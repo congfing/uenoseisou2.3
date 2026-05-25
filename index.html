@@ -20,11 +20,11 @@
     --button-bg: #ffffff;
     --button-text: #000000;
     --button-border: #000000;
-    --button-opacity: 1;
     --software-bg: #ffffff;
     --software-text: #000000;
     --software-border: #000000;
-    --software-opacity: 1;
+    --text-lift-shadow: none;
+    --text-gradient-bg: transparent;
   }
 
   * {
@@ -302,20 +302,11 @@
     background: var(--title-bg);
   }
 
-  .theme-opacity {
-    width: 90px;
-    height: 26px;
-    border: 1px solid rgba(0, 0, 0, 0.28);
-    border-radius: 14px;
-    padding: 0 6px;
-    background: rgba(255, 255, 255, 0.55);
+  .theme-check {
+    width: 18px;
+    height: 18px;
+    margin: 0;
     accent-color: var(--title-text);
-  }
-
-  .theme-value {
-    min-width: 32px;
-    font-size: 10px;
-    text-align: right;
   }
 
   .theme-reset {
@@ -407,12 +398,15 @@
     text-align: center;
     background: var(--button-bg);
     color: var(--button-text);
-    opacity: var(--button-opacity);
   }
 
   .launch-title {
     font-size: clamp(14px, 2.8vw, 19px);
     font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 7px;
+    text-shadow: var(--text-lift-shadow);
+    background: var(--text-gradient-bg);
   }
 
   .phone-card.running .launch-btn {
@@ -481,7 +475,6 @@
     border: 1px solid var(--card-border);
     border-radius: 16px;
     background: var(--software-bg);
-    opacity: var(--software-opacity);
     pointer-events: none;
     transform: scale(var(--preview-scale, 1));
     transform-origin: top left;
@@ -568,33 +561,25 @@
       <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="buttonBg"></label>
       <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="buttonText"></label>
       <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="buttonBorder"></label>
-      <label class="theme-group">
-        <span class="theme-label">透過</span>
-        <input class="theme-opacity" id="buttonOpacity" type="range" min="10" max="100" step="5">
-        <span class="theme-value" id="buttonOpacityValue">100%</span>
-      </label>
     </div>
     <div class="theme-section">
       <span class="theme-section-name">ソフト</span>
       <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareBg"></label>
       <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareText"></label>
       <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareBorder"></label>
-      <label class="theme-group">
-        <span class="theme-label">透過</span>
-        <input class="theme-opacity" id="softwareOpacity" type="range" min="10" max="100" step="5">
-        <span class="theme-value" id="softwareOpacityValue">100%</span>
-      </label>
     </div>
     <div class="theme-section">
       <span class="theme-section-name">ソフトボタン</span>
       <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareButtonBg"></label>
       <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareButtonText"></label>
       <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareButtonBorder"></label>
-      <label class="theme-group">
-        <span class="theme-label">透過</span>
-        <input class="theme-opacity" id="softwareButtonOpacity" type="range" min="10" max="100" step="5">
-        <span class="theme-value" id="softwareButtonOpacityValue">100%</span>
-      </label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">文字効果</span>
+      <label class="theme-group"><span class="theme-label">浮き上がり</span><input class="theme-check" id="textLift" type="checkbox"></label>
+      <label class="theme-group"><span class="theme-label">背景グラデ</span><input class="theme-check" id="textGradient" type="checkbox"></label>
+      <label class="theme-group"><span class="theme-label">色1</span><input class="theme-color" type="color" data-theme="textGradientStart"></label>
+      <label class="theme-group"><span class="theme-label">色2</span><input class="theme-color" type="color" data-theme="textGradientEnd"></label>
     </div>
     <button class="theme-reset" id="themeReset" type="button">白黒に戻す</button>
   </section>
@@ -629,12 +614,8 @@
   const expandBtn = document.getElementById("expandBtn");
   const themePanel = document.getElementById("themePanel");
   const themeToggle = document.getElementById("themeToggle");
-  const softwareOpacity = document.getElementById("softwareOpacity");
-  const softwareOpacityValue = document.getElementById("softwareOpacityValue");
-  const buttonOpacity = document.getElementById("buttonOpacity");
-  const buttonOpacityValue = document.getElementById("buttonOpacityValue");
-  const softwareButtonOpacity = document.getElementById("softwareButtonOpacity");
-  const softwareButtonOpacityValue = document.getElementById("softwareButtonOpacityValue");
+  const textLift = document.getElementById("textLift");
+  const textGradient = document.getElementById("textGradient");
   const frames = new Map();
   const cards = new Map();
   const savedZoom = new Map();
@@ -652,15 +633,16 @@
     buttonBg: "#ffffff",
     buttonText: "#000000",
     buttonBorder: "#000000",
-    buttonOpacity: 100,
     softwareBg: "#ffffff",
     softwareText: "#000000",
     softwareBorder: "#000000",
     softwareButtonBg: "#ffffff",
     softwareButtonText: "#000000",
     softwareButtonBorder: "#000000",
-    softwareButtonOpacity: 100,
-    softwareOpacity: 100
+    textLift: false,
+    textGradient: false,
+    textGradientStart: "#ffffff",
+    textGradientEnd: "#d9d9d9"
   };
   let theme = loadTheme();
   let activeApp = null;
@@ -695,20 +677,16 @@
     root.setProperty("--button-bg", theme.buttonBg);
     root.setProperty("--button-text", theme.buttonText);
     root.setProperty("--button-border", theme.buttonBorder);
-    root.setProperty("--button-opacity", String(theme.buttonOpacity / 100));
     root.setProperty("--software-bg", theme.softwareBg);
     root.setProperty("--software-text", theme.softwareText);
     root.setProperty("--software-border", theme.softwareBorder);
-    root.setProperty("--software-opacity", String(theme.softwareOpacity / 100));
-    buttonOpacityValue.textContent = theme.buttonOpacity + "%";
-    buttonOpacity.value = theme.buttonOpacity;
-    softwareButtonOpacityValue.textContent = theme.softwareButtonOpacity + "%";
-    softwareButtonOpacity.value = theme.softwareButtonOpacity;
-    softwareOpacityValue.textContent = theme.softwareOpacity + "%";
+    root.setProperty("--text-lift-shadow", theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none");
+    root.setProperty("--text-gradient-bg", theme.textGradient ? `linear-gradient(135deg, ${theme.textGradientStart}, ${theme.textGradientEnd})` : "transparent");
+    textLift.checked = theme.textLift;
+    textGradient.checked = theme.textGradient;
     document.querySelectorAll("[data-theme]").forEach((input) => {
       input.value = theme[input.dataset.theme];
     });
-    softwareOpacity.value = theme.softwareOpacity;
     frames.forEach((frame) => applySoftwareTheme(frame));
   }
 
@@ -845,7 +823,7 @@
         background-color: ${theme.softwareBg} !important;
         background-image: none !important;
         box-shadow: none !important;
-        text-shadow: none !important;
+        text-shadow: ${theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none"} !important;
       }
       html, body, header, main, section, nav, article, aside, table, th, td,
       button, input, select, textarea, dialog, [role="button"] {
@@ -868,13 +846,17 @@
       .prop-card-body {
         border-top: 2px solid ${theme.softwareBorder} !important;
       }
+      h1, h2, h3, legend, .brand, .title, .screen-title, .section-title,
+      .panel-title, .card-title, .prop-name {
+        background: ${theme.textGradient ? `linear-gradient(135deg, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
+        border-radius: 7px !important;
+      }
       button, input[type="button"], input[type="submit"], input[type="reset"],
       [role="button"], .btn, .toolbar-btn, .tb-btn, .nav-tab {
         background: ${theme.softwareButtonBg} !important;
         color: ${theme.softwareButtonText} !important;
         border: 2px solid ${theme.softwareButtonBorder} !important;
         border-radius: 10px !important;
-        opacity: ${theme.softwareButtonOpacity / 100} !important;
       }
     `;
     if (!style.parentNode) documentInFrame.head.appendChild(style);
@@ -915,9 +897,8 @@
   document.querySelectorAll("[data-theme]").forEach((input) => {
     input.addEventListener("input", () => changeThemeValue(input.dataset.theme, input.value));
   });
-  softwareOpacity.addEventListener("input", () => changeThemeValue("softwareOpacity", Number(softwareOpacity.value)));
-  buttonOpacity.addEventListener("input", () => changeThemeValue("buttonOpacity", Number(buttonOpacity.value)));
-  softwareButtonOpacity.addEventListener("input", () => changeThemeValue("softwareButtonOpacity", Number(softwareButtonOpacity.value)));
+  textLift.addEventListener("change", () => changeThemeValue("textLift", textLift.checked));
+  textGradient.addEventListener("change", () => changeThemeValue("textGradient", textGradient.checked));
   document.getElementById("themeReset").addEventListener("click", () => {
     theme = { ...defaultTheme };
     saveTheme();
