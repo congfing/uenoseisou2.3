@@ -70,7 +70,7 @@
     height: var(--title-height);
     min-height: var(--title-height);
     display: grid;
-    grid-template-columns: 78px 1fr 78px;
+    grid-template-columns: 78px 1fr minmax(138px, 248px);
     align-items: center;
     border: 1px solid var(--title-border);
     background: var(--title-bg);
@@ -174,17 +174,42 @@
     white-space: nowrap;
   }
 
-  .current-app {
+  .title-status {
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    color: var(--title-text);
+  }
+
+  .current-file {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     overflow: hidden;
-    justify-self: end;
-    margin-right: 5px;
-    max-width: 76px;
+    border-left: 1px solid var(--title-border);
+    border-right: 1px solid var(--title-border);
+    padding: 0 7px;
+    background: var(--title-bg);
+    color: var(--title-text);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .current-app {
+    flex: 0 0 47px;
+    overflow: hidden;
+    margin-right: 4px;
     border: 0;
     border-radius: 4px;
     background: var(--title-bg);
     color: var(--title-text);
-    padding: 3px 4px;
-    padding-right: 8px;
+    padding: 3px 3px;
     font-size: 9px;
     text-align: right;
     text-overflow: ellipsis;
@@ -497,7 +522,7 @@
 
   @media (max-width: 430px) {
     .titlebar {
-      grid-template-columns: 68px 1fr 65px;
+      grid-template-columns: 68px 1fr minmax(112px, 42vw);
     }
 
     .launcher {
@@ -536,7 +561,10 @@
       <div class="zoom-menu" id="zoomMenu" aria-label="倍率選択" hidden></div>
     </div>
     <button class="app-title" id="themeToggle" type="button" aria-expanded="false" aria-controls="themePanel" title="配色設定を開く">上野清掃2.3 v2-3</button>
-    <div class="current-app" id="currentApp" aria-label="現在の倍率">--</div>
+    <div class="title-status">
+      <div class="current-file" id="currentFile" aria-label="現在のファイル" title="index.html">index.html</div>
+      <div class="current-app" id="currentApp" aria-label="現在の倍率">--</div>
+    </div>
   </header>
   <section class="theme-panel" id="themePanel" aria-label="配色設定" hidden>
     <div class="theme-section">
@@ -609,6 +637,7 @@
   const launcher = document.getElementById("launcher");
   const grid = document.getElementById("phoneGrid");
   const frameLayer = document.getElementById("frameLayer");
+  const currentFile = document.getElementById("currentFile");
   const currentApp = document.getElementById("currentApp");
   const zoomMenu = document.getElementById("zoomMenu");
   const expandBtn = document.getElementById("expandBtn");
@@ -735,6 +764,8 @@
       activeApp = null;
       currentZoom = 100;
       launcher.hidden = false;
+      currentFile.textContent = "index.html";
+      currentFile.title = "index.html";
       currentApp.textContent = "--";
       currentApp.setAttribute("aria-label", "ソフト未起動");
     }
@@ -748,6 +779,8 @@
     } else if (activeApp) {
       minimizeSoftware(activeApp);
     }
+    currentFile.textContent = "index.html";
+    currentFile.title = "index.html";
     currentApp.textContent = "--";
     currentApp.setAttribute("aria-label", "ソフト未起動");
     closeZoomMenu();
@@ -799,6 +832,8 @@
     cards.get(app.file).classList.add("active");
     applyZoom(frame);
     setCardRunning(app, true);
+    currentFile.textContent = app.file;
+    currentFile.title = app.file;
     currentApp.textContent = currentZoom + "%";
     currentApp.setAttribute("aria-label", app.name + " の現在倍率 " + currentZoom + "%");
     launcher.hidden = true;
