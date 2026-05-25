@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 290px;
+      padding: 16px;
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      margin: 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 14px;
+      color: #89b4fa;
+      letter-spacing: 0.5px;
+    }
+    .section {
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #cba6f7;
+      margin-bottom: 10px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .row:last-child { margin-bottom: 0; }
+    label {
+      font-size: 11px;
+      color: #a6adc8;
+      width: 72px;
+      flex-shrink: 0;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #89b4fa;
+      cursor: pointer;
+    }
+    input[type="color"] {
+      width: 32px;
+      height: 22px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    input[type="checkbox"] {
+      accent-color: #89b4fa;
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    select {
+      flex: 1;
+      background: #313244;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .val {
+      font-size: 11px;
+      font-weight: bold;
+      color: #cdd6f4;
+      width: 34px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    button {
+      flex: 1;
+      padding: 7px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    #applyBtn { background: #89b4fa; color: #1e1e2e; }
+    #resetBtn { background: #45475a; color: #cdd6f4; }
+    #applyBtn:hover { background: #74c7ec; }
+    #resetBtn:hover { background: #585b70; }
+    .status {
+      font-size: 11px;
+      color: #a6e3a1;
+      text-align: center;
+      margin-top: 8px;
+      height: 14px;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .toggle-label {
+      font-size: 12px;
+      color: #cdd6f4;
+    }
+    .sub-label {
+      font-size: 10px;
+      color: #6c7086;
+      flex-shrink: 0;
+    }
+    .preview {
+      background: #f5f5f5;
+      color: #333;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 8px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      min-height: 28px;
+    }
+  </style>
+</head>
+<body>
+  <h2>✨ ページエフェクト コントローラー</h2>
+
+  <!-- 背景透過セクション -->
+  <div class="section">
+    <div class="section-title">🎨 背景透過</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="bgEnable">
+      <span class="toggle-label">背景透過を有効にする</span>
+    </div>
+    <div class="row">
+      <label>透明度</label>
+      <input type="range" id="bgOpacity" min="0" max="100" value="100">
+      <span class="val" id="bgVal">100%</span>
+    </div>
+    <div class="row">
+      <label>背景画像も消す</label>
+      <input type="checkbox" id="removeBgImage">
+    </div>
+  </div>
+
+  <!-- 文字影セクション -->
+  <div class="section">
+    <div class="section-title">🔤 文字の影（浮き上がり）</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="textShadowEnable">
+      <span class="toggle-label">文字影を有効にする</span>
+    </div>
+    <div class="row">
+      <label>影の形</label>
+      <select id="textShadowPreset">
+        <option value="float">🌫️ 浮き上がり（全方向）</option>
+        <option value="lifted">⬆️ ふんわり浮上</option>
+        <option value="bottom">⬇️ 下方向（標準）</option>
+        <option value="right">➡️ 右下方向</option>
+        <option value="left">⬅️ 左下方向</option>
+        <option value="top">⬆️ 上方向（逆光）</option>
+        <option value="glow">💡 グロー（発光）</option>
+        <option value="neon">🌈 ネオン</option>
+        <option value="outline">⭕ アウトライン（縁取り）</option>
+        <option value="emboss">🏛️ エンボス（浮き彫り）</option>
+        <option value="long">📏 ロングシャドウ</option>
+        <option value="retro">🕹️ レトロ（ずらし）</option>
+        <option value="3d">🧊 立体（3D）</option>
+        <option value="gradient-rb">✨ グラデーション影（右下）</option>
+        <option value="gradient-r">➡️ グラデーション影（右）</option>
+        <option value="gradient-b">⬇️ グラデーション影（下）</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>ぼかし強さ</label>
+      <input type="range" id="textBlur" min="0" max="30" value="6">
+      <span class="val" id="textBlurVal">6px</span>
+    </div>
+    <div class="row">
+      <label>影の距離</label>
+      <input type="range" id="textOffset" min="0" max="15" value="2">
+      <span class="val" id="textOffsetVal">2px</span>
+    </div>
+    <div class="row">
+      <label>影の色</label>
+      <input type="color" id="textShadowColor" value="#000000">
+      <span class="sub-label">透明度</span>
+      <input type="range" id="textShadowAlpha" min="0" max="100" value="50">
+      <span class="val" id="textAlphaVal">50%</span>
+    </div>
+  </div>
+
+  <!-- 文字の背景グラデーションセクション -->
+  <div class="section">
+    <div class="section-title">🌈 文字の背景に盛り上がりグラデーション</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="gradientEnable">
+      <span class="toggle-label">背景グラデーションを有効にする</span>
+    </div>
+    <div class="row">
+      <label>余白(padding)</label>
+      <input type="range" id="gradientPadding" min="0" max="20" value="4">
+      <span class="val" id="gradientPaddingVal">4px</span>
+    </div>
+    <div class="row">
+      <label>強さ</label>
+      <input type="range" id="gradientStrength" min="0" max="100" value="50">
+      <span class="val" id="gradientStrengthVal">50%</span>
+    </div>
+    <div class="row">
+      <label>スタイル</label>
+      <select id="gradientStyle">
+        <option value="bottom-dark">⬇️ 下半分を暗く（盛り上がり）</option>
+        <option value="bottom-bright">⬆️ 下半分を明るく（凹み）</option>
+        <option value="metallic">🥇 メタリック（金属光沢）</option>
+        <option value="chrome">⚙️ クローム</option>
+        <option value="gold">💰 ゴールド</option>
+        <option value="silver">🥈 シルバー</option>
+        <option value="rainbow">🌈 レインボー</option>
+        <option value="sunset">🌅 サンセット</option>
+        <option value="ice">❄️ アイス</option>
+        <option value="fire">🔥 ファイア</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>上の色</label>
+      <input type="color" id="gradientTop" value="#ffffff">
+      <label style="width:auto;">下の色</label>
+      <input type="color" id="gradientBottom" value="#333333">
+    </div>
+    <div class="row">
+      <label>境界位置</label>
+      <input type="range" id="gradientPosition" min="0" max="100" value="50">
+      <span class="val" id="gradientPosVal">50%</span>
+    </div>
+    <div class="preview" id="textPreview">プレビュー Sample あいう</div>
+  </div>
+
+  <!-- 画像影セクション -->
+  <div class="section">
+    <div class="section-title">🖼️ 画像の影（浮き上がり）</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="imgShadowEnable">
+      <span class="toggle-label">画像影を有効にする</span>
+    </div>
+    <div class="row">
+      <label>ぼかし強さ</label>
+      <input type="range" id="imgBlur" min="1" max="40" value="16">
+      <span class="val" id="imgBlurVal">16px</span>
+    </div>
+    <div class="row">
+      <label>影の距離</label>
+      <input type="range" id="imgOffset" min="0" max="20" value="8">
+      <span class="val" id="imgOffsetVal">8px</span>
+    </div>
+    <div class="row">
+      <label>影の色</label>
+      <input type="color" id="imgShadowColor" value="#000000">
+      <span class="sub-label">透明度</span>
+      <input type="range" id="imgShadowAlpha" min="0" max="100" value="40">
+      <span class="val" id="imgAlphaVal">40%</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="applyBtn">✅ 適用</button>
+    <button id="resetBtn">🔄 リセット</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

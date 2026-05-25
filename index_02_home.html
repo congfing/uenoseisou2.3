@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>上野清掃2.1</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: #f3f7fb;
+    color: #172033;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .app-shell {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  .tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #cfd8e3;
+    background: linear-gradient(180deg, #ffffff, #eef5fc);
+    box-shadow: 0 2px 8px rgba(15, 74, 128, 0.10);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    pointer-events: auto;
+  }
+  .brand {
+    flex: 0 0 auto;
+    color: #0f4a80;
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+    padding: 0 3px;
+  }
+  .tabs {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    z-index: 1001;
+    pointer-events: auto;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 0 0 auto;
+    min-width: 94px;
+    border: 1px solid #b8cce4;
+    border-radius: 12px;
+    background: #f8fbff;
+    color: #31506f;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 10px 13px;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1002;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  .tab-btn.active {
+    background: linear-gradient(135deg, #1a6eb5, #0f4a80);
+    border-color: #0f4a80;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(15, 74, 128, 0.22);
+  }
+  .tab-add-toggle {
+    align-items: center;
+    background: #d4e5f9;
+    border: none;
+    border-top: 1px solid #b5cef5;
+    color: #4a6fa5;
+    cursor: pointer;
+    display: flex;
+    font-family: inherit;
+    font-size: 10px;
+    gap: 4px;
+    justify-content: center;
+    padding: 2px 0;
+    transition: background 0.15s;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-add-toggle:active { background: #bdd6f5; }
+  .tab-add-panel {
+    flex: 0 0 auto;
+    border-bottom: 1px solid #b5cef5;
+    background: #e8f0fb;
+    position: relative;
+    z-index: 9;
+  }
+  .tab-add-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    max-height: 300px;
+    padding: 8px 10px;
+    scrollbar-width: none;
+    transition: max-height 0.22s ease, padding 0.22s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-add-panel.collapsed .tab-add-inner {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  .tab-add-panel.collapsed .tab-add-toggle {
+    border-top: none;
+    font-size: 11px;
+    padding: 4px 0;
+  }
+  .tab-add-inner::-webkit-scrollbar { display: none; }
+  .file-open-btn,
+  .tab-form-btn,
+  .tab-add-select {
+    flex: 0 0 auto;
+    min-height: 36px;
+    border: 1px solid #b8cce4;
+    border-radius: 10px;
+    background: #fff;
+    color: #31506f;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  .file-open-btn,
+  .tab-form-btn {
+    cursor: pointer;
+  }
+  .tab-form-btn.register {
+    background: #1a6eb5;
+    border-color: #0f4a80;
+    color: #fff;
+  }
+  .tab-form-btn.delete {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+  }
+  .file-input-hidden {
+    display: none;
+  }
+  .stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    background: #fff;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .app-frame {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+  }
+  .app-frame.active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+  }
+  .loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 800;
+    pointer-events: none;
+  }
+  .stage.ready .loading {
+    display: none;
+  }
+  @media (max-width: 520px) {
+    .tabbar {
+      padding: 7px 8px;
+      gap: 6px;
+    }
+    .brand {
+      font-size: 13px;
+      max-width: 86px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tab-btn {
+      min-width: 78px;
+      padding: 9px 10px;
+      font-size: 12px;
+    }
+    .tab-add-inner {
+      gap: 6px;
+    }
+  }
+
+  /* === v2.2 unified design === */
+  * { box-sizing: border-box; }
+  body { background: #fff !important; color: #000 !important; }
+  * { color: #000 !important; }
+
+  /* 背景を白に */
+  body, html, main, .screen, .panel, .card, .prop-card, section,
+  .container, .content, header, .header, #app-header, nav,
+  .topbar, .toolbar, #toolbar, #toolbar-inner, #toolbar-toggle,
+  .tool-panel, .staff-list, .staff-item, .prop-card-body,
+  .continue-panel, #colPanel, .col-lbl, #filterPopup, #saveDialogBox,
+  #hist-panel, .history-item, .hist-item, .section-title,
+  .count-badge, .nav-tab, .nav-tabs, .day-save-single,
+  #dataTable thead th, #dataTable tbody tr,
+  #dataTable tbody tr:nth-child(even), #dataTable tbody tr:hover,
+  .gh-file-item, .tool-toggle, .sheet-btn, .fp-row button,
+  .btn, .btn-primary, .btn-secondary, .btn-success, .btn-warning, .btn-danger,
+  .toolbar-btn, .tb-btn, .back-btn, .view-btn, .add-tab-btn,
+  .col-lbl.on, .day-dot, .day-dot.today,
+  .staff-item.selected, .prop-card.done {
+    background: #fff !important;
+    background-color: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+  }
+
+  /* 枠線 + 角丸 */
+  table, th, td, input, select, button, textarea,
+  .btn, .toolbar-btn, .tb-btn, .back-btn, .nav-tab, .view-btn,
+  .prop-card, .staff-item, .day-save-single,
+  #dataTable th, #dataTable td,
+  #filterPopup, #saveDialogBox, .col-lbl,
+  header, .topbar, .toolbar, #toolbar, .tool-panel,
+  .history-item, .hist-item, .sheet-btn {
+    border: 1px solid #000 !important;
+    border-color: #000 !important;
+    border-radius: 8px !important;
+  }
+
+  /* カード・セクションタイトル */
+  .card, .section-title {
+    border: 1px solid #000 !important;
+    border-radius: 12px !important;
+  }
+
+  /* 入力フォーム */
+  input[type=text], input[type=number], input[type=date],
+  select, textarea {
+    color: #000 !important;
+    background: #fff !important;
+    border: 1px solid #000 !important;
+    border-radius: 8px !important;
+  }
+
+  /* v2.2 thead fix */
+  #dataTable thead tr th,
+  #dataTable thead tr th.col-ctrl,
+  #dataTable thead tr th:hover,
+  #dataTable thead tr th.col-ctrl:hover {
+    background: #fff !important;
+    background-color: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+  }
+
+  /* カード文字色補完 */
+  .card, .card *, .screen-content, .section-sub,
+  .fields-label, .fields-group, .setting-section {
+    color: #000 !important;
+    border-color: #000 !important;
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="tabbar" aria-label="ソフト切替">
+    <div class="brand">上野清掃2.1</div>
+    <nav class="tabs" id="tabs" aria-label="ソフト一覧"></nav>
+  </header>
+  <section class="tab-add-panel collapsed" id="tabAddPanel" aria-label="Tab追加">
+    <div class="tab-add-inner">
+      <button class="file-open-btn" type="button" id="addEditorBtn">Editorを追加</button>
+      <select class="tab-add-select" id="githubFileSelect" title="GitHubのファイルを選択">
+        <option value="">GitHubからHTMLを追加</option>
+      </select>
+      <button class="tab-form-btn register" type="button" id="registerTabBtn">登録</button>
+      <select class="tab-add-select" id="deleteTabSelect" title="削除する追加Tabを選択">
+        <option value="">削除するTabを選択</option>
+      </select>
+      <button class="tab-form-btn delete" type="button" id="deleteTabBtn">削除</button>
+    </div>
+    <button class="tab-add-toggle" type="button" id="tabAddToggle">▼ 開く</button>
+  </section>
+  <main class="stage" id="stage">
+    <div class="loading">読み込み中...</div>
+  </main>
+</div>
+
+<script>
+const DEFAULT_APPS = [
+  { key: 'bukken', title: '物件表', href: 'index_2-3_bukken.html' },
+  { key: 'colview', title: '列選択', href: 'index_2-4_colview.html' },
+  { key: 'keiryou', title: '計量', href: 'index_3-16.html' },
+  { key: 'memo', title: 'メモ', href: 'index_5-1.html' }
+];
+const GITHUB_FILES = [
+  { title: '計量', href: 'index_3-16.html' },
+  { title: '計量 3-15', href: 'index_3-15.html' },
+  { title: '物件表', href: 'index_2-3_bukken.html' },
+  { title: '列選択', href: 'index_2-4_colview.html' },
+  { title: 'メモ', href: 'index_5-1.html' },
+  { title: 'カレンダー編集', href: 'index_2-2_gcal.html' },
+  { title: 'カレンダー', href: 'calendar_2026.html' }
+];
+const GITHUB_HTML_API = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+const APP_VERSION = '20260521-autoload';
+
+const tabsEl = document.getElementById('tabs');
+const stageEl = document.getElementById('stage');
+const tabAddToggle = document.getElementById('tabAddToggle');
+const tabAddPanel = document.getElementById('tabAddPanel');
+const addEditorBtn = document.getElementById('addEditorBtn');
+const githubFileSelect = document.getElementById('githubFileSelect');
+const registerTabBtn = document.getElementById('registerTabBtn');
+const deleteTabSelect = document.getElementById('deleteTabSelect');
+const deleteTabBtn = document.getElementById('deleteTabBtn');
+const frames = new Map();
+let APPS = [...DEFAULT_APPS, ...loadCustomTabs()];
+let activeKey = APPS[0].key;
+if (!APPS.some((app) => app.key === activeKey)) activeKey = APPS[0].key;
+
+function safeStorageGet(key, fallback) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    // file:// やプライベート環境でもTab切替は止めない。
+  }
+}
+
+function safeStorageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {}
+}
+
+function loadCustomTabs() {
+  try {
+    return JSON.parse(localStorage.getItem('ueno21_custom_tabs') || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveCustomTabs() {
+  const customTabs = APPS.filter((app) => app.custom && app.persist);
+  safeStorageSet('ueno21_custom_tabs', JSON.stringify(customTabs));
+}
+
+function withEmbeddedParam(href) {
+  return href + (href.includes('?') ? '&' : '?') + 'embedded=1&v=' + encodeURIComponent(APP_VERSION);
+}
+
+function makeTabKey() {
+  return `custom_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+}
+
+function makeUnsavedTitle(baseTitle) {
+  const sameCount = APPS.filter((app) => app.custom && app.title.replace(/（未登録）$/, '') === baseTitle).length;
+  return `${baseTitle}${sameCount ? ` ${sameCount + 1}` : ''}（未登録）`;
+}
+
+function createTabs() {
+  tabsEl.innerHTML = '';
+  APPS.forEach((app) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tab-btn';
+    button.dataset.key = app.key;
+    button.textContent = app.title;
+    button.addEventListener('click', () => activateTab(app.key));
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      activateTab(app.key);
+    });
+    button.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      activateTab(app.key);
+    }, { passive: false });
+    tabsEl.appendChild(button);
+  });
+}
+
+function createFrame(app) {
+  if (frames.has(app.key)) return;
+  const frame = document.createElement('iframe');
+  frame.className = 'app-frame';
+  frame.dataset.key = app.key;
+  frame.title = app.title;
+  frame.src = withEmbeddedParam(app.href);
+  stageEl.appendChild(frame);
+  frames.set(app.key, frame);
+}
+
+function preloadFrames() {
+  APPS.forEach((app) => {
+    createFrame(app);
+  });
+  stageEl.classList.add('ready');
+}
+
+function activateTab(key) {
+  activeKey = key;
+  safeStorageSet('ueno21_active_tab', key);
+  tabsEl.querySelectorAll('.tab-btn').forEach((button) => {
+    const active = button.dataset.key === key;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+    if (active) button.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  });
+  frames.forEach((frame, frameKey) => {
+    frame.classList.toggle('active', frameKey === key);
+  });
+}
+
+function renderTabs() {
+  createTabs();
+  preloadFrames();
+  activateTab(activeKey);
+}
+
+tabsEl.addEventListener('pointerdown', (event) => {
+  const button = event.target.closest('.tab-btn');
+  if (!button) return;
+  event.preventDefault();
+  activateTab(button.dataset.key);
+}, true);
+
+tabsEl.addEventListener('touchstart', (event) => {
+  const button = event.target.closest('.tab-btn');
+  if (!button) return;
+  event.preventDefault();
+  activateTab(button.dataset.key);
+}, { capture: true, passive: false });
+
+function setPanelOpen(open) {
+  tabAddPanel.classList.toggle('collapsed', !open);
+  tabAddToggle.textContent = open ? '▲ 閉じる' : '▼ 開く';
+}
+
+function fillGithubFiles() {
+  setGithubOptions(GITHUB_FILES);
+  githubFileSelect.querySelector('option').textContent = 'GitHub HTML読込中...';
+  fetch(GITHUB_HTML_API + '?t=' + Date.now())
+    .then((response) => {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .then((files) => {
+      const htmlFiles = files
+        .filter((file) => file.type === 'file' && /\.html?$/i.test(file.name))
+        .map((file) => ({
+          title: file.name.replace(/\.html?$/i, ''),
+          href: file.name
+        }))
+        .sort((a, b) => a.href.localeCompare(b.href, 'ja'));
+      setGithubOptions(htmlFiles.length ? htmlFiles : GITHUB_FILES);
+    })
+    .catch(() => {
+      setGithubOptions(GITHUB_FILES);
+    });
+}
+
+function setGithubOptions(files) {
+  githubFileSelect.innerHTML = '<option value="">GitHubからHTMLを追加</option>';
+  files.forEach((file) => {
+    const option = document.createElement('option');
+    option.value = file.href;
+    option.textContent = file.title;
+    option.dataset.title = file.title;
+    githubFileSelect.appendChild(option);
+  });
+}
+
+function refreshDeleteOptions() {
+  const current = deleteTabSelect.value;
+  deleteTabSelect.innerHTML = '<option value="">削除するTabを選択</option>';
+  APPS.filter((app) => app.custom).forEach((app) => {
+    const option = document.createElement('option');
+    option.value = app.key;
+    option.textContent = app.title;
+    deleteTabSelect.appendChild(option);
+  });
+  if (current && APPS.some((app) => app.key === current && app.custom)) {
+    deleteTabSelect.value = current;
+  }
+}
+
+function addCustomTab(title, href) {
+  const app = {
+    key: makeTabKey(),
+    title: makeUnsavedTitle(title),
+    href,
+    custom: true,
+    persist: false
+  };
+  APPS.push(app);
+  activeKey = app.key;
+  createFrame(app);
+  renderTabs();
+  refreshDeleteOptions();
+  return app;
+}
+
+function registerTab() {
+  const app = APPS.find((item) => item.key === activeKey);
+  if (!app || !app.custom) {
+    alert('登録する追加Tabを選択してください。');
+    return;
+  }
+  app.persist = true;
+  app.title = app.title.replace(/（未登録）$/, '');
+  saveCustomTabs();
+  renderTabs();
+  refreshDeleteOptions();
+}
+
+function deleteActiveTab() {
+  const targetKey = deleteTabSelect.value || activeKey;
+  const app = APPS.find((item) => item.key === targetKey);
+  if (!app || !app.custom) {
+    alert('削除する追加Tabを選択してください。');
+    return;
+  }
+  if (!confirm(`「${app.title}」を削除しますか？`)) return;
+  const frame = frames.get(app.key);
+  if (frame) frame.remove();
+  frames.delete(app.key);
+  APPS = APPS.filter((item) => item.key !== app.key);
+  saveCustomTabs();
+  if (activeKey === app.key) activeKey = APPS[0].key;
+  deleteTabSelect.value = '';
+  renderTabs();
+  refreshDeleteOptions();
+}
+
+tabAddToggle.addEventListener('click', () => {
+  setPanelOpen(tabAddPanel.classList.contains('collapsed'));
+});
+addEditorBtn.addEventListener('click', () => {
+  addCustomTab('Editor', 'index_2-3_bukken.html');
+  githubFileSelect.value = '';
+});
+githubFileSelect.addEventListener('change', () => {
+  if (!githubFileSelect.value) return;
+  const option = githubFileSelect.selectedOptions[0];
+  const title = option?.dataset.title || option?.textContent || githubFileSelect.value;
+  addCustomTab(title, githubFileSelect.value);
+  githubFileSelect.value = '';
+});
+registerTabBtn.addEventListener('click', registerTab);
+deleteTabBtn.addEventListener('click', deleteActiveTab);
+
+fillGithubFiles();
+createTabs();
+preloadFrames();
+activateTab(activeKey);
+refreshDeleteOptions();
+</script>
+</body>
+</html>

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>上野清掃2.3 v2-3</title>
+<style>
+  :root {
+    --ink: #000000;
+    --paper: #ffffff;
+    --title-height: 5mm;
+    --title-bg: #ffffff;
+    --title-text: #000000;
+    --title-border: #000000;
+    --base-bg: #ffffff;
+    --base-text: #000000;
+    --base-border: #000000;
+    --card-bg: #ffffff;
+    --card-border: #000000;
+    --button-bg: #ffffff;
+    --button-text: #000000;
+    --button-border: #000000;
+    --button-opacity: 1;
+    --software-bg: #ffffff;
+    --software-text: #000000;
+    --software-border: #000000;
+    --software-opacity: 1;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--base-bg);
+    color: var(--base-text);
+    font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  button {
+    color: inherit;
+    background: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--button-border);
+    border-radius: 8px;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100%;
+    background: var(--base-bg);
+  }
+
+  .titlebar {
+    flex: 0 0 var(--title-height);
+    height: var(--title-height);
+    min-height: var(--title-height);
+    display: grid;
+    grid-template-columns: 78px 1fr 78px;
+    align-items: center;
+    border: 1px solid var(--title-border);
+    background: var(--title-bg);
+    color: var(--title-text);
+    line-height: 1;
+    position: relative;
+    z-index: 30;
+  }
+
+  .window-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 7px;
+    position: relative;
+  }
+
+  .window-control {
+    width: 11px;
+    height: 11px;
+    padding: 0;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    position: relative;
+    background: var(--paper);
+  }
+
+  .window-control.close {
+    background: #ff5f57;
+    border-color: #e0443e;
+  }
+
+  .window-control.home {
+    background: #febc2e;
+    border-color: #d89e24;
+  }
+
+  .window-control.expand {
+    background: #28c840;
+    border-color: #1eab33;
+  }
+
+  .window-control::before,
+  .window-control::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 4px;
+    height: 1px;
+    background: var(--ink);
+    opacity: 0;
+  }
+
+  .window-control.close:hover::before,
+  .window-control.close:hover::after {
+    opacity: 1;
+  }
+
+  .window-control.close:hover::before {
+    transform: rotate(45deg);
+  }
+
+  .window-control.close:hover::after {
+    transform: rotate(-45deg);
+  }
+
+  .window-control.home:hover::before {
+    opacity: 1;
+  }
+
+  .window-control.expand:hover::before,
+  .window-control.expand:hover::after {
+    opacity: 1;
+  }
+
+  .window-control.expand:hover::before {
+    top: 2px;
+  }
+
+  .window-control.expand:hover::after {
+    top: auto;
+    bottom: 2px;
+  }
+
+  .app-title {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--title-border);
+    border-top: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    padding: 0;
+    background: var(--title-bg);
+    color: var(--title-text);
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .current-app {
+    overflow: hidden;
+    justify-self: end;
+    margin-right: 5px;
+    max-width: 76px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--title-bg);
+    color: var(--title-text);
+    padding: 3px 4px;
+    padding-right: 8px;
+    font-size: 9px;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .current-app:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  .zoom-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 38px;
+    z-index: 50;
+    width: 72px;
+    display: grid;
+    gap: 3px;
+    padding: 5px;
+    border: 1px solid var(--base-border);
+    background: var(--base-bg);
+  }
+
+  .zoom-menu[hidden] {
+    display: none;
+  }
+
+  .zoom-option {
+    min-height: 25px;
+    border: 1px solid var(--base-border);
+    background: var(--base-bg);
+    color: var(--base-text);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .zoom-option.selected {
+    border: 3px double var(--base-border);
+    background: var(--base-bg);
+    color: var(--base-text);
+  }
+
+  .theme-panel {
+    position: fixed;
+    top: var(--title-height);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-height: min(46vh, 290px);
+    overflow-y: auto;
+    padding: 10px 12px 11px;
+    border: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.24);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    background: var(--title-bg);
+    color: var(--title-text);
+  }
+
+  .theme-panel[hidden] {
+    display: none;
+  }
+
+  .theme-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 46px;
+    border: 1px solid rgba(0, 0, 0, 0.34);
+    border-radius: 11px;
+    padding: 5px 6px 5px 8px;
+    background: rgba(255, 255, 255, 0.30);
+  }
+
+  .theme-section-name {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid rgba(0, 0, 0, 0.18);
+    padding-right: 8px;
+    margin-right: 2px;
+    color: var(--title-text);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .theme-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 8px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.45);
+  }
+
+  .theme-label {
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .theme-color {
+    width: 32px;
+    height: 26px;
+    border: 1px solid rgba(0, 0, 0, 0.34);
+    border-radius: 6px;
+    padding: 2px;
+    background: var(--title-bg);
+  }
+
+  .theme-opacity {
+    width: 90px;
+    height: 26px;
+    border: 1px solid rgba(0, 0, 0, 0.28);
+    border-radius: 14px;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.55);
+    accent-color: var(--title-text);
+  }
+
+  .theme-value {
+    min-width: 32px;
+    font-size: 10px;
+    text-align: right;
+  }
+
+  .theme-reset {
+    min-height: 37px;
+    border: 1px solid rgba(0, 0, 0, 0.22);
+    border-radius: 9px;
+    padding: 3px 13px;
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--title-text);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .theme-panel button,
+  .theme-panel input {
+    border-color: rgba(0, 0, 0, 0.32);
+  }
+
+  .theme-reset:hover,
+  .theme-group:focus-within,
+  .theme-section:focus-within {
+    border-color: rgba(0, 0, 0, 0.46);
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    border: 1px solid var(--base-border);
+    border-top: 0;
+    background: var(--base-bg);
+    overflow: hidden;
+  }
+
+  .launcher {
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    padding: clamp(14px, 3vw, 25px);
+    background: var(--base-bg);
+    color: var(--base-text);
+  }
+
+  .frame-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .launcher[hidden] {
+    display: none;
+  }
+
+  .launcher-heading {
+    display: none;
+    margin: 0 auto 14px;
+    max-width: 690px;
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .phone-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(148px, 320px));
+    gap: clamp(10px, 2vw, 16px);
+    justify-content: center;
+    max-width: 690px;
+    margin: 0 auto;
+    padding-bottom: 24px;
+  }
+
+  .phone-card {
+    min-height: 0;
+    background: transparent;
+    position: relative;
+  }
+
+  .launch-btn {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    border: 2px solid var(--button-border);
+    border-radius: 12px;
+    padding: clamp(16px, 3vw, 23px) 10px;
+    text-align: center;
+    background: var(--button-bg);
+    color: var(--button-text);
+    opacity: var(--button-opacity);
+  }
+
+  .launch-title {
+    font-size: clamp(14px, 2.8vw, 19px);
+    font-weight: 700;
+  }
+
+  .phone-card.running .launch-btn {
+    position: relative;
+    z-index: 30;
+    margin-top: 248px;
+    padding: 8px 10px;
+    border-style: solid;
+  }
+
+  .phone-card.running {
+    min-height: 298px;
+  }
+
+  .running-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 242px;
+    z-index: 25;
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .running-preview[hidden] {
+    display: none;
+  }
+
+  .running-close {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    z-index: 35;
+    width: 25px;
+    height: 25px;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    padding: 0;
+    background: rgba(33, 37, 41, 0.84);
+    color: #fff;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .running-close[hidden] {
+    display: none;
+  }
+
+  .launch-btn:active,
+  .launch-btn:focus-visible,
+  .window-control:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .software-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: var(--preview-width, 100%);
+    height: var(--preview-height, 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: var(--software-bg);
+    opacity: var(--software-opacity);
+    pointer-events: none;
+    transform: scale(var(--preview-scale, 1));
+    transform-origin: top left;
+    visibility: hidden;
+    z-index: 2;
+  }
+
+  .software-frame.active {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    pointer-events: auto;
+    transform: none;
+    visibility: visible;
+    z-index: 20;
+  }
+
+  @media (max-width: 430px) {
+    .titlebar {
+      grid-template-columns: 68px 1fr 65px;
+    }
+
+    .launcher {
+      padding: 12px 9px;
+    }
+
+    .phone-grid {
+      gap: 9px;
+    }
+
+    .phone-card {
+      min-height: 0;
+    }
+
+    .phone-card.running {
+      min-height: 270px;
+    }
+
+    .phone-card.running .launch-btn {
+      margin-top: 220px;
+    }
+
+    .running-preview {
+      height: 214px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="titlebar">
+    <div class="window-controls" aria-label="画面操作">
+      <button class="window-control close" id="closeBtn" type="button" aria-label="ソフトを閉じて起動画面に戻る" title="閉じる"></button>
+      <button class="window-control home" id="homeBtn" type="button" aria-label="ソフトを縮小して起動カードに戻る" title="縮小して一覧へ"></button>
+      <button class="window-control expand" id="expandBtn" type="button" aria-label="倍率を選択する" aria-expanded="false" title="倍率"></button>
+      <div class="zoom-menu" id="zoomMenu" aria-label="倍率選択" hidden></div>
+    </div>
+    <button class="app-title" id="themeToggle" type="button" aria-expanded="false" aria-controls="themePanel" title="配色設定を開く">上野清掃2.3 v2-3</button>
+    <div class="current-app" id="currentApp" aria-label="現在の倍率">--</div>
+  </header>
+  <section class="theme-panel" id="themePanel" aria-label="配色設定" hidden>
+    <div class="theme-section">
+      <span class="theme-section-name">タイトル</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="titleBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="titleText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="titleBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">下地</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="baseBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="baseText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="baseBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">カード</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="cardBg"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="cardBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">起動ボタン</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="buttonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="buttonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="buttonBorder"></label>
+      <label class="theme-group">
+        <span class="theme-label">透過</span>
+        <input class="theme-opacity" id="buttonOpacity" type="range" min="10" max="100" step="5">
+        <span class="theme-value" id="buttonOpacityValue">100%</span>
+      </label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">ソフト</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareBorder"></label>
+      <label class="theme-group">
+        <span class="theme-label">透過</span>
+        <input class="theme-opacity" id="softwareOpacity" type="range" min="10" max="100" step="5">
+        <span class="theme-value" id="softwareOpacityValue">100%</span>
+      </label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">ソフトボタン</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareButtonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareButtonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareButtonBorder"></label>
+      <label class="theme-group">
+        <span class="theme-label">透過</span>
+        <input class="theme-opacity" id="softwareButtonOpacity" type="range" min="10" max="100" step="5">
+        <span class="theme-value" id="softwareButtonOpacityValue">100%</span>
+      </label>
+    </div>
+    <button class="theme-reset" id="themeReset" type="button">白黒に戻す</button>
+  </section>
+
+  <main class="workspace">
+    <section class="launcher" id="launcher" aria-label="ソフト起動画面">
+      <h1 class="launcher-heading">ソフト一覧</h1>
+      <div class="phone-grid" id="phoneGrid"></div>
+    </section>
+    <div class="frame-layer" id="frameLayer" aria-label="起動したソフト"></div>
+  </main>
+</div>
+
+<script>
+  const software = [
+    { name: "物件表", detail: "物件管理", file: "index_2-3_bukken.html" },
+    { name: "列選択", detail: "表示設定", file: "index_2-4_colview.html" },
+    { name: "計量", detail: "計量入力", file: "index_3-16.html" },
+    { name: "計量 3-15", detail: "計量画面", file: "index_3-15.html" },
+    { name: "メモ", detail: "記録", file: "index_5-1.html" },
+    { name: "カレンダー編集", detail: "日程編集", file: "index_2-2_gcal.html" },
+    { name: "縦通しカレンダー", detail: "年間表示", file: "令和8年度収集カレンダー（縦通し）.html" },
+    { name: "月別カレンダー", detail: "月間表示", file: "令和8年度収集カレンダー（月別）.html" }
+  ];
+
+  const softwareRoot = "./";
+  const launcher = document.getElementById("launcher");
+  const grid = document.getElementById("phoneGrid");
+  const frameLayer = document.getElementById("frameLayer");
+  const currentApp = document.getElementById("currentApp");
+  const zoomMenu = document.getElementById("zoomMenu");
+  const expandBtn = document.getElementById("expandBtn");
+  const themePanel = document.getElementById("themePanel");
+  const themeToggle = document.getElementById("themeToggle");
+  const softwareOpacity = document.getElementById("softwareOpacity");
+  const softwareOpacityValue = document.getElementById("softwareOpacityValue");
+  const buttonOpacity = document.getElementById("buttonOpacity");
+  const buttonOpacityValue = document.getElementById("buttonOpacityValue");
+  const softwareButtonOpacity = document.getElementById("softwareButtonOpacity");
+  const softwareButtonOpacityValue = document.getElementById("softwareButtonOpacityValue");
+  const frames = new Map();
+  const cards = new Map();
+  const savedZoom = new Map();
+  const zoomLevels = [50, 75, 100, 125, 150, 175, 200];
+  const themeStorageKey = "uenoseisou23_theme";
+  const defaultTheme = {
+    titleBg: "#ffffff",
+    titleText: "#000000",
+    titleBorder: "#000000",
+    baseBg: "#ffffff",
+    baseText: "#000000",
+    baseBorder: "#000000",
+    cardBg: "#ffffff",
+    cardBorder: "#000000",
+    buttonBg: "#ffffff",
+    buttonText: "#000000",
+    buttonBorder: "#000000",
+    buttonOpacity: 100,
+    softwareBg: "#ffffff",
+    softwareText: "#000000",
+    softwareBorder: "#000000",
+    softwareButtonBg: "#ffffff",
+    softwareButtonText: "#000000",
+    softwareButtonBorder: "#000000",
+    softwareButtonOpacity: 100,
+    softwareOpacity: 100
+  };
+  let theme = loadTheme();
+  let activeApp = null;
+  let currentZoom = 100;
+
+  function loadTheme() {
+    try {
+      return { ...defaultTheme, ...JSON.parse(localStorage.getItem(themeStorageKey) || "{}") };
+    } catch (error) {
+      return { ...defaultTheme };
+    }
+  }
+
+  function saveTheme() {
+    try {
+      localStorage.setItem(themeStorageKey, JSON.stringify(theme));
+    } catch (error) {
+      // 配色変更は保存不可の環境でも現在の画面へ反映する。
+    }
+  }
+
+  function applyTheme() {
+    const root = document.documentElement.style;
+    root.setProperty("--title-bg", theme.titleBg);
+    root.setProperty("--title-text", theme.titleText);
+    root.setProperty("--title-border", theme.titleBorder);
+    root.setProperty("--base-bg", theme.baseBg);
+    root.setProperty("--base-text", theme.baseText);
+    root.setProperty("--base-border", theme.baseBorder);
+    root.setProperty("--card-bg", theme.cardBg);
+    root.setProperty("--card-border", theme.cardBorder);
+    root.setProperty("--button-bg", theme.buttonBg);
+    root.setProperty("--button-text", theme.buttonText);
+    root.setProperty("--button-border", theme.buttonBorder);
+    root.setProperty("--button-opacity", String(theme.buttonOpacity / 100));
+    root.setProperty("--software-bg", theme.softwareBg);
+    root.setProperty("--software-text", theme.softwareText);
+    root.setProperty("--software-border", theme.softwareBorder);
+    root.setProperty("--software-opacity", String(theme.softwareOpacity / 100));
+    buttonOpacityValue.textContent = theme.buttonOpacity + "%";
+    buttonOpacity.value = theme.buttonOpacity;
+    softwareButtonOpacityValue.textContent = theme.softwareButtonOpacity + "%";
+    softwareButtonOpacity.value = theme.softwareButtonOpacity;
+    softwareOpacityValue.textContent = theme.softwareOpacity + "%";
+    document.querySelectorAll("[data-theme]").forEach((input) => {
+      input.value = theme[input.dataset.theme];
+    });
+    softwareOpacity.value = theme.softwareOpacity;
+    frames.forEach((frame) => applySoftwareTheme(frame));
+  }
+
+  function changeThemeValue(key, value) {
+    theme[key] = value;
+    saveTheme();
+    applyTheme();
+  }
+
+  function createCard(app, index) {
+    const card = document.createElement("article");
+    card.className = "phone-card";
+    card.innerHTML = `
+      <button class="running-preview" type="button" hidden aria-label="${app.name} の縮小画面を再開する"></button>
+      <button class="running-close" type="button" hidden aria-label="${app.name} を閉じる">×</button>
+      <button class="launch-btn" type="button">
+        <span class="launch-title">${app.name}</span>
+      </button>
+    `;
+    card.querySelector(".launch-btn").addEventListener("click", () => openSoftware(app));
+    card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app));
+    card.querySelector(".running-close").addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeSoftwareApp(app);
+    });
+    cards.set(app.file, card);
+    return card;
+  }
+
+  function setCardRunning(app, isRunning) {
+    const card = cards.get(app.file);
+    if (!card) return;
+    card.classList.toggle("running", isRunning);
+    card.querySelector(".running-preview").hidden = !isRunning;
+    card.querySelector(".running-close").hidden = !isRunning;
+  }
+
+  function closeSoftwareApp(app) {
+    const frame = frames.get(app.file);
+    if (frame) frame.remove();
+    frames.delete(app.file);
+    savedZoom.delete(app.file);
+    setCardRunning(app, false);
+    cards.get(app.file).classList.remove("active");
+    if (activeApp && activeApp.file === app.file) {
+      activeApp = null;
+      currentZoom = 100;
+      launcher.hidden = false;
+      currentApp.textContent = "--";
+      currentApp.setAttribute("aria-label", "ソフト未起動");
+    }
+  }
+
+  function showLauncher(shouldCloseSoftware) {
+    launcher.hidden = false;
+    if (shouldCloseSoftware && activeApp) {
+      const appToClose = activeApp;
+      closeSoftwareApp(appToClose);
+    } else if (activeApp) {
+      minimizeSoftware(activeApp);
+    }
+    currentApp.textContent = "--";
+    currentApp.setAttribute("aria-label", "ソフト未起動");
+    closeZoomMenu();
+  }
+
+  function createFrame(app) {
+    const frame = document.createElement("iframe");
+    frame.className = "software-frame";
+    frame.title = app.name;
+    frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3";
+    frame.addEventListener("load", () => {
+      applySoftwareTheme(frame);
+      applyZoom(frame);
+    });
+    frameLayer.appendChild(frame);
+    frames.set(app.file, frame);
+    return frame;
+  }
+
+  function minimizeSoftware(app) {
+    const frame = frames.get(app.file);
+    const card = cards.get(app.file);
+    if (!frame || !card) return;
+    setCardRunning(app, true);
+    const workspace = document.querySelector(".workspace").getBoundingClientRect();
+    const preview = card.querySelector(".running-preview").getBoundingClientRect();
+    const fullWidth = workspace.width;
+    const fullHeight = workspace.height;
+    frame.style.left = preview.left - workspace.left + "px";
+    frame.style.top = preview.top - workspace.top + "px";
+    frame.style.setProperty("--preview-width", fullWidth + "px");
+    frame.style.setProperty("--preview-height", fullHeight + "px");
+    frame.style.setProperty("--preview-scale", Math.min(preview.width / fullWidth, preview.height / fullHeight));
+    frame.classList.remove("active");
+    frame.style.visibility = "visible";
+    card.classList.remove("active");
+    activeApp = null;
+  }
+
+  function openSoftware(app) {
+    if (activeApp && activeApp.file !== app.file) minimizeSoftware(activeApp);
+    activeApp = app;
+    currentZoom = savedZoom.get(app.file) || 100;
+    const frame = frames.get(app.file) || createFrame(app);
+    frame.style.removeProperty("left");
+    frame.style.removeProperty("top");
+    frame.style.removeProperty("visibility");
+    frame.classList.add("active");
+    cards.get(app.file).classList.add("active");
+    applyZoom(frame);
+    setCardRunning(app, true);
+    currentApp.textContent = currentZoom + "%";
+    currentApp.setAttribute("aria-label", app.name + " の現在倍率 " + currentZoom + "%");
+    launcher.hidden = true;
+    closeZoomMenu();
+  }
+
+  function applyZoom(frame) {
+    const documentInFrame = frame.contentDocument;
+    if (!documentInFrame) return;
+    documentInFrame.documentElement.style.zoom = String(currentZoom / 100);
+  }
+
+  function applySoftwareTheme(frame) {
+    const documentInFrame = frame.contentDocument;
+    if (!documentInFrame) return;
+
+    const style = documentInFrame.getElementById("ueno-v23-theme") || documentInFrame.createElement("style");
+    style.id = "ueno-v23-theme";
+    style.textContent = `
+      *, *::before, *::after {
+        color: ${theme.softwareText} !important;
+        background-color: ${theme.softwareBg} !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      html, body, header, main, section, nav, article, aside, table, th, td,
+      button, input, select, textarea, dialog, [role="button"] {
+        background: ${theme.softwareBg} !important;
+        color: ${theme.softwareText} !important;
+      }
+      svg, svg * {
+        fill: ${theme.softwareBg} !important;
+        stroke: ${theme.softwareBorder} !important;
+      }
+      .card, .prop-card, .staff-item, .history-item, .hist-item,
+      .day-save-single, .past-data-banner, .save-order-banner,
+      .continue-panel, .section-title, #saveDialogBox, #filterPopup,
+      #youbiPopup, #hist-panel, .check-section, .modal,
+      input[type="date"], input[type="text"], input[type="number"],
+      input[type="email"], select, textarea {
+        border: 2px solid ${theme.softwareBorder} !important;
+        border-radius: 10px !important;
+      }
+      .prop-card-body {
+        border-top: 2px solid ${theme.softwareBorder} !important;
+      }
+      button, input[type="button"], input[type="submit"], input[type="reset"],
+      [role="button"], .btn, .toolbar-btn, .tb-btn, .nav-tab {
+        background: ${theme.softwareButtonBg} !important;
+        color: ${theme.softwareButtonText} !important;
+        border: 2px solid ${theme.softwareButtonBorder} !important;
+        border-radius: 10px !important;
+        opacity: ${theme.softwareButtonOpacity / 100} !important;
+      }
+    `;
+    if (!style.parentNode) documentInFrame.head.appendChild(style);
+  }
+
+  applyTheme();
+  software.forEach((app, index) => grid.appendChild(createCard(app, index)));
+
+  function renderZoomMenu() {
+    zoomMenu.innerHTML = "";
+    zoomLevels.forEach((level) => {
+      const button = document.createElement("button");
+      button.className = "zoom-option" + (level === currentZoom ? " selected" : "");
+      button.type = "button";
+      button.textContent = level + "%";
+      button.addEventListener("click", () => {
+        if (!activeApp) return;
+        currentZoom = level;
+        savedZoom.set(activeApp.file, level);
+        applyZoom(frames.get(activeApp.file));
+        currentApp.textContent = level + "%";
+        currentApp.setAttribute("aria-label", activeApp.name + " の現在倍率 " + level + "%");
+        closeZoomMenu();
+      });
+      zoomMenu.appendChild(button);
+    });
+  }
+
+  function closeZoomMenu() {
+    zoomMenu.hidden = true;
+    expandBtn.setAttribute("aria-expanded", "false");
+  }
+
+  themeToggle.addEventListener("click", () => {
+    themePanel.hidden = !themePanel.hidden;
+    themeToggle.setAttribute("aria-expanded", String(!themePanel.hidden));
+  });
+  document.querySelectorAll("[data-theme]").forEach((input) => {
+    input.addEventListener("input", () => changeThemeValue(input.dataset.theme, input.value));
+  });
+  softwareOpacity.addEventListener("input", () => changeThemeValue("softwareOpacity", Number(softwareOpacity.value)));
+  buttonOpacity.addEventListener("input", () => changeThemeValue("buttonOpacity", Number(buttonOpacity.value)));
+  softwareButtonOpacity.addEventListener("input", () => changeThemeValue("softwareButtonOpacity", Number(softwareButtonOpacity.value)));
+  document.getElementById("themeReset").addEventListener("click", () => {
+    theme = { ...defaultTheme };
+    saveTheme();
+    applyTheme();
+  });
+
+  document.getElementById("closeBtn").addEventListener("click", () => showLauncher(true));
+  document.getElementById("homeBtn").addEventListener("click", () => showLauncher(false));
+  expandBtn.addEventListener("click", () => {
+    if (!activeApp) return;
+    const open = zoomMenu.hidden;
+    if (!open) {
+      closeZoomMenu();
+      return;
+    }
+    renderZoomMenu();
+    zoomMenu.hidden = false;
+    expandBtn.setAttribute("aria-expanded", "true");
+  });
+</script>
+</body>
+</html>

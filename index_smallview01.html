@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>上野清掃2.2 Small View</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --smallview-bg: #edf3f8;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: var(--smallview-bg);
+    color: #172033;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { overflow: hidden; }
+  .app-shell {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--smallview-bg);
+  }
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: linear-gradient(180deg, #ffffff, #eef5fc);
+    border-bottom: 1px solid #cfd8e3;
+    box-shadow: 0 2px 8px rgba(15, 74, 128, 0.10);
+    z-index: 20;
+  }
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #0f4a80;
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .view-btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+    border: 1px solid #b8cce4;
+    border-radius: 10px;
+    background: #fff;
+    color: #31506f;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 8px 12px;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .view-btn.primary {
+    background: #1a6eb5;
+    border-color: #0f4a80;
+    color: #fff;
+  }
+  .tool-panel {
+    flex: 0 0 auto;
+    background: #e8f0fb;
+    border-bottom: 1px solid #b5cef5;
+    z-index: 19;
+  }
+  .tool-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    max-height: 300px;
+    padding: 8px 10px;
+    scrollbar-width: none;
+    transition: max-height 0.22s ease, padding 0.22s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tool-panel.collapsed .tool-inner {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  .tool-inner::-webkit-scrollbar { display: none; }
+  .tool-btn,
+  .tool-select,
+  .color-picker {
+    flex: 0 0 auto;
+    min-height: 36px;
+    border: 1px solid #b8cce4;
+    border-radius: 10px;
+    background: #fff;
+    color: #31506f;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  .tool-btn { cursor: pointer; }
+  .color-picker {
+    width: 44px;
+    min-width: 44px;
+    padding: 3px;
+    cursor: pointer;
+  }
+  .color-presets {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .color-swatch {
+    width: 30px;
+    height: 30px;
+    border: 2px solid rgba(49, 80, 111, 0.30);
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.75), 0 1px 3px rgba(15, 74, 128, 0.15);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .color-swatch.active {
+    border-color: #0f4a80;
+    box-shadow: 0 0 0 2px rgba(26, 110, 181, 0.20);
+  }
+  .effect-tools {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding-left: 4px;
+  }
+  .effect-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid #b8cce4;
+    border-radius: 10px;
+    background: #fff;
+    color: #31506f;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .effect-check input {
+    width: 15px;
+    height: 15px;
+    accent-color: #1a6eb5;
+  }
+  .effect-range {
+    width: 82px;
+    accent-color: #1a6eb5;
+  }
+  .effect-color {
+    width: 34px;
+    min-width: 34px;
+    min-height: 36px;
+    padding: 3px;
+    border: 1px solid #b8cce4;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .tool-btn.register {
+    background: #1a6eb5;
+    border-color: #0f4a80;
+    color: #fff;
+  }
+  .tool-btn.delete {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+  }
+  .tool-sep {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: #4a6fa5;
+    white-space: nowrap;
+    padding: 0 4px;
+    align-self: center;
+  }
+  .tool-toggle {
+    width: 100%;
+    border: none;
+    border-top: 1px solid #b5cef5;
+    background: #d4e5f9;
+    color: #4a6fa5;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    background: var(--smallview-bg);
+  }
+  .window-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .window-card {
+    min-height: 260px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #c5d5e7;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(15, 74, 128, 0.15);
+    transition: inset 0.18s ease, width 0.18s ease, height 0.18s ease, border-radius 0.18s ease;
+  }
+  .window-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55);
+  }
+  .window-title {
+    display: none;
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    z-index: 3;
+    max-width: calc(100% - 20px);
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #0f4a80;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .window-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+  }
+  .window-grid.overview .window-frame {
+    pointer-events: none;
+  }
+  .window-grid.overview .window-card {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .window-grid.focus {
+    display: block;
+    overflow: hidden;
+    padding: 0;
+  }
+  .window-grid.focus .window-card {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .window-grid.focus .window-card.active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+  }
+  .window-grid.focus .window-card.active .window-frame {
+    pointer-events: auto;
+  }
+  .window-grid.focus .window-title {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .window-grid {
+      gap: 10px;
+      padding: 10px;
+    }
+    .window-card {
+      min-height: 225px;
+      border-radius: 10px;
+    }
+    .brand {
+      font-size: 13px;
+    }
+    .view-btn {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+  }
+  @media (max-width: 430px) {
+    .window-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 8px;
+    }
+    .window-card {
+      min-height: 205px;
+    }
+    .window-title {
+      left: 7px;
+      top: 7px;
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+  }
+
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">上野清掃2.2</div>
+    <button class="view-btn primary" type="button" id="overviewBtn">縮小表示</button>
+  </header>
+  <section class="tool-panel collapsed" id="toolPanel">
+    <div class="tool-inner">
+      <span class="tool-sep">下地色</span>
+      <input class="color-picker" type="color" id="bgColorPicker" value="#edf3f8" title="背景色（下地）">
+      <div class="color-presets" id="bgColorPresets" aria-label="背景色候補"></div>
+      <span class="tool-sep">─</span>
+      <button class="tool-btn" type="button" id="gdriveBtn">GDrive</button>
+      <button class="tool-btn" type="button" id="addEditorBtn">Editorを追加</button>
+      <select class="tool-select" id="githubFileSelect" title="GitHubのHTMLを選択">
+        <option value="">GitHubからHTMLを追加</option>
+      </select>
+      <button class="tool-btn register" type="button" id="registerWindowBtn">登録</button>
+      <select class="tool-select" id="deleteWindowSelect" title="削除する追加Windowを選択">
+        <option value="">削除するWindowを選択</option>
+      </select>
+      <button class="tool-btn delete" type="button" id="deleteWindowBtn">削除</button>
+      <label class="effect-check"><input type="checkbox" id="softBorderEnable">枠線<input class="effect-color" type="color" id="softBorderColor" value="#1a6eb5"></label>
+      <label class="effect-check"><input type="checkbox" id="softFrameBgEnable">枠背景<input class="effect-color" type="color" id="softFrameBgColor" value="#ffffff"></label>
+      <label class="effect-check"><input type="checkbox" id="softTitleBarEnable">TitleBar<input class="effect-color" type="color" id="softTitleBarColor" value="#1a6eb5"></label>
+      <label class="effect-check"><input type="checkbox" id="softSubtitleEnable">SubTitle<input class="effect-color" type="color" id="softSubtitleColor" value="#e8f0fb"></label>
+      <label class="effect-check"><input type="checkbox" id="softTitleTextEnable">Title文字<input class="effect-color" type="color" id="softTitleTextColor" value="#ffffff"></label>
+      <div class="effect-tools" aria-label="Shadow設定">
+        <label class="effect-check"><input type="checkbox" id="fxShadowEnable">Shadow</label>
+        <select class="tool-select" id="fxShadowPreset" title="影の形">
+          <option value="float">浮き上がり</option>
+          <option value="bottom">下方向</option>
+          <option value="right">右下</option>
+          <option value="glow">グロー</option>
+          <option value="outline">縁取り</option>
+          <option value="3d">3D</option>
+        </select>
+        <input class="effect-range" type="range" id="fxShadowBlur" min="0" max="30" value="6" title="ぼかし">
+        <input class="effect-range" type="range" id="fxShadowOffset" min="0" max="15" value="2" title="距離">
+        <input class="effect-color" type="color" id="fxShadowColor" value="#000000" title="影の色">
+        <label class="effect-check"><input type="checkbox" id="fxGradientEnable">文字背景</label>
+        <label class="effect-check"><input type="checkbox" id="fxBgEnable">背景透過</label>
+        <input class="effect-range" type="range" id="fxBgOpacity" min="0" max="100" value="82" title="背景透明度">
+        <button class="tool-btn" type="button" id="fxResetBtn">解除</button>
+      </div>
+      <span class="tool-sep">─ v2.2カラー ─</span>
+      <label class="effect-check">背景<input class="effect-color" type="color" id="v22BgColor" value="#ffffff" title="v2.2 背景色"></label>
+      <label class="effect-check">框線<input class="effect-color" type="color" id="v22BorderColor" value="#000000" title="v2.2 框線色"></label>
+      <label class="effect-check">文字<input class="effect-color" type="color" id="v22TextColor" value="#000000" title="v2.2 文字色"></label>
+      <button class="tool-btn" type="button" id="v22ResetBtn">v2.2解除</button>
+      <span class="tool-sep">─ ナビ・ヘッダー ─</span>
+      <label class="effect-check">ナビ背景<input class="effect-color" type="color" id="navBgColor" value="#ffffff"></label>
+      <label class="effect-check">ナビ文字<input class="effect-color" type="color" id="navTextColor" value="#000000"></label>
+      <button class="tool-btn" type="button" id="navColorResetBtn">ナビ解除</button>
+      <label class="effect-check">タップ背景<input class="effect-color" type="color" id="tapBgColor" value="#dddddd"></label>
+      <label class="effect-check">タップ文字<input class="effect-color" type="color" id="tapTextColor" value="#000000"></label>
+    </div>
+    <button class="tool-toggle" type="button" id="toolToggle">▼ 開く</button>
+  </section>
+  <main class="workspace">
+    <div class="window-grid overview" id="windowGrid"></div>
+  </main>
+</div>
+
+<script>
+const DEFAULT_APPS = [
+  { key: 'bukken', title: '物件表', href: 'index_2-3_bukken.html' },
+  { key: 'colview', title: '列選択', href: 'index_2-4_colview.html' },
+  { key: 'keiryou', title: '計量', href: 'index_3-16.html' },
+  { key: 'memo', title: 'メモ', href: 'index_5-1.html' },
+  { key: 'excel', title: 'Excelビューア', href: 'index_2-3_excel.html' },
+  { key: 'htmlviewer', title: 'カレンダー', href: 'index_3-3_htmlviewer.html' }
+];
+const GITHUB_FILES = [
+  { title: '計量', href: 'index_3-16.html' },
+  { title: '計量 3-15', href: 'index_3-15.html' },
+  { title: '物件表', href: 'index_2-3_bukken.html' },
+  { title: '列選択', href: 'index_2-4_colview.html' },
+  { title: 'メモ', href: 'index_5-1.html' },
+  { title: 'Excelビューア', href: 'index_2-3_excel.html' },
+  { title: 'カレンダービューア', href: 'index_3-3_htmlviewer.html' },
+  { title: 'カレンダー編集', href: 'index_2-2_gcal.html' },
+  { title: 'カレンダー', href: 'calendar_2026.html' }
+];
+const GITHUB_HTML_API = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+const APP_VERSION = '20260521-smallview01';
+const LOAD_DELAY_MS = 650;
+const STORAGE_KEY = 'ueno21_smallview_custom_windows';
+const BG_COLOR_KEY = 'ueno21_smallview_bg_color';
+const EFFECT_KEY = 'ueno21_smallview_effect_settings';
+const DEFAULT_BG_COLOR = '#edf3f8';
+const BG_COLOR_PRESETS = ['#edf3f8', '#f3f7ef', '#fff4df', '#f6edf8', '#eef7f8', '#f5f5f5'];
+
+const windowGrid = document.getElementById('windowGrid');
+const overviewBtn = document.getElementById('overviewBtn');
+const toolPanel = document.getElementById('toolPanel');
+const toolToggle = document.getElementById('toolToggle');
+const gdriveBtn = document.getElementById('gdriveBtn');
+const addEditorBtn = document.getElementById('addEditorBtn');
+const githubFileSelect = document.getElementById('githubFileSelect');
+const registerWindowBtn = document.getElementById('registerWindowBtn');
+const deleteWindowSelect = document.getElementById('deleteWindowSelect');
+const deleteWindowBtn = document.getElementById('deleteWindowBtn');
+const bgColorPicker = document.getElementById('bgColorPicker');
+const bgColorPresets = document.getElementById('bgColorPresets');
+const softBorderEnable = document.getElementById('softBorderEnable');
+const softBorderColor = document.getElementById('softBorderColor');
+const softFrameBgEnable = document.getElementById('softFrameBgEnable');
+const softFrameBgColor = document.getElementById('softFrameBgColor');
+const softTitleBarEnable = document.getElementById('softTitleBarEnable');
+const softTitleBarColor = document.getElementById('softTitleBarColor');
+const softSubtitleEnable = document.getElementById('softSubtitleEnable');
+const softSubtitleColor = document.getElementById('softSubtitleColor');
+const softTitleTextEnable = document.getElementById('softTitleTextEnable');
+const softTitleTextColor = document.getElementById('softTitleTextColor');
+const fxShadowEnable = document.getElementById('fxShadowEnable');
+const fxShadowPreset = document.getElementById('fxShadowPreset');
+const fxShadowBlur = document.getElementById('fxShadowBlur');
+const fxShadowOffset = document.getElementById('fxShadowOffset');
+const fxShadowColor = document.getElementById('fxShadowColor');
+const fxGradientEnable = document.getElementById('fxGradientEnable');
+const fxBgEnable = document.getElementById('fxBgEnable');
+const fxBgOpacity = document.getElementById('fxBgOpacity');
+const fxResetBtn = document.getElementById('fxResetBtn');
+
+const cards = new Map();
+let APPS = [...DEFAULT_APPS, ...loadCustomWindows()];
+let activeKey = '';
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {}
+}
+
+function safeStorageGet(key, fallback) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function loadCustomWindows() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveCustomWindows() {
+  const customWindows = APPS.filter((app) => app.custom && app.persist);
+  safeStorageSet(STORAGE_KEY, JSON.stringify(customWindows));
+}
+
+function withEmbeddedParam(href) {
+  return href + (href.includes('?') ? '&' : '?') + 'embedded=1&v=' + encodeURIComponent(APP_VERSION);
+}
+
+function makeWindowKey() {
+  return `custom_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+}
+
+function makeUnsavedTitle(baseTitle) {
+  const sameCount = APPS.filter((app) => app.custom && app.title.replace(/（未登録）$/, '') === baseTitle).length;
+  return `${baseTitle}${sameCount ? ` ${sameCount + 1}` : ''}（未登録）`;
+}
+
+function createWindow(app) {
+  if (cards.has(app.key)) return;
+  const card = document.createElement('section');
+  card.className = 'window-card';
+  card.dataset.key = app.key;
+  card.setAttribute('aria-label', app.title);
+
+  const title = document.createElement('div');
+  title.className = 'window-title';
+  title.textContent = app.title;
+
+  const frame = document.createElement('iframe');
+  frame.className = 'window-frame';
+  frame.title = app.title;
+  frame.dataset.src = withEmbeddedParam(app.href);
+  frame.addEventListener('load', () => {
+    if (frame.dataset.loadingStarted !== 'true') return;
+    card.classList.add('loaded');
+    attachFrameObserver(frame);
+    setTimeout(applyEffectsToAllWindows, 120);
+    setTimeout(applyEffectsToAllWindows, 900);
+    try {
+      const innerDoc = frame.contentDocument;
+      if (innerDoc) {
+        innerDoc.querySelectorAll('iframe').forEach((nested) => {
+          nested.addEventListener('load', () => {
+            setTimeout(applyEffectsToAllWindows, 120);
+          });
+        });
+      }
+    } catch (e) {}
+  });
+
+  card.appendChild(title);
+  card.appendChild(frame);
+  card.addEventListener('click', () => {
+    if (windowGrid.classList.contains('overview')) focusWindow(app.key);
+  });
+  card.addEventListener('touchstart', (event) => {
+    if (!windowGrid.classList.contains('overview')) return;
+    event.preventDefault();
+    focusWindow(app.key);
+  }, { passive: false });
+
+  windowGrid.appendChild(card);
+  cards.set(app.key, card);
+}
+
+function loadWindowFrame(app, index) {
+  const card = cards.get(app.key);
+  if (!card) return;
+  const frame = card.querySelector('.window-frame');
+  if (!frame || frame.src) return;
+  setTimeout(() => {
+    frame.dataset.loadingStarted = 'true';
+    frame.src = frame.dataset.src;
+  }, index * LOAD_DELAY_MS);
+}
+
+function startStaggeredLoad() {
+  APPS.forEach((app, index) => loadWindowFrame(app, index));
+}
+
+function renderWindows() {
+  APPS.forEach((app) => createWindow(app));
+  startStaggeredLoad();
+  refreshDeleteOptions();
+}
+
+function focusWindow(key) {
+  activeKey = key;
+  windowGrid.classList.remove('overview');
+  windowGrid.classList.add('focus');
+  cards.forEach((card, cardKey) => {
+    card.classList.toggle('active', cardKey === key);
+  });
+}
+
+function showOverview() {
+  activeKey = '';
+  windowGrid.classList.add('overview');
+  windowGrid.classList.remove('focus');
+  cards.forEach((card) => card.classList.remove('active'));
+}
+
+function setPanelOpen(open) {
+  toolPanel.classList.toggle('collapsed', !open);
+  toolToggle.textContent = open ? '▲ 閉じる' : '▼ 開く';
+}
+
+function applyBgColor(color) {
+  const safeColor = /^#[0-9a-f]{6}$/i.test(color) ? color : DEFAULT_BG_COLOR;
+  document.documentElement.style.setProperty('--smallview-bg', safeColor);
+  bgColorPicker.value = safeColor;
+  safeStorageSet(BG_COLOR_KEY, safeColor);
+  bgColorPresets.querySelectorAll('.color-swatch').forEach((button) => {
+    button.classList.toggle('active', button.dataset.color.toLowerCase() === safeColor.toLowerCase());
+  });
+}
+
+function buildColorPresets() {
+  bgColorPresets.innerHTML = '';
+  BG_COLOR_PRESETS.forEach((color) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'color-swatch';
+    button.dataset.color = color;
+    button.style.background = color;
+    button.title = color;
+    button.addEventListener('click', () => applyBgColor(color));
+    bgColorPresets.appendChild(button);
+  });
+}
+
+function hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16)
+  };
+}
+
+function generateTextShadow(preset, blur, offset, color, alpha) {
+  const { r, g, b } = hexToRgb(color);
+  const a = alpha / 100;
+  const rgba = (mult = 1) => `rgba(${r},${g},${b},${a * mult})`;
+  switch (preset) {
+    case 'bottom':
+      return `${Math.round(offset / 2)}px ${offset}px ${blur}px ${rgba()}`;
+    case 'right':
+      return `${offset}px ${offset}px ${blur}px ${rgba()}`;
+    case 'glow':
+      return [`0 0 ${blur}px ${rgba()}`, `0 0 ${blur * 2}px ${rgba(0.6)}`, `0 0 ${blur * 3}px ${rgba(0.3)}`].join(', ');
+    case 'outline':
+      return [`${offset}px 0 0 ${rgba()}`, `-${offset}px 0 0 ${rgba()}`, `0 ${offset}px 0 ${rgba()}`, `0 -${offset}px 0 ${rgba()}`].join(', ');
+    case '3d': {
+      const shadows = [];
+      const depth = Math.max(3, offset);
+      for (let i = 1; i <= depth; i++) shadows.push(`${i}px ${i}px 0 ${rgba(0.9 - (i / depth) * 0.3)}`);
+      shadows.push(`${depth + 2}px ${depth + 2}px ${blur}px ${rgba(0.5)}`);
+      return shadows.join(', ');
+    }
+    case 'float':
+    default:
+      return [`${offset}px ${offset}px ${blur}px ${rgba()}`, `-${offset}px ${offset}px ${blur}px ${rgba(0.6)}`, `0 ${offset * 1.5}px ${blur * 1.5}px ${rgba(0.8)}`].join(', ');
+  }
+}
+
+function getEffectSettings() {
+  return {
+    softBorderEnable: softBorderEnable.checked,
+    softBorderColor: softBorderColor.value,
+    softFrameBgEnable: softFrameBgEnable.checked,
+    softFrameBgColor: softFrameBgColor.value,
+    softTitleBarEnable: softTitleBarEnable.checked,
+    softTitleBarColor: softTitleBarColor.value,
+    softSubtitleEnable: softSubtitleEnable.checked,
+    softSubtitleColor: softSubtitleColor.value,
+    softTitleTextEnable: softTitleTextEnable.checked,
+    softTitleTextColor: softTitleTextColor.value,
+    shadowEnable: fxShadowEnable.checked,
+    shadowPreset: fxShadowPreset.value,
+    shadowBlur: fxShadowBlur.value,
+    shadowOffset: fxShadowOffset.value,
+    shadowColor: fxShadowColor.value,
+    gradientEnable: fxGradientEnable.checked,
+    bgEnable: fxBgEnable.checked,
+    bgOpacity: fxBgOpacity.value
+  };
+}
+
+function saveEffectSettings() {
+  safeStorageSet(EFFECT_KEY, JSON.stringify(getEffectSettings()));
+}
+
+function loadEffectSettings() {
+  let settings = {};
+  try {
+    settings = JSON.parse(localStorage.getItem(EFFECT_KEY) || '{}');
+  } catch (error) {
+    settings = {};
+  }
+  softBorderEnable.checked = !!settings.softBorderEnable;
+  if (settings.softBorderColor) softBorderColor.value = settings.softBorderColor;
+  softFrameBgEnable.checked = !!settings.softFrameBgEnable;
+  if (settings.softFrameBgColor) softFrameBgColor.value = settings.softFrameBgColor;
+  softTitleBarEnable.checked = !!settings.softTitleBarEnable;
+  if (settings.softTitleBarColor) softTitleBarColor.value = settings.softTitleBarColor;
+  softSubtitleEnable.checked = !!settings.softSubtitleEnable;
+  if (settings.softSubtitleColor) softSubtitleColor.value = settings.softSubtitleColor;
+  softTitleTextEnable.checked = !!settings.softTitleTextEnable;
+  if (settings.softTitleTextColor) softTitleTextColor.value = settings.softTitleTextColor;
+  fxShadowEnable.checked = !!settings.shadowEnable;
+  if (settings.shadowPreset) fxShadowPreset.value = settings.shadowPreset;
+  if (settings.shadowBlur !== undefined) fxShadowBlur.value = settings.shadowBlur;
+  if (settings.shadowOffset !== undefined) fxShadowOffset.value = settings.shadowOffset;
+  if (settings.shadowColor) fxShadowColor.value = settings.shadowColor;
+  fxGradientEnable.checked = !!settings.gradientEnable;
+  fxBgEnable.checked = !!settings.bgEnable;
+  if (settings.bgOpacity !== undefined) fxBgOpacity.value = settings.bgOpacity;
+}
+
+function resetEffectsInDocument(doc) {
+  if (!doc) return;
+  doc.querySelectorAll('[data-ueno-soft-color]').forEach((el) => {
+    el.style.removeProperty('background-color');
+    el.style.removeProperty('background');
+    el.style.removeProperty('border-color');
+    el.style.removeProperty('color');
+    delete el.dataset.uenoSoftColor;
+  });
+  doc.querySelectorAll('[data-ueno-bg-opacity]').forEach((el) => {
+    el.style.removeProperty('background-color');
+    delete el.dataset.uenoBgOpacity;
+  });
+  doc.querySelectorAll('[data-ueno-text-shadow]').forEach((el) => {
+    el.style.removeProperty('text-shadow');
+    delete el.dataset.uenoTextShadow;
+  });
+  doc.querySelectorAll('[data-ueno-text-gradient]').forEach((el) => {
+    el.style.removeProperty('background-image');
+    el.style.removeProperty('padding');
+    el.style.removeProperty('border-radius');
+    if (el.dataset.uenoGradientDisplay) {
+      el.style.removeProperty('display');
+      delete el.dataset.uenoGradientDisplay;
+    }
+    delete el.dataset.uenoTextGradient;
+  });
+}
+
+function applySoftColorsToDocument(doc, settings) {
+  if (!doc || !doc.body) return;
+
+  if (settings.softFrameBgEnable) {
+    doc.querySelectorAll('body, main, .workspace, #tableWrapper, #emptyMsg, #dataTable, #dataTable tbody tr, #dataTable tbody td, #filterPopup, #saveDialogBox, #hist-panel, .container, .content, .panel, .card, .screen, .selector, .prop-card, .history-item, .hist-item').forEach((el) => {
+      el.style.setProperty('background-color', settings.softFrameBgColor, 'important');
+      el.style.setProperty('background', settings.softFrameBgColor, 'important');
+      el.dataset.uenoSoftColor = 'true';
+    });
+  }
+
+  if (settings.softBorderEnable) {
+    doc.querySelectorAll('table, th, td, button, input, select, textarea, label.file-label, .file-label, #dataTable th, #dataTable td, #colPanel, .col-lbl, #filterPopup, #saveDialogBox, #gitFileSelector, #sheetSelector, #searchInput, #toolbar-toggle, #hist-panel, .toolbar-btn, .tb-btn, .card, .panel, .section, #toolbar, .toolbar, .selector, .prop-card, .history-item, .hist-item, .property-header, .file-tag').forEach((el) => {
+      el.style.setProperty('border-color', settings.softBorderColor, 'important');
+      el.dataset.uenoSoftColor = 'true';
+    });
+  }
+
+  if (settings.softTitleBarEnable) {
+    doc.querySelectorAll('#app-header, #hist-panel-hdr, #hist-save-btn, #dataTable thead th, #filterApplyBtn, .col-lbl.on, a.keiryou-link-cell, .app-header, .header, header, .topbar, .page-header, .main-header, .titlebar, .property-header, .cal-title, .month-title').forEach((el) => {
+      el.style.setProperty('background-color', settings.softTitleBarColor, 'important');
+      el.style.setProperty('background', settings.softTitleBarColor, 'important');
+      el.dataset.uenoSoftColor = 'true';
+    });
+  }
+
+  if (settings.softSubtitleEnable) {
+    doc.querySelectorAll('#toolbar, #toolbar-inner, #toolbar-toggle, #colPanel, label.file-label, .file-label, .tb-btn, .fp-row button, #sdlgSaveAs, .hist-item, .toolbar, .toolbar-inner, .nav-tabs, .nav-tab, .tabbar, .tab-add-panel, nav, .subbar, .sub-header, .header-top, .section-title, .sub, .section-sub, .file-header-note, .file-tag, .property-no, .count-badge').forEach((el) => {
+      el.style.setProperty('background-color', settings.softSubtitleColor, 'important');
+      el.style.setProperty('background', settings.softSubtitleColor, 'important');
+      el.dataset.uenoSoftColor = 'true';
+    });
+  }
+
+  if (settings.softTitleTextEnable) {
+    doc.querySelectorAll('#app-header, #app-header *, #dataTable thead th, #hist-panel-hdr, #hist-panel-hdr *, #filterApplyBtn, label.file-label, .file-label, a.keiryou-link-cell, .col-lbl.on, .app-header, .app-header *, .header, .header *, header, header *, .topbar, .topbar *, h1, .title, .page-title, .header-title, .section-title, .property-name').forEach((el) => {
+      el.style.setProperty('color', settings.softTitleTextColor, 'important');
+      el.dataset.uenoSoftColor = 'true';
+    });
+  }
+}
+
+function attachFrameObserver(frame) {
+  try {
+    if (frame._uenoEffectObserver) {
+      frame._uenoEffectObserver.disconnect();
+      frame._uenoEffectObserver = null;
+    }
+    const doc = frame.contentDocument;
+    if (!doc || !doc.body) return;
+    const Observer = (doc.defaultView && doc.defaultView.MutationObserver) || MutationObserver;
+    let timer = null;
+    frame._uenoEffectObserver = new Observer(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => applyEffectsToDocument(doc, getEffectSettings()), 120);
+    });
+    frame._uenoEffectObserver.observe(doc.body, { childList: true, subtree: true });
+  } catch (error) {}
+}
+
+function applySoftColorsToHost(settings) {
+  cards.forEach((card) => {
+    card.style.removeProperty('border-color');
+    card.style.removeProperty('background-color');
+    if (settings.softBorderEnable) {
+      card.style.setProperty('border-color', settings.softBorderColor, 'important');
+    }
+    if (settings.softFrameBgEnable) {
+      card.style.setProperty('background-color', settings.softFrameBgColor, 'important');
+    }
+  });
+}
+
+function applyEffectsToDocument(doc, settings) {
+  if (!doc || !doc.body) return;
+  resetEffectsInDocument(doc);
+
+  applySoftColorsToDocument(doc, settings);
+
+  if (settings.bgEnable) {
+    const opacity = parseInt(settings.bgOpacity, 10) / 100;
+    doc.querySelectorAll('*').forEach((el) => {
+      const style = doc.defaultView.getComputedStyle(el);
+      const bg = style.backgroundColor;
+      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return;
+      const rgb = bg.match(/\d+/g);
+      if (!rgb || rgb.length < 3) return;
+      el.style.setProperty('background-color', `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${opacity})`, 'important');
+      el.dataset.uenoBgOpacity = 'true';
+    });
+  }
+
+  if (settings.shadowEnable) {
+    const shadow = generateTextShadow(
+      settings.shadowPreset || 'float',
+      parseInt(settings.shadowBlur, 10) || 6,
+      parseInt(settings.shadowOffset, 10) || 2,
+      settings.shadowColor || '#000000',
+      55
+    );
+    doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, li, td, th, div, label, button').forEach((el) => {
+      const hasText = Array.from(el.childNodes).some((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      if (!hasText) return;
+      el.style.setProperty('text-shadow', shadow, 'important');
+      el.dataset.uenoTextShadow = 'true';
+    });
+  }
+
+  if (settings.gradientEnable) {
+    const gradient = 'linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.20) 36%, rgba(0,0,0,0.22) 100%)';
+    doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, a, li, td, th, label, button').forEach((el) => {
+      const hasText = Array.from(el.childNodes).some((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      if (!hasText) return;
+      el.style.setProperty('background-image', gradient, 'important');
+      el.style.setProperty('padding', '3px', 'important');
+      el.style.setProperty('border-radius', '0', 'important');
+      if (doc.defaultView.getComputedStyle(el).display === 'inline') {
+        el.style.setProperty('display', 'inline-block', 'important');
+        el.dataset.uenoGradientDisplay = 'true';
+      }
+      el.dataset.uenoTextGradient = 'true';
+    });
+  }
+}
+
+function forEachWindowDocument(callback) {
+  cards.forEach((card) => {
+    const frame = card.querySelector('.window-frame');
+    try {
+      if (frame && frame.contentDocument) {
+        callback(frame.contentDocument);
+        frame.contentDocument.querySelectorAll('iframe').forEach((nested) => {
+          try {
+            if (nested.contentDocument) callback(nested.contentDocument);
+          } catch (e) {}
+        });
+      }
+    } catch (error) {}
+  });
+}
+
+function applyEffectsToAllWindows() {
+  const settings = getEffectSettings();
+  saveEffectSettings();
+  applySoftColorsToHost(settings);
+  forEachWindowDocument((doc) => applyEffectsToDocument(doc, settings));
+}
+
+function resetEffectsAllWindows() {
+  softBorderEnable.checked = false;
+  softFrameBgEnable.checked = false;
+  softTitleBarEnable.checked = false;
+  softSubtitleEnable.checked = false;
+  softTitleTextEnable.checked = false;
+  fxShadowEnable.checked = false;
+  fxGradientEnable.checked = false;
+  fxBgEnable.checked = false;
+  saveEffectSettings();
+  applySoftColorsToHost(getEffectSettings());
+  forEachWindowDocument(resetEffectsInDocument);
+}
+
+function fillGithubFiles() {
+  setGithubOptions(GITHUB_FILES);
+  githubFileSelect.querySelector('option').textContent = 'GitHub HTML読込中...';
+  fetch(GITHUB_HTML_API + '?t=' + Date.now())
+    .then((response) => {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .then((files) => {
+      const htmlFiles = files
+        .filter((file) => file.type === 'file' && /\.html?$/i.test(file.name))
+        .map((file) => ({
+          title: file.name.replace(/\.html?$/i, ''),
+          href: file.name
+        }))
+        .sort((a, b) => a.href.localeCompare(b.href, 'ja'));
+      setGithubOptions(htmlFiles.length ? htmlFiles : GITHUB_FILES);
+    })
+    .catch(() => {
+      setGithubOptions(GITHUB_FILES);
+    });
+}
+
+function setGithubOptions(files) {
+  githubFileSelect.innerHTML = '<option value="">GitHubからHTMLを追加</option>';
+  files.forEach((file) => {
+    const option = document.createElement('option');
+    option.value = file.href;
+    option.textContent = file.title;
+    option.dataset.title = file.title;
+    githubFileSelect.appendChild(option);
+  });
+}
+
+function refreshDeleteOptions() {
+  const current = deleteWindowSelect.value;
+  deleteWindowSelect.innerHTML = '<option value="">削除するWindowを選択</option>';
+  APPS.filter((app) => app.custom).forEach((app) => {
+    const option = document.createElement('option');
+    option.value = app.key;
+    option.textContent = app.title;
+    deleteWindowSelect.appendChild(option);
+  });
+  if (current && APPS.some((app) => app.key === current && app.custom)) {
+    deleteWindowSelect.value = current;
+  }
+}
+
+function addCustomWindow(title, href) {
+  const app = {
+    key: makeWindowKey(),
+    title: makeUnsavedTitle(title),
+    href,
+    custom: true,
+    persist: false
+  };
+  APPS.push(app);
+  createWindow(app);
+  loadWindowFrame(app, 0);
+  refreshDeleteOptions();
+  focusWindow(app.key);
+  return app;
+}
+
+function registerWindow() {
+  const app = APPS.find((item) => item.key === activeKey);
+  if (!app || !app.custom) {
+    alert('登録する追加Windowを全画面で開いてください。');
+    return;
+  }
+  app.persist = true;
+  app.title = app.title.replace(/（未登録）$/, '');
+  const card = cards.get(app.key);
+  if (card) {
+    const title = card.querySelector('.window-title');
+    if (title) title.textContent = app.title;
+  }
+  saveCustomWindows();
+  refreshDeleteOptions();
+}
+
+function deleteWindow() {
+  const targetKey = deleteWindowSelect.value || activeKey;
+  const app = APPS.find((item) => item.key === targetKey);
+  if (!app || !app.custom) {
+    alert('削除する追加Windowを選択してください。');
+    return;
+  }
+  if (!confirm(`「${app.title}」を削除しますか？`)) return;
+  const card = cards.get(app.key);
+  if (card) card.remove();
+  cards.delete(app.key);
+  APPS = APPS.filter((item) => item.key !== app.key);
+  saveCustomWindows();
+  deleteWindowSelect.value = '';
+  if (activeKey === app.key) showOverview();
+  refreshDeleteOptions();
+}
+
+overviewBtn.addEventListener('click', showOverview);
+gdriveBtn.addEventListener('click', () => {
+  window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener');
+});
+toolToggle.addEventListener('click', () => {
+  setPanelOpen(toolPanel.classList.contains('collapsed'));
+});
+addEditorBtn.addEventListener('click', () => {
+  addCustomWindow('Editor', 'index_2-3_bukken.html');
+  githubFileSelect.value = '';
+});
+githubFileSelect.addEventListener('change', () => {
+  if (!githubFileSelect.value) return;
+  const option = githubFileSelect.selectedOptions[0];
+  const title = option?.dataset.title || option?.textContent || githubFileSelect.value;
+  addCustomWindow(title, githubFileSelect.value);
+  githubFileSelect.value = '';
+});
+registerWindowBtn.addEventListener('click', registerWindow);
+deleteWindowBtn.addEventListener('click', deleteWindow);
+bgColorPicker.addEventListener('input', () => applyBgColor(bgColorPicker.value));
+[
+  softBorderEnable,
+  softBorderColor,
+  softFrameBgEnable,
+  softFrameBgColor,
+  softTitleBarEnable,
+  softTitleBarColor,
+  softSubtitleEnable,
+  softSubtitleColor,
+  softTitleTextEnable,
+  softTitleTextColor,
+  fxShadowEnable,
+  fxShadowPreset,
+  fxShadowBlur,
+  fxShadowOffset,
+  fxShadowColor,
+  fxGradientEnable,
+  fxBgEnable,
+  fxBgOpacity
+].forEach((control) => {
+  control.addEventListener('input', applyEffectsToAllWindows);
+  control.addEventListener('change', applyEffectsToAllWindows);
+});
+fxResetBtn.addEventListener('click', resetEffectsAllWindows);
+
+buildColorPresets();
+applyBgColor(safeStorageGet(BG_COLOR_KEY, DEFAULT_BG_COLOR));
+loadEffectSettings();
+fillGithubFiles();
+renderWindows();
+showOverview();
+setTimeout(applyEffectsToAllWindows, 500);
+setTimeout(applyEffectsToAllWindows, 1800);
+
+// v2.2 color override
+const V22_COLOR_KEY = 'ueno22_color_override';
+const v22BgColor = document.getElementById('v22BgColor');
+const v22BorderColor = document.getElementById('v22BorderColor');
+const v22TextColor = document.getElementById('v22TextColor');
+const v22ResetBtn = document.getElementById('v22ResetBtn');
+function getV22Colors() { return { bg: v22BgColor.value, border: v22BorderColor.value, text: v22TextColor.value }; }
+function saveV22Colors() { safeStorageSet(V22_COLOR_KEY, JSON.stringify(getV22Colors())); }
+function loadV22Colors() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(V22_COLOR_KEY) || '{}'); } catch(e) {}
+  if (s.bg) v22BgColor.value = s.bg;
+  if (s.border) v22BorderColor.value = s.border;
+  if (s.text) v22TextColor.value = s.text;
+}
+function applyV22ColorsToDocument(doc, c) {
+  if (!doc || !doc.body) return;
+  let el = doc.getElementById('ueno-v22-color-override');
+  if (!el) { el = doc.createElement('style'); el.id = 'ueno-v22-color-override'; (doc.head || doc.body).appendChild(el); }
+  el.textContent = `
+    body,html,main,section,header,nav,.screen,.panel,.card,.prop-card,.prop-card-body,
+    .container,.content,.header,#app-header,.topbar,.toolbar,#toolbar,
+    #toolbar-inner,#toolbar-toggle,.tool-panel,.staff-list,.staff-item,.day-save-single,
+    #colPanel,.col-lbl,#filterPopup,#saveDialogBox,#hist-panel,.history-item,.hist-item,
+    .section-title,.count-badge,.nav-tab,.nav-tabs,.past-data-banner,
+    #dataTable thead tr th,#dataTable thead tr th.col-ctrl,#dataTable thead th,#dataTable tbody tr,
+    .btn,.btn-primary,.btn-secondary,.btn-success,.btn-warning,.btn-danger,
+    .toolbar-btn,.tb-btn,.back-btn,.view-btn,.add-tab-btn {
+      background:${c.bg}!important;background-color:${c.bg}!important;background-image:none!important;
+    }
+    table,th,td,input,select,button,textarea,
+    .prop-card,.staff-item,#dataTable th,#dataTable td,
+    #filterPopup,#saveDialogBox,.col-lbl,header,.topbar,.toolbar,#toolbar,.tool-panel,
+    .history-item,.hist-item,.sheet-btn,.btn,.toolbar-btn,.tb-btn,.back-btn {
+      border:1px solid ${c.border}!important;border-color:${c.border}!important;
+    }
+    * { color:${c.text}!important; }
+    .date-cell { background:transparent!important; background-color:transparent!important; }
+    .date-num { background:transparent!important; background-color:transparent!important; border:1px solid!important; }
+  `;
+}
+function applyV22ColorsToAllWindows() { const c=getV22Colors(); saveV22Colors(); forEachWindowDocument((doc)=>applyV22ColorsToDocument(doc,c)); }
+function resetV22Colors() { v22BgColor.value='#ffffff'; v22BorderColor.value='#000000'; v22TextColor.value='#000000'; applyV22ColorsToAllWindows(); }
+const _origApplyEffects = applyEffectsToAllWindows;
+applyEffectsToAllWindows = function() { _origApplyEffects(); applyV22ColorsToAllWindows(); };
+[v22BgColor,v22BorderColor,v22TextColor].forEach((c)=>{ c.addEventListener('input',applyV22ColorsToAllWindows); c.addEventListener('change',applyV22ColorsToAllWindows); });
+v22ResetBtn.addEventListener('click', resetV22Colors);
+loadV22Colors();
+setTimeout(applyV22ColorsToAllWindows, 800);
+setTimeout(applyV22ColorsToAllWindows, 2200);
+
+// ナビ・ヘッダー カラー設定
+const NAV_COLOR_KEY = 'ueno22_nav_color';
+const navBgColor = document.getElementById('navBgColor');
+const navTextColor = document.getElementById('navTextColor');
+const navColorResetBtn = document.getElementById('navColorResetBtn');
+function getNavColors(){return{bg:navBgColor.value,text:navTextColor.value};}
+function saveNavColors(){safeStorageSet(NAV_COLOR_KEY,JSON.stringify(getNavColors()));}
+function loadNavColors(){
+  let s={};try{s=JSON.parse(localStorage.getItem(NAV_COLOR_KEY)||'{}');}catch(e){}
+  if(s.bg)navBgColor.value=s.bg;
+  if(s.text)navTextColor.value=s.text;
+}
+const tapBgColor = document.getElementById('tapBgColor');
+const tapTextColor = document.getElementById('tapTextColor');
+function getTapColors(){return{bg:tapBgColor.value,text:tapTextColor.value};}
+function applyNavColorsToDocument(doc,nc){
+  if(!doc||!doc.body)return;
+  const tc=getTapColors();
+  // 非アクティブ: ナビ背景
+  const selAll=['.header','.nav-tabs','#nav-tabs-bar','.header-top','.header-left',
+    '.header-title','.header-date','.back-btn','.count-badge'].join(',');
+  doc.querySelectorAll(selAll).forEach(el=>{
+    el.style.setProperty('background',nc.bg,'important');
+    el.style.setProperty('background-color',nc.bg,'important');
+    el.style.setProperty('background-image','none','important');
+    el.style.setProperty('color',nc.text,'important');
+  });
+  // 全nav-tab: まずナビ色で塗る
+  doc.querySelectorAll('.nav-tab').forEach(el=>{
+    el.style.setProperty('background',nc.bg,'important');
+    el.style.setProperty('background-color',nc.bg,'important');
+    el.style.setProperty('background-image','none','important');
+    el.style.setProperty('color',nc.text,'important');
+  });
+  // アクティブtab: タップ色で上書き
+  doc.querySelectorAll('.nav-tab.active').forEach(el=>{
+    el.style.setProperty('background',tc.bg,'important');
+    el.style.setProperty('background-color',tc.bg,'important');
+    el.style.setProperty('background-image','none','important');
+    el.style.setProperty('color',tc.text,'important');
+  });
+  // 全テキストをナビ文字色で統一（インライン !important で最優先）
+  try{
+    const textSel='body,p,div,span,label,td,th,li,h1,h2,h3,h4,h5,h6,small,strong,em,a,button,input,select,textarea';
+    doc.querySelectorAll(textSel).forEach(el=>{
+      if(!el.classList.contains('nav-tab') && !el.classList.contains('header')){
+        el.style.setProperty('color',nc.text,'important');
+      }
+    });
+  }catch(e){}
+}
+// タップ色変更時に再適用
+[tapBgColor,tapTextColor].forEach(ctrl=>{
+  ctrl.addEventListener('input',applyNavColorsToAllWindows);
+  ctrl.addEventListener('change',applyNavColorsToAllWindows);
+});
+// attachFrameObserverにナビ色再適用Observerを追加
+const _origAttach=attachFrameObserver;
+attachFrameObserver=function(frame){
+  _origAttach(frame);
+  try{
+    const doc=frame.contentDocument;
+    if(!doc||!doc.body)return;
+    let navTimer=null;
+    const NavObs=doc.defaultView&&doc.defaultView.MutationObserver||MutationObserver;
+    const navObs=new NavObs(()=>{
+      clearTimeout(navTimer);
+      navTimer=setTimeout(()=>applyNavColorsToDocument(doc,getNavColors()),160);
+    });
+    navObs.observe(doc.body,{subtree:true,attributes:true,attributeFilter:['class']});
+    frame._uenoNavObserver=navObs;
+  }catch(e){}
+};
+function applyNavColorsToAllWindows(){const nc=getNavColors();saveNavColors();forEachWindowDocument(doc=>applyNavColorsToDocument(doc,nc));}
+function resetNavColors(){navBgColor.value='#ffffff';navTextColor.value='#000000';applyNavColorsToAllWindows();}
+[navBgColor,navTextColor].forEach(ctrl=>{
+  ctrl.addEventListener('input',applyNavColorsToAllWindows);
+  ctrl.addEventListener('change',applyNavColorsToAllWindows);
+});
+navColorResetBtn.addEventListener('click',resetNavColors);
+const _orig2=applyEffectsToAllWindows;
+applyEffectsToAllWindows=function(){_orig2();applyNavColorsToAllWindows();};
+loadNavColors();
+setTimeout(applyNavColorsToAllWindows,1000);
+setTimeout(applyNavColorsToAllWindows,2500);
+// v2.2カラーを最後に実行して全設定に勝つ
+const _orig3=applyEffectsToAllWindows;
+applyEffectsToAllWindows=function(){_orig3();applyV22ColorsToAllWindows();};
+setTimeout(applyV22ColorsToAllWindows,1200);
+setTimeout(applyV22ColorsToAllWindows,2800);
+</script>
+</body>
+</html>

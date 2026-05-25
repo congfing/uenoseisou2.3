@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>計量データ入力_3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { overscroll-behavior-x: contain; font-family: 'Hiragino Sans', 'Meiryo', sans-serif; min-height: 100vh; }
+
+  /* ===== HEADER ===== */
+  #app-header { padding: 8px 14px; position: sticky; top: 0; z-index: 101; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: flex; align-items: center; min-height: 44px; }
+  #app-header h1 { margin: 0; font-size: 15px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  #nav-tabs-bar { padding: 0 14px; position: sticky; top: 44px; z-index: 100; }
+  .nav-tabs { display: flex; gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .nav-tab { flex-shrink: 0; padding: 7px 10px; font-size: 12px; font-weight: bold;
+    border: none; border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .nav-tab.active { }
+  .nav-tab.disabled { opacity: 0.4; cursor: default; }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
+  .screen.active { display: block; }
+  .card { border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+  /* ===== BUTTONS ===== */
+  .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+  .btn-primary { }
+  .btn-secondary { background: #e2e8f0; color: #444; }
+  .btn-success { background: #22c55e; color: white; }
+  .btn-warning { background: #f59e0b; color: white; }
+  .btn-danger { background: #fee2e2; color: #dc2626; }
+  .btn-enter { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 12px; }
+  .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 8px; display: inline-block; width: auto; }
+
+  /* ===== INPUTS ===== */
+  input[type="date"], input[type="text"] { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; outline: none; }
+  input:focus { border-color: #1a6eb5; }
+  .num-input { width: 100%; font-size: 22px; text-align: center; padding: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; }
+  .num-input:focus { border-color: #1a6eb5; }
+
+  /* ===== STAFF ===== */
+  .staff-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px;
+    border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    cursor: pointer; border: 2px solid transparent; }
+  .staff-item.selected { border-color: #1a6eb5; }
+  .staff-check { color: #1a6eb5; font-size: 20px; display: none; }
+  .staff-item.selected .staff-check { display: block; }
+  .order-saved-badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+
+
+  /* ===== 曜日保存ボタン ===== */
+  .day-save-single { border-radius: 10px; padding: 8px 12px;
+    margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+  .day-save-single button { flex: 1; padding: 9px 8px; border-radius: 8px;
+    border: 2px solid #10b981; background: #d1fae5; color: #065f46;
+    font-size: 14px; font-weight: bold; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; }
+  .day-save-single button:active { transform: scale(0.96); }
+  .day-save-single .saved-note { font-size: 11px; color: #10b981; }
+
+  /* ===== COMBINED PROPERTY LIST+SETTINGS ===== */
+  .prop-card { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
+  .prop-card.done { border-color: #22c55e; }
+  .prop-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+  .prop-order-input { width: 40px !important; max-width: 40px !important; min-width: 40px !important;
+    padding: 5px 3px; text-align: center; font-size: 15px; font-weight: bold;
+    border: 2px solid #e2e8f0; border-radius: 8px; color: #1a6eb5;
+    flex-shrink: 0; outline: none; }
+  .prop-order-input:focus { border-color: #1a6eb5; }
+  .prop-seq-num { width: 30px; min-width: 30px; text-align: center; font-size: 15px; font-weight: bold;
+    color: #1a6eb5; flex-shrink: 0; }
+  .drag-handle { color: #bbb; font-size: 20px; cursor: grab; padding: 0 6px; user-select: none;
+    touch-action: none; flex-shrink: 0; line-height: 1; border: none; background: none; }
+  .drag-handle:active { cursor: grabbing; color: #888; }
+  .prop-card.drag-dragging { opacity: 0.35; }
+  .prop-card.drag-over-top { border-top: 3px solid #1a6eb5; }
+  .prop-card.drag-over-bottom { border-bottom: 3px solid #1a6eb5; }
+  #drag-ghost { position: fixed; z-index: 9999; pointer-events: none; background: white;
+    border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.25); padding: 10px 14px;
+    font-size: 15px; font-weight: 600; color: #333; display: none; max-width: 320px;
+    border: 2px solid #1a6eb5; }
+  .prop-info { flex: 1; min-width: 0; overflow: hidden; }
+  .prop-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prop-days { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .day-dot { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: bold; background: #e2e8f0; color: #94a3b8; }
+  .day-dot.today { background: #1a6eb5; color: white; }
+  .prop-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .prop-status-icon { font-size: 20px; }
+  .prop-toggle { color: #aaa; font-size: 14px; }
+
+  .prop-card-body { overscroll-behavior-x: contain; padding: 12px 14px; border-top: 1px solid #f0f0f0; display: none; }
+  .prop-card-body.open { display: block; }
+
+  /* Day checkboxes */
+  .day-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .day-check-label { display: flex; align-items: center; gap: 3px; background: #e2e8f0;
+    padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold;
+    transition: all 0.15s; user-select: none; }
+  .day-check-label input { display: none; }
+  .day-check-label.checked { background: #1a6eb5; color: white; }
+  .day-check-label.today-day { outline: 2px solid #f59e0b; outline-offset: 1px; }
+
+  /* Field editor */
+  .fields-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 600; }
+  .field-edit-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+  .field-name-wrap { flex: 1; position: relative; }
+  .field-name-wrap input { padding: 7px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 6px; width: 100%; outline: none; }
+  .field-name-wrap input:focus { border-color: #1a6eb5; }
+  .field-dropdown { position: absolute; top: 100%; left: 0; right: 0;
+    border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 300; max-height: 180px; overflow-y: auto; display: none; }
+  .field-dropdown.open { display: block; }
+  .field-dropdown-item { padding: 9px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+  .field-dropdown-item:last-child { border-bottom: none; }
+  .field-dropdown-item:active { background: #eff6ff; }
+  .field-edit-row select { padding: 7px 4px; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 6px; width: 54px; }
+
+  /* Data entry */
+  .field-group { margin-bottom: 14px; }
+  .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
+  .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
+  .last-val-hint { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+  .last-val-hint span { font-weight: bold; color: #94a3b8; }
+
+  /* Summary */
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .summary-table th { background: #1a6eb5; color: white; padding: 8px; text-align: left; }
+  .summary-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+  .summary-table tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Misc */
+  .section-title { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #1a6eb5; border-radius: 12px; padding: 8px 12px; }
+  .section-sub { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .count-badge { display: inline-block; background: #1a6eb5; color: white; border-radius: 20px; padding: 2px 10px; font-size: 13px; font-weight: bold; margin-left: 8px; }
+  .add-row { display: flex; gap: 8px; margin-top: 8px; }
+  .add-row input { flex: 1; }
+  .empty-state { text-align: center; padding: 32px 16px; color: #aaa; }
+  .save-order-banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 10px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
+  .save-order-banner span { font-size: 13px; color: #92400e; flex: 1; }
+  .sort-hint { font-size: 12px; color: #aaa; text-align: center; padding: 2px 0 8px; }
+
+  /* History */
+  .history-item { border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); overflow: hidden; }
+  .history-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
+  .history-date { font-size: 15px; font-weight: 700; color: #1a6eb5; }
+  .history-staff { font-size: 13px; color: #888; margin-top: 2px; }
+  .history-body { overscroll-behavior-x: contain; padding: 10px 14px; border-top: 1px solid #f0f0f0; display: none; }
+  .history-body.open { display: block; }
+  .past-data-banner { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 10px;
+    padding: 12px; margin-top: 12px; display: none; }
+  .past-data-banner .banner-title { font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+  .past-data-banner .banner-entries { font-size: 13px; color: #555; margin-bottom: 8px; }
+
+  /* 誤操作防止: 旧ホーム/戻るボタンは非表示 */
+  #backBtn,
+  button[onclick*="index.html"] { display:none !important; }
+
+</style>
+
+</head>
+<body>
+
+<div id="app-header">
+  <h1 id="headerTitle">計量データ入力</h1>
+</div>
+<div id="nav-tabs-bar">
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="navDate" onclick="navTo(1)">📅 日付選択</button>
+    <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
+    <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
+    <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
+    <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
+    <button class="nav-tab" id="navConvert" onclick="navTo(8)">🔄 変換</button>
+  </div>
+</div>
+
+<!-- Screen 1: Date -->
+<div class="screen active" id="screen1">
+  <div style="padding-top:16px">
+    <div class="section-title">📅 日付選択</div>
+    <div class="section-sub">作業日を選択してください</div>
+    <div class="card"><input type="date" id="dateInput" onchange="checkPastData(this.value)"></div>
+    <div class="past-data-banner" id="pastDataBanner">
+      <div class="banner-title">📋 この日付のデータが保存されています</div>
+      <div class="banner-entries" id="pastDataEntries"></div>
+      <button class="btn btn-secondary btn-sm" onclick="goToHistoryForDate()">データを確認する</button>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary" onclick="goToScreen2()">新規入力 →</button>
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">index_3-16.html</div>
+  </div>
+</div>
+
+<!-- Screen 2: Staff -->
+<div class="screen" id="screen2">
+  <div style="padding-top:16px">
+    <div class="section-title">👤 担当者選択</div>
+    <div class="section-sub" id="screen2sub"></div>
+    <div id="staffList"></div>
+    <div class="add-row">
+      <input type="text" id="newStaffName" placeholder="担当者名を追加" maxlength="20">
+      <button class="btn btn-secondary btn-sm" onclick="addStaff()">追加</button>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary" onclick="goToScreen3()">次へ →</button>
+  </div>
+</div>
+
+<!-- Screen 3: Combined property list + inline settings -->
+<div class="screen" id="screen3">
+  <div style="padding-top:16px">
+    <div class="section-title">🏢 物件リスト<span class="count-badge" id="propCount"></span></div>
+    <div class="section-sub" id="screen3sub"></div>
+    <div class="sort-hint" id="sortHint"></div>
+    <div class="day-save-single" id="daySaveSingle" style="display:none">
+      <button onclick="saveTodayOrder()" id="daySaveBtn">📌 月の順番として保存</button>
+      <span class="saved-note" id="daySavedNote"></span>
+    </div>
+    <div id="propertyList"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-success" style="flex:1" onclick="exportText()">📄 TEXT保存</button>
+      <button class="btn btn-primary" style="flex:2" onclick="goToScreen5()">確認・保存 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 4: Data entry -->
+<div class="screen" id="screen4">
+  <div style="padding-top:16px">
+    <div class="section-title" id="propEntryTitle"></div>
+    <div class="section-sub">各項目に数値を入力してください</div>
+    <div id="inputFields"></div>
+    <div style="display:flex;gap:10px;margin-top:0">
+      <button class="btn btn-primary" style="flex:2" onclick="savePropertyData()">履歴に保存して戻る ✓</button>
+      <button class="btn btn-danger" style="flex:1" onclick="clearPropertyData()">消去して戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 5: Confirm -->
+<div class="screen" id="screen5">
+  <div style="padding-top:16px">
+    <div class="section-title">✅ 確認・保存</div>
+    <div class="section-sub" id="screen5sub"></div>
+    <div id="summaryContent"></div>
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <button class="btn btn-success" style="flex:1" onclick="exportText()">📄 TEXT保存</button>
+      <button class="btn btn-primary" style="flex:1" onclick="exportXlsx()">📥 Excel保存</button>
+    </div>
+    <button class="btn btn-secondary" onclick="navTo(3)">← 入力に戻る</button>
+  </div>
+</div>
+
+<!-- Screen 6: History -->
+<div class="screen" id="screen6">
+  <div style="padding-top:16px">
+    <div class="section-title">📋 履歴</div>
+    <div class="section-sub">過去の入力データを確認できます</div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Screen 7: Mail Settings -->
+<div class="screen" id="screen7">
+  <div style="padding-top:16px">
+    <div class="section-title">✉️ メール設定</div>
+    <div class="section-sub">送信先アドレスを最大4件登録できます</div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">📮 送信先アドレス</div>
+      <div id="mailAddressList"></div>
+      <button class="btn btn-success" style="margin-top:8px" onclick="saveMailSettings()">保存する</button>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div style="font-size:13px;color:#666;line-height:1.7">
+        送信時にチェックが入っているアドレスに送信されます。<br>
+        アドレスを空にするとその行は無視されます。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 8: Text → Excel 変換 -->
+<div class="screen" id="screen8">
+  <div style="padding-top:16px">
+    <div class="section-title">🔄 Excel 変換</div>
+    <div class="section-sub">履歴または保存テキストからExcelを作成します</div>
+
+    <!-- 履歴から変換 -->
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">📅 履歴から変換</div>
+      <input type="date" id="convertDateInput" onchange="loadConvertFromHistory(this.value)" style="margin-bottom:10px">
+      <div id="convertHistResult" style="margin-top:4px"></div>
+    </div>
+
+    <!-- テキストファイルから変換（バックアップ用） -->
+    <div class="card" style="margin-top:4px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#555">📂 テキストファイルから変換（バックアップ用）</div>
+      <input type="file" id="txtFileInput" accept=".txt" style="width:100%;padding:10px;border:2px dashed #cbd5e1;border-radius:8px;font-size:14px;background:#f8fafc" onchange="loadTxtFile(event)">
+      <div id="txtPreview" style="margin-top:14px;display:none">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#1a6eb5">📋 読み込み内容</div>
+        <div id="txtPreviewTable" style="overflow-x:auto"></div>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="convertTxtToXlsx()">📥 Excelで保存（.xlsx）</button>
+      </div>
+      <div id="txtError" style="margin-top:10px;color:#dc2626;font-size:13px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 0: Settings -->
+<div class="screen" id="screen0">
+  <div style="padding-top:16px">
+    <div class="section-title">⚙️ 設定</div>
+    <div class="section-sub">物件の追加・担当者の管理</div>
+
+    <!-- Add property -->
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">＋ 物件を追加</div>
+      <div class="field-group">
+        <div class="fields-label">物件名</div>
+        <input type="text" id="newPropertyName" placeholder="例：セブン〇〇店">
+      </div>
+      <div class="field-group">
+        <div class="fields-label">収集曜日</div>
+        <div class="day-checkboxes" id="newPropertyDays">
+          <label class="day-check-label" onclick="toggleNewDay(this,'月',event)"><input type="checkbox">月</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'火',event)"><input type="checkbox">火</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'水',event)"><input type="checkbox">水</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'木',event)"><input type="checkbox">木</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'金',event)"><input type="checkbox">金</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'土',event)"><input type="checkbox">土</label>
+          <label class="day-check-label" onclick="toggleNewDay(this,'日',event)"><input type="checkbox">日</label>
+        </div>
+      </div>
+      <div class="fields-label">入力項目</div>
+      <div id="newPropertyFields">
+        <div class="field-edit-row">
+          <div class="field-name-wrap">
+            <input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)">
+            <div class="field-dropdown"></div>
+          </div>
+          <select><option value="袋">袋</option><option value="kg">kg</option></select>
+          <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="addFieldRow()" style="margin-top:6px;margin-bottom:12px">＋ 項目を追加</button>
+      <button class="btn btn-success" onclick="addNewProperty()">物件を登録</button>
+    </div>
+
+    <!-- Staff management -->
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">👤 担当者管理</div>
+      <div id="settingsStaffList"></div>
+      <div class="add-row">
+        <input type="text" id="settingsNewStaff" placeholder="担当者名を追加" maxlength="20">
+        <button class="btn btn-secondary btn-sm" onclick="addStaffFromSettings()">追加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS_JP   = ['日','月','火','水','木','金','土'];
+const ORDERED_DAYS = ['月','火','水','木','金','土','日'];
+const FIELD_SUGGESTIONS = ['可燃','不燃','生ごみ','段ボール','アラ','ペット','白','青','黒','段紙','紙','缶','びん','その他','廃プラ'];
+const LS_PROPERTIES    = 'keiryo_properties';
+const LS_STAFF         = 'keiryo_staff';
+const LS_ORDER_PREFIX  = 'keiryo_order_';
+const LS_LASTDATA_PREFIX = 'keiryo_last_';
+const LS_HISTORY_PREFIX  = 'keiryo_hist_'; // + date_staffName
+
+const DEFAULT_PROPERTIES = [
+  // ── ほっともっと ──
+  { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'紙屑',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'ほっともっと 伊賀白鳳通り店',   order:2,  days:[], fields:[{label:'紙屑',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  // ── LA・MU ──
+  { name:'LA・MU',             order:3,  days:[], fields:[{label:'可燃',unit:'kg'},{label:'不燃',unit:'kg'}] },
+  // ── いがっこ給食センター ──
+  { name:'いがっこ給食センター',       order:4,  days:[], fields:[{label:'可燃',unit:'kg'},{label:'不燃金属',unit:'kg'},{label:'ビン割れ物',unit:'kg'},{label:'硬質プラ',unit:'kg'}] },
+  // ── すき家 ──
+  { name:'すき家 伊賀上野店',             order:5,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'ビン缶PET',unit:'袋'},{label:'ビン缶PET',unit:'kg'}] },
+  // ── セブンイレブン 8店舗 ──
+  { name:'セブンイレブン 伊賀四十九町北店',       order:6,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀緑ヶ丘東町店',   order:7,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀東条店',         order:8,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀平野北谷店',     order:9,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀緑ヶ丘本町店',         order:10, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀平野東町店',     order:11, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブンイレブン 伊賀忍者市駅南店',         order:13, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  // ── セカンドストリート ──
+  { name:'セカンドストリート 伊賀小田店',  order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  // ── ナフコ ──
+  { name:'ナフコ 伊賀店',             order:15, days:[], fields:[{label:'可燃',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'発泡スチロール',unit:'kg'},{label:'木くず',unit:'kg'},{label:'その他',unit:'kg'}] },
+  // ── 伊賀の街・ライフテクノ ──
+  { name:'伊賀の街',           order:16, days:[], fields:[{label:'可燃',unit:'kg'}] },
+  { name:'ライフテクノサービス',       order:17, days:[], fields:[{label:'可燃',unit:'kg'},{label:'不燃',unit:'袋'}] },
+  // ── 創価学会 ──
+  { name:'創価学会 伊賀上野文化会館',   order:18, days:[], fields:[{label:'古紙',unit:'kg'},{label:'可燃',unit:'kg'},{label:'その他',unit:'kg'}] },
+  // ── 農業屋（三輝） ──
+  { name:'農業屋 伊賀上野店',             order:20, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'その他',unit:'袋'},{label:'その他',unit:'kg'},{label:'段ボール',unit:'kg'}] },
+  // ── 津地方裁判所 ──
+  { name:'津地方裁判所',       order:21, days:[], fields:[{label:'シュレッダー',unit:'kg'},{label:'新聞段ボール',unit:'kg'},{label:'可燃',unit:'kg'},{label:'不燃',unit:'kg'}] },
+  // ── 西松屋 ──
+  { name:'西松屋 伊賀上野店',             order:22, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'不燃',unit:'袋'},{label:'不燃',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'ビン',unit:'kg'},{label:'カン',unit:'kg'},{label:'ペットボトル',unit:'kg'}] },
+  // ── 伊賀神戸駅 ──
+  { name:'伊賀神戸駅',         order:23, days:[], fields:[{label:'可燃',unit:'袋'},{label:'カン',unit:'袋'},{label:'ビン',unit:'袋'},{label:'その他',unit:'袋'}] },
+  // ── イオンタウン・びっくりドンキー・KFC ──
+  { name:'イオンタウン伊賀',       order:24, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'ハンガー',unit:'kg'},{label:'段ボール',unit:'kg'}] },
+  { name:'びっくりドンキー 伊賀上野店',   order:25, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
+  { name:'KFC イオンタウン伊賀上野店',                order:26, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
+  // ── コカ・コーラボトラーズ ──
+  { name:'コカ・コーラボトラーズ',       order:27, days:[], fields:[{label:'収集',unit:'袋'}] },
+  // ── チョーヤ梅酒 ──
+  { name:'チョーヤ梅酒',       order:28, days:[], fields:[{label:'可燃㎥',unit:'㎥'},{label:'可燃',unit:'kg'},{label:'第2収集㎥',unit:'㎥'},{label:'第2収集',unit:'kg'}] },
+  // ── マックスバリュ ──
+  { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
+  { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
+  // ── やさいの戸島屋 ──
+  { name:'㈱やさいの戸島屋',     order:31, days:[], fields:[{label:'可燃',unit:'袋'}] },
+  // ── 古本市場・サイリス ──
+  { name:'古本市場 上野店',           order:32, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'古紙',unit:'kg'},{label:'資源',unit:'袋'},{label:'資源',unit:'kg'}] },
+  // ── 旧上野庁舎（SAKAKURABASE） ──
+  { name:'旧上野庁舎 SAKAKURA BASE',         order:33, days:[], fields:[{label:'ホテル可燃',unit:'kg'},{label:'ホテル不燃',unit:'kg'},{label:'図書館可燃',unit:'kg'},{label:'図書館不燃',unit:'kg'},{label:'カフェ可燃',unit:'kg'},{label:'カフェ不燃',unit:'kg'},{label:'白袋',unit:'袋'},{label:'青袋',unit:'袋'},{label:'黒袋',unit:'袋'}] },
+  // ── 魚民 ──
+  { name:'魚民 上野市駅前店',               order:34, days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'紙',unit:'kg'},{label:'不燃ビニ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'割れ物',unit:'kg'},{label:'発泡',unit:'kg'}] },
+  // ── 厚板プレス工業 ──
+  { name:'厚板プレス工業',         order:35, days:[], fields:[{label:'可燃',unit:'kg'},{label:'不燃',unit:'kg'},{label:'その他',unit:'kg'}] },
+  // ── 三重県伊賀庁舎 ──
+  { name:'三重県伊賀庁舎',           order:36, days:[], fields:[{label:'古紙',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'その他',unit:'kg'}] },
+  // ── 上野法務合同庁舎 ──
+  { name:'上野法務合同庁舎',       order:37, days:[], fields:[{label:'可燃',unit:'kg'},{label:'資源ごみ',unit:'kg'},{label:'不燃',unit:'kg'}] },
+  // ── ドラッグセイムス ──
+  { name:'ドラッグセイムス 伊賀小田店', order:38, days:[], fields:[{label:'段ボール',unit:'kg'}] },
+  { name:'ドラッグセイムス 伊賀上野店', order:39, days:[], fields:[{label:'段ボール',unit:'kg'}] },
+  // ── 飯田金属 ──
+  { name:'飯田金属',           order:40, days:[], fields:[{label:'収集',unit:'kg'}] },
+  // ── あみやき亭 ──
+  { name:'あみやき亭',         order:41, days:[], fields:[
+    {label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'},
+    {label:'段ボール',unit:'kg'},{label:'ペットボトル',unit:'kg'}
+  ]},
+  // ── クスリのアオキ 伊賀上野店 ──
+  { name:'クスリのアオキ 伊賀上野店', order:42, days:[], fields:[
+    {label:'生ごみ（前）',unit:'袋'},{label:'生ごみ（前）',unit:'kg'},
+    {label:'生ごみ（廃）',unit:'袋'},{label:'生ごみ（廃）',unit:'kg'},
+    {label:'廃業廃棄物',unit:'kg'}
+  ]},
+  // ── クスリのアオキ 平野東店 ──
+  { name:'クスリのアオキ 平野東店', order:43, days:[], fields:[
+    {label:'生ごみ（前）',unit:'袋'},{label:'生ごみ（前）',unit:'kg'},
+    {label:'生ごみ（廃）',unit:'袋'},{label:'生ごみ（廃）',unit:'kg'},
+    {label:'廃業廃棄物',unit:'kg'}
+  ]},
+  // ── コメリ ──
+  { name:'コメリ ＨＣ上野店', order:44, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'可燃物',unit:'kg'},{label:'不燃物１(ビン缶PET)',unit:'袋'},{label:'不燃物１(ビン缶PET)',unit:'kg'},{label:'不燃物２(容器包装系)',unit:'袋'},{label:'不燃物２(容器包装系)',unit:'kg'},{label:'粗大ごみ/その他',unit:'袋'},{label:'粗大ごみ/その他',unit:'kg'}] },
+  // ── 検察庁 ──
+  { name:'検察庁', order:45, days:[], fields:[
+    {label:'可燃物',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'古紙',unit:'kg'}
+  ]},
+  // ── 法務局 ──
+  { name:'法務局', order:46, days:[], fields:[
+    {label:'シュレッダー',unit:'kg'},{label:'古紙',unit:'kg'},{label:'不燃ごみ',unit:'kg'}
+  ]},
+];
+const DEFAULT_STAFF = ['担当者A','担当者B'];
+
+function loadJSON(key,def){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+function getSavedOrder(staff,day){ return loadJSON(LS_ORDER_PREFIX+staff+'_'+day,null); }
+function setSavedOrder(staff,day,arr){ saveJSON(LS_ORDER_PREFIX+staff+'_'+day,arr); }
+function getLastData(name){ return loadJSON(LS_LASTDATA_PREFIX+name,null); }
+function setLastData(name,data,staff,date){ saveJSON(LS_LASTDATA_PREFIX+name,{data,staffName:staff,date}); }
+function saveHistory(date,staff,entryData){
+  saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {date,staffName:staff,entryData});
+  // keep index of all history keys
+  let idx=loadJSON('keiryo_hist_index',[]);
+  const key=date+'_'+staff;
+  if(!idx.includes(key)) idx.push(key);
+  saveJSON('keiryo_hist_index',idx);
+}
+function getAllHistory(){
+  const idx=loadJSON('keiryo_hist_index',[]);
+  return idx.map(k=>loadJSON(LS_HISTORY_PREFIX+k,null)).filter(Boolean)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+// localStorageの物件 + コードに新規追加された物件をマージ（削除済みは除外）
+let allProperties = (() => {
+  const saved = loadJSON(LS_PROPERTIES, null);
+  if (!saved) return DEFAULT_PROPERTIES.slice();
+  const savedNames = new Set(saved.map(p => p.name));
+  // デフォルトにあってlocalStorageにない物件を末尾に追加
+  const newProps = DEFAULT_PROPERTIES.filter(p => !savedNames.has(p.name));
+  // デフォルトから削除された物件をlocalStorageからも除外
+  const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
+  const filtered = saved.filter(p => defaultNames.has(p.name));
+  return [...filtered, ...newProps];
+})();
+let staffList     = loadJSON(LS_STAFF, DEFAULT_STAFF);
+
+let state = {
+  date:'', dayName:'', selectedStaff:'',
+  currentPropertyIndex:-1,
+  entryData:{}, entryOrder:[],
+  entryDraft:{},
+  currentScreen:1, prevScreen:1,
+  customOrder: null
+};
+
+const LS_SESSION = 'keiryo_session';
+
+function saveSession(){
+  saveJSON(LS_SESSION, {
+    date: state.date, dayName: state.dayName,
+    selectedStaff: state.selectedStaff,
+    entryData: state.entryData,
+    entryDraft: state.entryDraft,
+    entryOrder: state.entryOrder,
+    currentScreen: state.currentScreen,
+    currentPropertyIndex: state.currentPropertyIndex,
+    customOrder: state.customOrder
+  });
+}
+
+function restoreSession(){
+  const s = loadJSON(LS_SESSION, null);
+  if(!s || !s.date) return false;
+  // 日付が今日と一致する場合のみ復元
+  const today = new Date();
+  const ty = today.getFullYear();
+  const tm = String(today.getMonth()+1).padStart(2,'0');
+  const td = String(today.getDate()).padStart(2,'0');
+  const todayStr = `${ty}-${tm}-${td}`;
+  if(s.date !== todayStr) return false;
+  state.date = s.date; state.dayName = s.dayName;
+  state.selectedStaff = s.selectedStaff || '';
+  state.entryData = s.entryData || {};
+  state.entryDraft = s.entryDraft || {};
+  state.entryOrder = s.entryOrder || [];
+  state.customOrder = s.customOrder || null;
+  state.currentPropertyIndex = (s.currentPropertyIndex !== undefined) ? s.currentPropertyIndex : -1;
+  document.getElementById('dateInput').value = state.date;
+  return true;
+}
+
+// ===== INIT =====
+window.onload = function(){
+  const t=new Date();
+  const y=t.getFullYear();
+  const m=String(t.getMonth()+1).padStart(2,'0');
+  const d=String(t.getDate()).padStart(2,'0');
+  document.getElementById('dateInput').value=`${y}-${m}-${d}`;
+
+  if(restoreSession() && state.selectedStaff){
+    // 入力途中のデータがあれば復元
+    document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
+    renderPropertyList();
+    if(state.currentScreen === 4 && state.currentPropertyIndex >= 0 && state.currentPropertyIndex < allProperties.length){
+      // 入力画面を直接復元（中断した物件の入力画面へ）
+      openEntry(state.currentPropertyIndex, {stopPropagation:()=>{}});
+    } else {
+      const scr = [3,4,5].includes(state.currentScreen) ? 3 : (state.currentScreen||1);
+      showScreen(scr);
+    }
+  } else {
+    updateNav(1);
+  }
+};
+
+// ===== NAVIGATION =====
+function updateNav(n){
+  state.currentScreen=n;
+  document.getElementById('backBtn').style.display='flex'; // 常に表示
+  const titles={0:'設定',1:'計量データ入力',2:'担当者選択',3:'物件リスト',4:'データ入力',5:'確認・保存',6:'履歴',7:'メール設定',8:'変換'};
+  document.getElementById('headerTitle').textContent=titles[n]||'';
+  const dl=document.getElementById('headerDateLabel');
+  dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
+  // tabs active
+  ['navDate','navStaff','navProps','navHistory','navSettings','navMail','navConvert'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(n===0) document.getElementById('navSettings').classList.add('active');
+  else if(n===1) document.getElementById('navDate').classList.add('active');
+  else if(n===2) document.getElementById('navStaff').classList.add('active');
+  else if(n===3||n===4||n===5) document.getElementById('navProps').classList.add('active');
+  else if(n===6) document.getElementById('navHistory').classList.add('active');
+  else if(n===7){ document.getElementById('navMail').classList.add('active'); loadMailSettings(); }
+  else if(n===8) document.getElementById('navConvert').classList.add('active');
+  // enabled/disabled
+  document.getElementById('navStaff').className='nav-tab'+(n===2?' active':'')+(state.date?'':' disabled');
+  document.getElementById('navProps').className='nav-tab'+((n===3||n===4||n===5)?' active':'')+(state.selectedStaff?'':' disabled');
+}
+
+function showScreen(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`screen${n}`).classList.add('active');
+  updateNav(n);
+  saveSession();
+  window.scrollTo(0,0);
+}
+
+function goBack(){
+  if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
+  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7){ showScreen(state.prevScreen||1); return; }
+  if(state.currentScreen===4){ showScreen(3); return; }
+  if(state.currentScreen>1) showScreen(state.currentScreen-1);
+}
+
+function navTo(n){
+  if(n===2&&!state.date) return;
+  if(n===3&&!state.selectedStaff) return;
+  if(n===0){ state.prevScreen=state.currentScreen; renderSettingsStaff(); showScreen(0); return; }
+  if(n===1){ showScreen(1); return; }
+  if(n===2){ renderStaffList(); showScreen(2); return; }
+  if(n===3){ renderPropertyList(); showScreen(3); return; }
+  if(n===6){ renderHistory(); showScreen(6); return; }
+  if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
+  if(n===8){ showScreen(8); initConvertScreen(); return; }
+}
+
+// ===== SCREEN 1→2 =====
+function goToScreen2(){
+  const val=document.getElementById('dateInput').value;
+  if(!val){alert('日付を選択してください');return;}
+  const d=new Date(val+'T00:00:00');
+  state.date=val; state.dayName=DAYS_JP[d.getDay()];
+  saveSession();
+  document.getElementById('screen2sub').textContent=`${val}（${state.dayName}曜日）の担当者を選んでください`;
+  renderStaffList(); showScreen(2);
+}
+
+function renderStaffList(){
+  const c=document.getElementById('staffList'); c.innerHTML='';
+  staffList.forEach(name=>{
+    const saved=getSavedOrder(name,state.dayName);
+    const badge=saved?`<span class="order-saved-badge">順番保存済み</span>`:'';
+    const div=document.createElement('div');
+    div.className='staff-item'+(state.selectedStaff===name?' selected':'');
+    div.innerHTML=`<div><span style="font-size:16px;font-weight:500">${name}</span>${badge}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="staff-check">✓</span>
+        <button class="btn btn-danger btn-sm" onclick="removeStaff('${name}',event)">削除</button>
+      </div>`;
+    div.onclick=e=>{if(e.target.tagName!=='BUTTON'){state.selectedStaff=name;saveSession();renderStaffList();}};
+    c.appendChild(div);
+  });
+}
+
+function addStaff(){
+  const inp=document.getElementById('newStaffName');const name=inp.value.trim();
+  if(!name||staffList.includes(name)){alert(name?'同じ名前が既に登録されています':'名前を入力してください');return;}
+  staffList.push(name);saveJSON(LS_STAFF,staffList);inp.value='';renderStaffList();
+}
+function removeStaff(name,e){
+  e.stopPropagation();if(!confirm(`「${name}」を削除しますか？`))return;
+  staffList=staffList.filter(s=>s!==name);saveJSON(LS_STAFF,staffList);
+  if(state.selectedStaff===name)state.selectedStaff='';renderStaffList();
+}
+
+// ===== SCREEN 2→3 =====
+function goToScreen3(){
+  if(!state.selectedStaff){alert('担当者を選択してください');return;}
+  state.entryData={};state.entryDraft={};state.entryOrder=[];state.customOrder=null;
+  saveSession();
+  document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
+  renderPropertyList();showScreen(3);
+  renderDaySaveSingle();
+}
+
+function getSortedProps(){
+  const saved=getSavedOrder(state.selectedStaff,state.dayName);
+  let props=[...allProperties];
+  if(saved&&saved.length){
+    const names=[...saved,...props.map(p=>p.name).filter(n=>!saved.includes(n))];
+    props.sort((a,b)=>names.indexOf(a.name)-names.indexOf(b.name));
+  } else {
+    props.sort((a,b)=>(a.order||999)-(b.order||999));
+  }
+  return props;
+}
+
+function renderPropertyList(){
+  const c=document.getElementById('propertyList'); c.innerHTML='';
+  const hint=document.getElementById('sortHint');
+
+  let displayList;
+  if(state.customOrder){
+    displayList=state.customOrder.map(n=>allProperties.find(p=>p.name===n)).filter(Boolean);
+    const missing=allProperties.filter(p=>!state.customOrder.includes(p.name));
+    displayList=[...displayList,...missing];
+  } else {
+    const baseProps=getSortedProps();
+    const entered=state.entryOrder.map(n=>baseProps.find(p=>p.name===n)).filter(Boolean);
+    const remaining=baseProps.filter(p=>!state.entryOrder.includes(p.name));
+    displayList=[...entered,...remaining];
+  }
+
+  const hasSaved=!!getSavedOrder(state.selectedStaff,state.dayName);
+  if(state.customOrder){
+    hint.textContent='↕ ドラッグで並び替え中';
+  } else if(state.entryOrder.length>0){
+    hint.textContent='✅ 入力済みが上に並んでいます';
+  } else if(hasSaved){
+    hint.textContent='📌 前回の入力順で表示中';
+  } else {
+    hint.textContent='番号順で表示中';
+  }
+
+  // Update entry count badge
+  const enteredCount = Object.keys(state.entryData).length;
+  document.getElementById('propCount').textContent = allProperties.length + '件';
+  const badge = document.getElementById('entryCountBadge');
+  if(enteredCount > 0){
+    badge.textContent = '✅ ' + enteredCount + ' / ' + allProperties.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  displayList.forEach((prop,di)=>{
+    const done=!!state.entryData[prop.name];
+    const idx=allProperties.indexOf(prop);
+    const div=document.createElement('div');
+    div.className='prop-card'+(done?' done':'');
+    div.id=`propcard_${idx}`;
+    div.dataset.propname=prop.name;
+
+    // Day dots
+    const dayDots=ORDERED_DAYS.map(d=>{
+      const assigned=prop.days.includes(d);
+      const isToday=d===state.dayName;
+      if(!assigned) return `<span class="day-dot" style="opacity:0.25">${d}</span>`;
+      return `<span class="day-dot${isToday?' today':''}">${d}</span>`;
+    }).join('');
+
+    // Field editor rows for body
+    const fieldRows=prop.fields.map((f,fi)=>`
+      <div class="field-edit-row">
+        <div class="field-name-wrap">
+          <input type="text" value="${f.label}" placeholder="項目名" onfocus="showFieldDropdown(this)"
+            oninput="filterFieldDropdown(this);updateFL(${idx},${fi},this.value)"
+            onchange="updateFL(${idx},${fi},this.value)" onblur="hideFieldDropdown(this)">
+          <div class="field-dropdown"></div>
+        </div>
+        <select onchange="updateFU(${idx},${fi},this.value)">
+          <option value="袋" ${f.unit==='袋'?'selected':''}>袋</option>
+          <option value="kg" ${f.unit==='kg'?'selected':''}>kg</option>
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="removeFieldInline(${idx},${fi},event)">✕</button>
+      </div>`).join('');
+
+    // Day checkboxes for body
+    const dayCBs=ORDERED_DAYS.map(d=>{
+      const ch=prop.days.includes(d);
+      const isToday=d===state.dayName;
+      return `<label class="day-check-label${ch?' checked':''}${isToday?' today-day':''}" onclick="toggleDayInline(${idx},'${d}',this,event)">
+        <input type="checkbox" ${ch?'checked':''}>${d}</label>`;
+    }).join('');
+
+    div.innerHTML=`
+      <div class="prop-card-header" onclick="togglePropCard(${idx})">
+        <button class="drag-handle" data-propname="${prop.name.replace(/"/g,'&quot;')}" ontouchstart="dragHandleStart(event,this)" onmousedown="dragHandleStart(event,this)">≡</button>
+        <input type="number" class="prop-order-input" value="${di+1}" min="1" max="${displayList.length}"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.stopPropagation();movePropToPos(${di},this);this.blur();}"
+          onblur="resetPropOrderInput(${di},this)"
+          onfocus="event.stopPropagation();this.select()">
+        <div class="prop-info">
+          <div class="prop-name">${prop.name}</div>
+          <div class="prop-days">${dayDots}</div>
+        </div>
+        <div class="prop-right">
+          <span class="prop-status-icon">${done?'✅':'▶'}</span>
+          <span class="prop-toggle" id="ptoggle_${idx}">▼</span>
+        </div>
+      </div>
+      <div class="prop-card-body" id="pbody_${idx}">
+        <div class="fields-label">収集曜日（今日の曜日が青）</div>
+        <div class="day-checkboxes">${dayCBs}</div>
+        <div class="fields-label">入力項目</div>
+        <div id="pfields_${idx}">${fieldRows}</div>
+        <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="margin-top:4px">＋ 項目追加</button>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn-enter" onclick="openEntry(${idx},event)">${done?'✏️ 修正する':'📝 入力する'}</button>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
+        </div>
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+function togglePropCard(idx){
+  const body=document.getElementById(`pbody_${idx}`);
+  const arrow=document.getElementById(`ptoggle_${idx}`);
+  const open=body.classList.contains('open');
+  body.classList.toggle('open',!open);
+  arrow.textContent=open?'▼':'▲';
+}
+
+function updatePropOrder(idx,val){
+  allProperties[idx].order=val?parseInt(val):999;
+  saveJSON(LS_PROPERTIES,allProperties);
+}
+
+function toggleDayInline(idx,day,label,event){
+  event.preventDefault(); event.stopPropagation();
+  const prop=allProperties[idx];
+  if(prop.days.includes(day)){prop.days=prop.days.filter(d=>d!==day);label.classList.remove('checked');}
+  else{prop.days.push(day);label.classList.add('checked');}
+  prop.days.sort((a,b)=>ORDERED_DAYS.indexOf(a)-ORDERED_DAYS.indexOf(b));
+  saveJSON(LS_PROPERTIES,allProperties);
+  // Update dots in header
+  const card=document.getElementById(`propcard_${idx}`);
+  if(card){
+    const dotsEl=card.querySelector('.prop-days');
+    if(dotsEl){
+      dotsEl.innerHTML=ORDERED_DAYS.map(d=>{
+        const assigned=allProperties[idx].days.includes(d);
+        const isToday=d===state.dayName;
+        if(!assigned) return `<span class="day-dot" style="opacity:0.25">${d}</span>`;
+        return `<span class="day-dot${isToday?' today':''}">${d}</span>`;
+      }).join('');
+    }
+  }
+}
+
+function updateFL(propIdx,fieldIdx,val){allProperties[propIdx].fields[fieldIdx].label=val;saveJSON(LS_PROPERTIES,allProperties);}
+function updateFU(propIdx,fieldIdx,val){allProperties[propIdx].fields[fieldIdx].unit=val;saveJSON(LS_PROPERTIES,allProperties);}
+
+function removeFieldInline(propIdx,fieldIdx,event){
+  event.stopPropagation();
+  allProperties[propIdx].fields.splice(fieldIdx,1);
+  saveJSON(LS_PROPERTIES,allProperties);
+  renderPropertyList();
+  document.getElementById(`pbody_${propIdx}`).classList.add('open');
+  document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
+}
+
+function addFieldInline(propIdx,event){
+  event.stopPropagation();
+  allProperties[propIdx].fields.push({label:'',unit:'袋'});
+  saveJSON(LS_PROPERTIES,allProperties);
+  renderPropertyList();
+  document.getElementById(`pbody_${propIdx}`).classList.add('open');
+  document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
+}
+
+function deleteProp(idx,event){
+  event.stopPropagation();
+  if(!confirm(`「${allProperties[idx].name}」を削除しますか？`))return;
+  allProperties.splice(idx,1);
+  saveJSON(LS_PROPERTIES,allProperties);
+  renderPropertyList();
+}
+
+// ===== OPEN ENTRY =====
+function openEntry(idx,event){
+  event.stopPropagation();
+  state.currentPropertyIndex=idx;
+  const prop=allProperties[idx];
+  document.getElementById('propEntryTitle').textContent=prop.name;
+  const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
+  const lastSaved=getLastData(prop.name);
+  const c=document.getElementById('inputFields'); c.innerHTML='';
+  prop.fields.forEach(field=>{
+    const div=document.createElement('div');
+    div.className='field-group card';
+    let hint='';
+    if(lastSaved&&lastSaved.data&&lastSaved.data[field.label]!==undefined&&lastSaved.data[field.label]!==''){
+      hint=`<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastSaved.data[field.label]} ${field.unit}</span></div>`;
+    }
+    div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span></div>
+      ${hint}
+      <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+        id="ef_${field.label}" placeholder="0" value="${existing[field.label]!==undefined?existing[field.label]:''}">`;
+    c.appendChild(div);
+    const input = div.querySelector('input.num-input');
+    input.addEventListener('input', () => {
+      if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
+      state.entryDraft[prop.name][field.label] = input.value;
+      saveSession();
+    });
+  });
+  showScreen(4);
+}
+
+function savePropertyData(){
+  const prop=allProperties[state.currentPropertyIndex];
+  const data={}; let hasVal=false;
+  prop.fields.forEach(f=>{
+    const v=document.getElementById(`ef_${f.label}`).value;
+    data[f.label]=v!==''?parseFloat(v):'';
+    if(v!=='')hasVal=true;
+  });
+  if(!hasVal&&!confirm('値が入力されていません。空のまま保存しますか？'))return;
+  state.entryData[prop.name]=data;
+  if(state.entryDraft) delete state.entryDraft[prop.name];
+  setLastData(prop.name,data,state.selectedStaff,state.date);
+  state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
+  state.entryOrder.push(prop.name);
+  saveSession();
+  saveHistory(state.date, state.selectedStaff, state.entryData);
+  const savedName = prop.name;
+  renderPropertyList();showScreen(3);
+  setTimeout(()=>{
+    const cards = document.querySelectorAll('.prop-card');
+    let savedCard = null;
+    cards.forEach(c=>{ if(c.dataset.propname===savedName) savedCard=c; });
+    if(savedCard){
+      const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
+      const top = savedCard.getBoundingClientRect().top + window.scrollY - headerH - 8;
+      window.scrollTo({ top, behavior:'instant' });
+      const inp = savedCard.querySelector('.prop-order-input');
+      if(inp){ inp.focus(); inp.select(); }
+    }
+  }, 80);
+}
+
+function clearPropertyData(){
+  const prop=allProperties[state.currentPropertyIndex];
+  if(!state.entryData[prop.name]&&!confirm('入力データがありません。戻りますか？'))return;
+  if(state.entryData[prop.name]&&!confirm(`「${prop.name}」の入力データを消去して戻りますか？`))return;
+  delete state.entryData[prop.name];
+  if(state.entryDraft) delete state.entryDraft[prop.name];
+  state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
+  saveSession();
+  renderPropertyList();showScreen(3);
+}
+
+// ===== 曜日別・保存（シングルボタン） =====
+function renderDaySaveSingle(){
+  const panel = document.getElementById('daySaveSingle');
+  const btn   = document.getElementById('daySaveBtn');
+  const note  = document.getElementById('daySavedNote');
+  if(!panel||!btn) return;
+  if(!state.selectedStaff || !state.dayName){ panel.style.display='none'; return; }
+  panel.style.display='flex';
+  btn.textContent = '📌 ' + state.dayName + '曜日の順番として保存';
+  const saved = !!getSavedOrder(state.selectedStaff, state.dayName);
+  note.textContent = saved ? '（保存済み・上書き）' : '';
+}
+
+function saveTodayOrder(){
+  if(!state.selectedStaff){ alert('担当者が選択されていません'); return; }
+  const day = state.dayName;
+  const base = getSortedProps();
+  const ordered = [...state.entryOrder,
+    ...base.filter(p=>!state.entryOrder.includes(p.name)).map(p=>p.name)];
+  setSavedOrder(state.selectedStaff, day, ordered);
+  const note = document.getElementById('daySavedNote');
+  if(note){ note.textContent='✓ 保存しました'; setTimeout(()=>{ note.textContent='（保存済み・上書き）'; },1500); }
+}
+
+// ===== SAVE ORDER =====
+
+
+
+// ===== SCREEN 3→5 =====
+function goToScreen5(){
+  // Auto-save to history when reaching confirm screen
+  if(Object.keys(state.entryData).length>0){
+    saveHistory(state.date, state.selectedStaff, state.entryData);
+  }
+  const entered=Object.keys(state.entryData).length;
+  document.getElementById('screen5sub').textContent=`${state.date}（${state.dayName}曜日）　担当：${state.selectedStaff}　${entered}/${allProperties.length}件入力済み`;
+  const c=document.getElementById('summaryContent'); c.innerHTML='';
+  if(!entered){c.innerHTML='<div class="empty-state"><div>まだ入力データがありません</div></div>';return;}
+  let html='<div class="card"><table class="summary-table"><thead><tr><th>物件</th><th>項目</th><th>値</th><th>単位</th></tr></thead><tbody>';
+  const sorted=getSortedProps();
+  sorted.forEach(prop=>{
+    const data=state.entryData[prop.name];if(!data)return;
+    let nameShown=false;
+    prop.fields.forEach((f,fi)=>{
+      const val=data[f.label];
+      const display=val!==''&&val!==undefined?val:'-';
+      const nameCell=nameShown?'':`<b>${prop.name}</b>`;
+      nameShown=true;
+      html+=`<tr><td style="padding:4px 6px;vertical-align:top">${nameCell}</td><td style="padding:4px 6px">${f.label}</td><td style="text-align:right;font-weight:600;padding:4px 6px">${display}</td><td style="padding:4px 6px">${f.unit}</td></tr>`;
+    });
+  });
+  html+='</tbody></table></div>';
+  c.innerHTML=html;
+  showScreen(5);
+}
+
+function exportText(){
+  const props = getSortedProps();
+  const entered = props.filter(p => state.entryData[p.name]);
+  if(entered.length === 0){
+    alert('まだ入力データがありません。');
+    return;
+  }
+  const d = state.date ? state.date.replace(/-/g,'/') : '日付未設定';
+  let lines = [];
+  lines.push('■ 計量データ　' + d + '　' + (state.dayName||'') );
+  lines.push('　担当：' + (state.selectedStaff||'未設定'));
+  lines.push('');
+  entered.forEach((prop, idx) => {
+    const data = state.entryData[prop.name];
+    lines.push((idx+1) + '．' + prop.name);
+    prop.fields.forEach(f => {
+      const val = (data[f.label] !== undefined && data[f.label] !== '') ? data[f.label] : '－';
+      lines.push('　　' + f.label + '：' + val + ' ' + f.unit);
+    });
+    lines.push('');
+  });
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('入力件数：' + entered.length + '件　/ 全' + props.length + '件');
+  lines.push('出力：' + new Date().toLocaleString('ja-JP'));
+  const text = lines.join('\n');
+  const fname = '計量データ_' + (state.date||'').replace(/-/g,'') + '_' + (state.selectedStaff||'未設定') + '.txt';
+  const blob = new Blob(['\uFEFF' + text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+}
+
+function exportXlsx(){
+  const wb=XLSX.utils.book_new();
+  const rows=[['物件名','項目','値','単位','日付','担当者']];
+  getSortedProps().forEach(prop=>{
+    const data=state.entryData[prop.name];if(!data)return;
+    prop.fields.forEach(f=>rows.push([prop.name,f.label,data[f.label]!==''?data[f.label]:'',f.unit,state.date,state.selectedStaff]));
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'計量データ');
+  XLSX.writeFile(wb,`計量データ_${state.date.replace(/-/g,'')}_${state.selectedStaff}.xlsx`);
+}
+
+// ===== CONVERT SCREEN =====
+function initConvertScreen(){
+  const t = new Date();
+  const today = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  const inp = document.getElementById('convertDateInput');
+  inp.value = today;
+  loadConvertFromHistory(today);
+}
+
+function loadConvertFromHistory(dateVal){
+  const resultEl = document.getElementById('convertHistResult');
+  if(!dateVal){ resultEl.innerHTML=''; return; }
+  const records = getAllHistory().filter(h=>h.date===dateVal);
+  if(records.length===0){
+    resultEl.innerHTML=`<div style="color:#888;font-size:13px;padding:6px 0">この日付の履歴はありません。<br>テキストファイルから変換してください。</div>`;
+    return;
+  }
+  // 複数担当がある場合はセレクタ表示
+  let html='';
+  if(records.length>1){
+    html+=`<div style="font-size:13px;margin-bottom:8px;color:#555">担当者を選択：</div>`;
+    html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
+    records.forEach((r,i)=>{
+      const cnt=Object.keys(r.entryData).length;
+      html+=`<button class="btn btn-secondary btn-sm" onclick="showConvertPreview(${i})" id="convBtn_${i}">${r.staffName}（${cnt}件）</button>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`<div id="convertPreviewWrap"></div>`;
+  resultEl.innerHTML=html;
+  // 1件だけなら自動表示
+  window._convertRecords=records;
+  if(records.length===1) showConvertPreview(0);
+}
+
+function showConvertPreview(idx){
+  const records=window._convertRecords||[];
+  const rec=records[idx]; if(!rec) return;
+  // ボタンのハイライト
+  records.forEach((_,i)=>{
+    const b=document.getElementById(`convBtn_${i}`);
+    if(b) b.style.background=i===idx?'#1a6eb5':''  ;
+    if(b) b.style.color=i===idx?'white':'';
+  });
+  const propNames=Object.keys(rec.entryData);
+  let html=`<div style="font-size:13px;margin-bottom:8px;color:#555">📋 ${rec.date}　${rec.staffName}　${propNames.length}件</div>`;
+  html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html+='<tr style="background:#e2e8f0"><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #cbd5e1">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">単位</th></tr>';
+  propNames.forEach(name=>{
+    const data=rec.entryData[name];
+    const prop=allProperties.find(p=>p.name===name);
+    if(!prop) return;
+    prop.fields.forEach((f,fi)=>{
+      const val=data[f.label]!==undefined&&data[f.label]!==''?data[f.label]:'－';
+      html+=`<tr style="background:${fi%2===0?'#fff':'#f8fafc'}">`;
+      if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${name}</td>`;
+      html+=`<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.label}</td><td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:right">${val}</td><td style="padding:5px 8px;border:1px solid #e2e8f0">${f.unit}</td></tr>`;
+    });
+  });
+  html+='</table></div>';
+  html+=`<button class="btn btn-primary" style="margin-top:12px" onclick="convertHistToXlsx(${idx})">📥 Excelで保存（.xlsx）</button>`;
+  document.getElementById('convertPreviewWrap').innerHTML=html;
+}
+
+function convertHistToXlsx(idx){
+  const records=window._convertRecords||[];
+  const rec=records[idx]; if(!rec) return;
+  const wb=XLSX.utils.book_new();
+  const rows=[['物件名','項目','値','単位','日付','担当者']];
+  Object.keys(rec.entryData).forEach(name=>{
+    const data=rec.entryData[name];
+    const prop=allProperties.find(p=>p.name===name);
+    if(!prop) return;
+    prop.fields.forEach(f=>rows.push([name,f.label,data[f.label]!==''?data[f.label]:'',f.unit,rec.date,rec.staffName]));
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'計量データ');
+  XLSX.writeFile(wb,`計量データ_${rec.date.replace(/-/g,'')}_${rec.staffName}.xlsx`);
+}
+
+// ===== TEXT → EXCEL 変換 =====
+let _parsedTxt = null; // {date, staff, props:[{name, fields:[{label,value,unit}]}]}
+
+function loadTxtFile(event){
+  const file = event.target.files[0];
+  const errEl = document.getElementById('txtError');
+  const prevEl = document.getElementById('txtPreview');
+  errEl.style.display='none'; prevEl.style.display='none';
+  _parsedTxt = null;
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      _parsedTxt = parseTxtData(e.target.result);
+      renderTxtPreview(_parsedTxt);
+      prevEl.style.display='block';
+    } catch(err){
+      errEl.textContent = '読み込みエラー：' + err.message;
+      errEl.style.display='block';
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseTxtData(text){
+  // BOM除去
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split('\n').map(l=>l.replace(/\r$/,''));
+  let date='', staff='', props=[], curProp=null;
+
+  for(let i=0; i<lines.length; i++){
+    const line = lines[i];
+
+    // 日付行: ■ 計量データ　2026/04/16　木
+    if(line.startsWith('■')){
+      const m = line.match(/(\d{4}\/\d{2}\/\d{2})/);
+      if(m) date = m[1].replace(/\//g,'-');
+      continue;
+    }
+    // 担当行: 　担当：田中
+    if(line.match(/担当[：:]/)){
+      const m = line.match(/担当[：:](.+)/);
+      if(m) staff = m[1].trim();
+      continue;
+    }
+    // 物件行: 1．LA・MU  or 1.LA・MU
+    const propMatch = line.match(/^\d+[．.]\s*(.+)/);
+    if(propMatch){
+      curProp = { name: propMatch[1].trim(), fields: [] };
+      props.push(curProp);
+      continue;
+    }
+    // フィールド行: 　　可燃ごみ：123 kg  or 　　可燃ごみ：－ kg
+    if(curProp && line.match(/[：:]/)){
+      const m = line.match(/^\s+(.+?)[：:](.+?)\s+(\S+)\s*$/);
+      if(m){
+        const label = m[1].trim();
+        const rawVal = m[2].trim();
+        const unit = m[3].trim();
+        // 「－」は空値
+        const value = (rawVal==='－'||rawVal==='-') ? '' : rawVal;
+        curProp.fields.push({label, value, unit});
+      }
+      continue;
+    }
+  }
+  if(!date) throw new Error('日付が見つかりません。正しいテキストファイルか確認してください。');
+  if(props.length===0) throw new Error('物件データが見つかりません。');
+  return {date, staff, props};
+}
+
+function renderTxtPreview(parsed){
+  const tbl = document.getElementById('txtPreviewTable');
+  let html = `<div style="font-size:13px;margin-bottom:8px;color:#555">
+    📅 ${parsed.date}　👤 ${parsed.staff}　🏢 ${parsed.props.length}件
+  </div>`;
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="background:#e2e8f0"><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #cbd5e1">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">単位</th></tr>';
+  parsed.props.forEach(prop=>{
+    prop.fields.forEach((f, fi)=>{
+      html += `<tr style="background:${fi%2===0?'#fff':'#f8fafc'}">`;
+      html += fi===0 ? `<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${prop.name}</td>` : '';
+      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.label}</td>`;
+      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:right">${f.value!==''?f.value:'－'}</td>`;
+      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.unit}</td></tr>`;
+    });
+  });
+  html += '</table>';
+  tbl.innerHTML = html;
+}
+
+function convertTxtToXlsx(){
+  if(!_parsedTxt){ alert('テキストファイルを先に選択してください。'); return; }
+  const p = _parsedTxt;
+  const wb = XLSX.utils.book_new();
+  const rows = [['物件名','項目','値','単位','日付','担当者']];
+  p.props.forEach(prop=>{
+    prop.fields.forEach(f=>{
+      rows.push([prop.name, f.label, f.value!==''?parseFloat(f.value)||f.value:'', f.unit, p.date, p.staff]);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws, '計量データ');
+  XLSX.writeFile(wb, `計量データ_${p.date.replace(/-/g,'')}_${p.staff}.xlsx`);
+}
+
+// ===== FIELD DROPDOWN =====
+function showFieldDropdown(input){ renderDropdown(input.parentElement.querySelector('.field-dropdown'),input.value); }
+function filterFieldDropdown(input){ renderDropdown(input.parentElement.querySelector('.field-dropdown'),input.value); }
+function renderDropdown(dd,q){
+  const f=FIELD_SUGGESTIONS.filter(s=>s.includes(q)||q==='');
+  dd.innerHTML=f.map(s=>`<div class="field-dropdown-item" onmousedown="selectSug(event,'${s}')">${s}</div>`).join('');
+  dd.classList.toggle('open',f.length>0);
+}
+function selectSug(event,val){
+  event.preventDefault();
+  const dd=event.target.closest('.field-dropdown');
+  dd.previousElementSibling.value=val;
+  dd.previousElementSibling.dispatchEvent(new Event('change'));
+  dd.classList.remove('open');
+}
+function hideFieldDropdown(input){ setTimeout(()=>{input.parentElement.querySelector('.field-dropdown').classList.remove('open');},200); }
+
+// ===== HISTORY =====
+function checkPastData(dateVal){
+  const banner=document.getElementById('pastDataBanner');
+  const entries=document.getElementById('pastDataEntries');
+  if(!dateVal){ banner.style.display='none'; return; }
+  const hist=getAllHistory().filter(h=>h.date===dateVal);
+  if(!hist.length){ banner.style.display='none'; return; }
+  const names=hist.map(h=>`${h.staffName}（${Object.keys(h.entryData).length}件）`).join('、');
+  entries.textContent=`担当：${names}`;
+  banner.style.display='block';
+  state._histFilterDate=dateVal;
+}
+
+function goToHistoryForDate(){
+  state._histFilterDate=document.getElementById('dateInput').value;
+  renderHistory(state._histFilterDate);
+  showScreen(6);
+}
+
+function renderHistory(filterDate){
+  const c=document.getElementById('historyList'); c.innerHTML='';
+  let hist=getAllHistory();
+  if(filterDate) hist=hist.filter(h=>h.date===filterDate);
+  if(!hist.length){
+    c.innerHTML='<div class="empty-state"><div class="icon">📭</div><div>履歴がありません</div></div>';
+    return;
+  }
+  hist.forEach((record,ri)=>{
+    const d=new Date(record.date+'T00:00:00');
+    const dayName=DAYS_JP[d.getDay()];
+    const enteredCount=Object.keys(record.entryData).length;
+    const div=document.createElement('div');
+    div.className='history-item';
+    // Build detail table
+    let tableRows='';
+    const sorted=[...allProperties].sort((a,b)=>(a.order||999)-(b.order||999));
+    sorted.forEach(prop=>{
+      const data=record.entryData[prop.name]; if(!data)return;
+      let nameShown=false;
+      prop.fields.forEach((f,fi)=>{
+        const val=data[f.label];
+        if(val===''||val===undefined)return;
+        const nameCell=nameShown?'':`<b>${prop.name}</b>`;
+        nameShown=true;
+        tableRows+=`<tr><td style="padding:4px 6px;vertical-align:top">${nameCell}</td><td style="padding:4px 6px">${f.label}</td><td style="text-align:right;font-weight:600;padding:4px 6px">${val}</td><td style="padding:4px 6px">${f.unit}</td></tr>`;
+      });
+    });
+    div.innerHTML=`
+      <div class="history-header" onclick="toggleHist(${ri})">
+        <div>
+          <div class="history-date">${record.date}（${dayName}曜日）</div>
+          <div class="history-staff">担当：${record.staffName}　${enteredCount}件</div>
+        </div>
+        <span style="color:#aaa;font-size:16px" id="harrow_${ri}">▼</span>
+      </div>
+      <div class="history-body" id="hbody_${ri}">
+        ${tableRows?`<table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f0f4f8"><th style="padding:6px;text-align:left">物件</th><th style="padding:6px;text-align:left">項目</th><th style="padding:6px;text-align:right">値</th><th style="padding:6px">単位</th></tr></thead>
+          <tbody>${tableRows}</tbody></table>`:'<div style="color:#aaa;font-size:13px">データなし</div>'}
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="reloadHistoryEntry(${ri},event)">このデータで再入力</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteHistory(${ri},event)">削除</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn btn-success" style="flex:1" onclick="shareHistoryAsExcel(${ri},event)">📊 Excelで共有</button>
+          <button class="btn btn-secondary" style="flex:1" onclick="sendHistoryByMail(${ri},event)">✉️ メール本文</button>
+        </div>
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+function toggleHist(ri){
+  const body=document.getElementById(`hbody_${ri}`);
+  const arrow=document.getElementById(`harrow_${ri}`);
+  const open=body.classList.contains('open');
+  body.classList.toggle('open',!open);
+  arrow.textContent=open?'▼':'▲';
+}
+
+function reloadHistoryEntry(ri,event){
+  event.stopPropagation();
+  let hist=getAllHistory();
+  const filterDate=state._histFilterDate||null;
+  if(filterDate) hist=hist.filter(h=>h.date===filterDate);
+  const record=hist[ri];
+  if(!record)return;
+  // Set state from history
+  state.date=record.date;
+  const d=new Date(record.date+'T00:00:00');
+  state.dayName=DAYS_JP[d.getDay()];
+  state.selectedStaff=record.staffName;
+  state.entryData={...record.entryData};
+  state.entryOrder=Object.keys(record.entryData);
+  document.getElementById('dateInput').value=record.date;
+  updateNav(3);
+  renderPropertyList();
+  showScreen(3);
+}
+
+function deleteHistory(ri,event){
+  event.stopPropagation();
+  if(!confirm('この履歴を削除しますか？'))return;
+  let hist=getAllHistory();
+  const filterDate=state._histFilterDate||null;
+  let displayed=filterDate?hist.filter(h=>h.date===filterDate):hist;
+  const record=displayed[ri];
+  if(!record)return;
+  // Remove from index
+  let idx=loadJSON('keiryo_hist_index',[]);
+  const key=record.date+'_'+record.staffName;
+  idx=idx.filter(k=>k!==key);
+  saveJSON('keiryo_hist_index',idx);
+  localStorage.removeItem(LS_HISTORY_PREFIX+key);
+  state._histFilterDate=filterDate;
+  renderHistory(filterDate);
+}
+
+// ===== SETTINGS SCREEN =====
+function renderSettingsStaff(){
+  const c=document.getElementById('settingsStaffList'); c.innerHTML='';
+  staffList.forEach(name=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;';
+    div.innerHTML=`<span style="font-size:15px">${name}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeStaffSettings('${name}')">削除</button>`;
+    c.appendChild(div);
+  });
+}
+function removeStaffSettings(name){
+  if(!confirm(`「${name}」を削除しますか？`))return;
+  staffList=staffList.filter(s=>s!==name);saveJSON(LS_STAFF,staffList);
+  if(state.selectedStaff===name)state.selectedStaff='';
+  renderSettingsStaff();
+}
+function addStaffFromSettings(){
+  const inp=document.getElementById('settingsNewStaff');const name=inp.value.trim();
+  if(!name||staffList.includes(name)){alert(name?'同じ名前が既に登録されています':'名前を入力してください');return;}
+  staffList.push(name);saveJSON(LS_STAFF,staffList);inp.value='';renderSettingsStaff();
+}
+
+// ===== DRAG AND DROP =====
+function dragHandleStart(e, el){
+  const propName = el.dataset.propname;
+  dragStart(e, propName, el);
+}
+
+const _drag = {
+  active: false, propName: null, srcEl: null,
+  ghost: null, overEl: null, startY: 0, startX: 0
+};
+
+function dragStart(e, propName, handle){
+  e.stopPropagation();
+  e.preventDefault();
+  const card = handle.closest('.prop-card');
+  const ghost = document.getElementById('drag-ghost');
+  ghost.textContent = propName;
+  ghost.style.display = 'block';
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  ghost.style.left = (clientX + 12) + 'px';
+  ghost.style.top  = (clientY - 20) + 'px';
+
+  _drag.active = true;
+  _drag.propName = propName;
+  _drag.srcEl = card;
+  _drag.ghost = ghost;
+  _drag.overEl = null;
+  card.classList.add('drag-dragging');
+
+  // Init customOrder if not set
+  if(!state.customOrder){
+    const c = document.getElementById('propertyList');
+    state.customOrder = [...c.querySelectorAll('.prop-card')].map(el=>el.dataset.propname);
+  }
+
+  if(e.touches){
+    document.addEventListener('touchmove', dragMove, {passive:false});
+    document.addEventListener('touchend',  dragEnd,  {once:true});
+  } else {
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup',   dragEnd,  {once:true});
+  }
+}
+
+function dragMove(e){
+  if(!_drag.active) return;
+  e.preventDefault();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  _drag.ghost.style.left = (clientX + 12) + 'px';
+  _drag.ghost.style.top  = (clientY - 20) + 'px';
+
+  // Find card under pointer
+  _drag.ghost.style.display = 'none';
+  const el = document.elementFromPoint(clientX, clientY);
+  _drag.ghost.style.display = 'block';
+  const targetCard = el ? el.closest('.prop-card') : null;
+
+  // Clear previous highlight
+  if(_drag.overEl && _drag.overEl !== targetCard){
+    _drag.overEl.classList.remove('drag-over-top','drag-over-bottom');
+  }
+  if(targetCard && targetCard !== _drag.srcEl){
+    const rect = targetCard.getBoundingClientRect();
+    const half = rect.top + rect.height / 2;
+    targetCard.classList.remove('drag-over-top','drag-over-bottom');
+    targetCard.classList.add(clientY < half ? 'drag-over-top' : 'drag-over-bottom');
+    _drag.overEl = targetCard;
+  }
+}
+
+function dragEnd(e){
+  if(!_drag.active) return;
+  document.removeEventListener('touchmove', dragMove);
+  document.removeEventListener('mousemove', dragMove);
+
+  _drag.ghost.style.display = 'none';
+  _drag.srcEl.classList.remove('drag-dragging');
+  if(_drag.overEl){
+    _drag.overEl.classList.remove('drag-over-top','drag-over-bottom');
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    const rect = _drag.overEl.getBoundingClientRect();
+    const insertBefore = clientY < rect.top + rect.height / 2;
+
+    // Reorder customOrder
+    const order = [...state.customOrder];
+    const fromIdx = order.indexOf(_drag.propName);
+    const toName = _drag.overEl.dataset.propname;
+    let toIdx = order.indexOf(toName);
+    if(fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx){
+      order.splice(fromIdx, 1);
+      toIdx = order.indexOf(toName);
+      order.splice(insertBefore ? toIdx : toIdx + 1, 0, _drag.propName);
+      state.customOrder = order;
+      renderPropertyList();
+    }
+  }
+  _drag.active = false; _drag.propName = null; _drag.srcEl = null; _drag.overEl = null;
+}
+
+// ===== NUMBER REORDER =====
+function movePropToPos(fromIdx, input){
+  const toPos = parseInt(input.value);
+  if(isNaN(toPos)) return;
+  // Build current displayList
+  let displayList;
+  if(state.customOrder){
+    displayList = state.customOrder.map(n=>allProperties.find(p=>p.name===n)).filter(Boolean);
+    const missing = allProperties.filter(p=>!state.customOrder.includes(p.name));
+    displayList = [...displayList, ...missing];
+  } else {
+    const baseProps = getSortedProps();
+    const entered = state.entryOrder.map(n=>baseProps.find(p=>p.name===n)).filter(Boolean);
+    const remaining = baseProps.filter(p=>!state.entryOrder.includes(p.name));
+    displayList = [...entered, ...remaining];
+  }
+  const toIdx = Math.max(0, Math.min(toPos-1, displayList.length-1));
+  if(toIdx === fromIdx){ input.value = fromIdx+1; return; }
+  // Initialize customOrder from current display if needed
+  if(!state.customOrder){
+    state.customOrder = displayList.map(p=>p.name);
+  }
+  const order = [...state.customOrder];
+  const propName = displayList[fromIdx].name;
+  const fi = order.indexOf(propName);
+  if(fi !== -1){
+    const item = order.splice(fi, 1)[0];
+    // toIdx references displayList positions; find corresponding customOrder index
+    const toName = displayList[toIdx].name;
+    let ti = order.indexOf(toName);
+    if(ti === -1) ti = order.length;
+    order.splice(ti, 0, item);
+  }
+  state.customOrder = order;
+  saveSession();
+  renderPropertyList();
+  setTimeout(()=>{
+    const cards = document.querySelectorAll('.prop-card');
+    if(cards[toIdx]){
+      const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
+      const top = cards[toIdx].getBoundingClientRect().top + window.scrollY - headerH - 8;
+      window.scrollTo({ top, behavior:'smooth' });
+      cards[toIdx].style.background = '#d1fae5';
+      setTimeout(()=>{ cards[toIdx].style.background = ''; }, 800);
+    }
+  }, 50);
+}
+
+function resetPropOrderInput(fromIdx, input){
+  // On blur without Enter: reset display value
+  input.value = fromIdx + 1;
+}
+
+// ===== SHARE HISTORY AS EXCEL =====
+function shareHistoryAsExcel(ri, event){
+  event.stopPropagation();
+  let hist = getAllHistory();
+  const filterDate = state._histFilterDate || null;
+  if(filterDate) hist = hist.filter(h => h.date === filterDate);
+  const record = hist[ri];
+  if(!record){ alert('データが見つかりません'); return; }
+
+  const d = new Date(record.date + 'T00:00:00');
+  const dayName = DAYS_JP[d.getDay()];
+
+  // Build Excel rows
+  const rows = [['日付', '曜日', '担当者', '物件名', '項目', '値', '単位']];
+  const sorted = [...allProperties].sort((a,b) => (a.order||999) - (b.order||999));
+  sorted.forEach(prop => {
+    const data = record.entryData[prop.name];
+    if(!data) return;
+    prop.fields.forEach(f => {
+      const val = data[f.label];
+      if(val === '' || val === undefined) return;
+      rows.push([record.date, dayName+'曜日', record.staffName, prop.name, f.label, val, f.unit]);
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:20},{wch:14},{wch:8},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws, '計量データ');
+
+  const filename = `計量データ_${record.date.replace(/-/g,'')}_${record.staffName}.xlsx`;
+
+  // ダウンロード → iPhoneでは「ファイル」アプリのDownloadsに保存される
+  XLSX.writeFile(wb, filename);
+  setTimeout(()=>alert('📂 「ファイル」アプリのDownloadsフォルダに保存されました。\nそこからGoogle DriveやメールへAttachできます。'), 500);
+}
+
+// ===== SEND HISTORY BY MAIL =====
+function sendHistoryByMail(ri, event){
+  event.stopPropagation();
+  let hist = getAllHistory();
+  const filterDate = state._histFilterDate || null;
+  if(filterDate) hist = hist.filter(h => h.date === filterDate);
+  const record = hist[ri];
+  if(!record){ alert('データが見つかりません'); return; }
+
+  const d = new Date(record.date + 'T00:00:00');
+  const dayName = DAYS_JP[d.getDay()];
+
+  // Build email body
+  let body = `【計量データ】\n`;
+  body += `日付：${record.date}（${dayName}曜日）\n`;
+  body += `担当：${record.staffName}\n`;
+  body += `─────────────────\n`;
+
+  const sorted = [...allProperties].sort((a,b) => (a.order||999) - (b.order||999));
+  sorted.forEach(prop => {
+    const data = record.entryData[prop.name];
+    if(!data) return;
+    let hasVal = false;
+    prop.fields.forEach(f => {
+      if(data[f.label] !== '' && data[f.label] !== undefined) hasVal = true;
+    });
+    if(!hasVal) return;
+    body += `\n【${prop.name}】\n`;
+    prop.fields.forEach(f => {
+      const val = data[f.label];
+      if(val === '' || val === undefined) return;
+      body += `  ${f.label}：${val} ${f.unit}\n`;
+    });
+  });
+  body += `─────────────────\n`;
+
+  const to = getMailTo();
+  if(!to){ alert('送信先が設定されていません。\nメール設定タブでアドレスを登録してください。'); return; }
+  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）`);
+  const bodyEncoded = encodeURIComponent(body);
+  openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
+}
+
+function openMailComposer(mailtoUrl){
+  const a = document.createElement('a');
+  a.href = mailtoUrl;
+  a.target = '_top';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    if(a.parentNode) a.parentNode.removeChild(a);
+  }, 1000);
+}
+
+// ===== MAIL SETTINGS =====
+const LS_MAIL_LIST = 'keiryo_mail_list';
+const MAIL_COUNT = 4;
+
+function defaultMailList(){
+  return [
+    {addr:'annsyuu38@gmail.com', enabled:true},
+    {addr:'', enabled:false},
+    {addr:'', enabled:false},
+    {addr:'', enabled:false}
+  ];
+}
+
+function loadMailList(){
+  try{
+    const v = localStorage.getItem(LS_MAIL_LIST);
+    return v ? JSON.parse(v) : defaultMailList();
+  }catch(e){ return defaultMailList(); }
+}
+
+function saveMailList(list){ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(list)); }
+
+function loadMailSettings(){
+  const list = loadMailList();
+  const c = document.getElementById('mailAddressList');
+  c.innerHTML = '';
+  list.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
+    row.innerHTML = `
+      <input type="checkbox" id="mailChk_${i}" ${item.enabled?'checked':''} style="width:20px;height:20px;flex-shrink:0;accent-color:#1a6eb5">
+      <input type="email" id="mailAddr_${i}" value="${item.addr}" placeholder="メールアドレス ${i+1}"
+        style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none">`;
+    c.appendChild(row);
+  });
+}
+
+function saveMailSettings(){
+  const list = Array.from({length:MAIL_COUNT}, (_,i) => ({
+    addr: document.getElementById(`mailAddr_${i}`).value.trim(),
+    enabled: document.getElementById(`mailChk_${i}`).checked
+  }));
+  saveMailList(list);
+  const active = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
+  alert('保存しました。\n送信先：\n' + (active.length ? active.join('\n') : '（なし）'));
+}
+
+function getMailTo(){
+  const list = loadMailList();
+  const addrs = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
+  return addrs.length ? addrs.join(',') : 'annsyuu38@gmail.com';
+}
+
+// ===== RESET PROPERTIES TO DEFAULT =====
+function resetPropertiesToDefault(){
+  if(!confirm('物件リストをデフォルト（45件）に戻しますか？\n追加・変更した物件情報はすべて消えます。')) return;
+  localStorage.removeItem(LS_PROPERTIES);
+  allProperties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+  saveJSON(LS_PROPERTIES, allProperties);
+  alert('物件リストをデフォルトに戻しました（' + allProperties.length + '件）');
+}
+
+// ===== ADD NEW PROPERTY =====
+let newPropDays=[];
+function toggleNewDay(label,day,event){
+  event.preventDefault();label.classList.toggle('checked');
+  if(newPropDays.includes(day))newPropDays=newPropDays.filter(d=>d!==day);else newPropDays.push(day);
+}
+function addFieldRow(){
+  const c=document.getElementById('newPropertyFields');
+  const div=document.createElement('div');div.className='field-edit-row';
+  div.innerHTML=`<div class="field-name-wrap">
+    <input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)">
+    <div class="field-dropdown"></div></div>
+    <select><option value="袋">袋</option><option value="kg">kg</option></select>
+    <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button>`;
+  c.appendChild(div);
+}
+function removeFieldRow(btn){ btn.parentElement.remove(); }
+function addNewProperty(){
+  const name=document.getElementById('newPropertyName').value.trim();
+  if(!name){alert('物件名を入力してください');return;}
+  if(allProperties.find(p=>p.name===name)){alert('同じ名前の物件が既に登録されています');return;}
+  const rows=document.querySelectorAll('#newPropertyFields .field-edit-row');
+  const fields=[];
+  rows.forEach(row=>{const l=row.querySelector('input').value.trim();const u=row.querySelector('select').value;if(l)fields.push({label:l,unit:u});});
+  if(!fields.length){alert('入力項目を1つ以上追加してください');return;}
+  const maxOrder=allProperties.reduce((m,p)=>Math.max(m,p.order||0),0);
+  newPropDays.sort((a,b)=>ORDERED_DAYS.indexOf(a)-ORDERED_DAYS.indexOf(b));
+  allProperties.push({name,order:maxOrder+1,days:[...newPropDays],fields});
+  saveJSON(LS_PROPERTIES,allProperties);
+  document.getElementById('newPropertyName').value='';
+  document.querySelectorAll('#newPropertyDays .day-check-label').forEach(l=>l.classList.remove('checked'));
+  newPropDays=[];
+  document.getElementById('newPropertyFields').innerHTML=`<div class="field-edit-row">
+    <div class="field-name-wrap"><input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)"><div class="field-dropdown"></div></div>
+    <select><option value="袋">袋</option><option value="kg">kg</option></select>
+    <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button></div>`;
+  alert(`「${name}」を登録しました`);
+}
+</script>
+<script>
+(function(){
+  const RESUME_KEY = 'ueno_seisou_resume_v1';
+  const PAGE = 'index_3-16.html';
+  let timer = null;
+  function saveResume(){
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, updatedAt: Date.now()}));
+    } catch(e) {}
+  }
+  window.addEventListener('load', () => {
+    try {
+      const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
+      if(r && r.page === PAGE && typeof r.scrollY === 'number') setTimeout(() => window.scrollTo(0, r.scrollY), 120);
+    } catch(e) {}
+    saveResume();
+  });
+  window.addEventListener('scroll', () => {
+    clearTimeout(timer);
+    timer = setTimeout(saveResume, 250);
+  }, {passive:true});
+  window.addEventListener('pagehide', saveResume);
+})();
+</script>
+<div id="drag-ghost"></div>
+<script src="app-tabs.js?v=20260518shadowlabel"></script>
+
+</body>
+</html>

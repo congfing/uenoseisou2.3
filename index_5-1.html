@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>計量物件表 記入箇所メモ（v5-1）</title>
+<style>
+  :root {
+    --panel: #ffffff;
+    --border: #d9dde3;
+    --accent: #1f6feb;
+    --accent-dark: #155ac4;
+    --muted: #57606a;
+    --tag: #eef3fb;
+    --tag-text: #0b4cb1;
+  }
+  * { box-sizing: border-box; }
+  html, body { overscroll-behavior-x: contain;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    padding: 18px 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+  }
+  header .sub {
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+  .selector {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+  }
+  .selector label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  select, input[type="search"] {
+    width: 100%;
+    padding: 14px 14px;
+    font-size: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2357606a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+    cursor: pointer;
+  }
+  input[type="search"] {
+    background-image: none;
+    padding-right: 14px;
+    cursor: text;
+  }
+  select:focus, input[type="search"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(31,111,235,0.2);
+  }
+  .search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .search-row input {
+    flex: 1;
+  }
+  .clear-btn, .link-btn {
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .clear-btn {
+    color: var(--muted);
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+  .quick-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .link-btn {
+    display: inline-block;
+    text-decoration: none;
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .link-btn.secondary {
+    color: var(--tag-text);
+  }
+  .hit-count {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .content {
+    margin-top: 20px;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .property-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  .property-no {
+    display: inline-block;
+    color: #fff;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .property-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .file-tag {
+    display: inline-block;
+    color: var(--tag-text);
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 14px 0 6px;
+    letter-spacing: 0.04em;
+  }
+  .detail {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .columns-list, .rows-list, .note-list {
+    margin: 4px 0 0 0;
+    padding-left: 1.2em;
+  }
+  .columns-list li, .rows-list li, .note-list li {
+    margin: 2px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px 12px;
+    margin-top: 6px;
+    font-size: 14px;
+  }
+  .meta-key {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .meta-val {
+    color: var(--text);
+  }
+  .file-header-note {
+    border: 1px solid #f5d87a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #6b5600;
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+  .note-block {
+    border-left: 3px solid #9aa5b4;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #3a424d;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 20px;
+  }
+  @media (max-width: 480px) {
+    header h1 { font-size: 17px; }
+    .property-name { font-size: 16px; }
+    main { padding: 14px 12px 40px; }
+    .card { padding: 16px; }
+    .meta-grid { grid-template-columns: 90px 1fr; }
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <h1>計量物件表　記入箇所メモ</h1>
+  <div class="sub" id="headerSub"></div>
+</header>
+
+<main>
+  <div class="selector">
+    <label for="propSearch">物件名・ファイル名で検索</label>
+    <div class="search-row">
+      <input type="search" id="propSearch" placeholder="例：セブン、マックス、kg、段ボール">
+      <button type="button" class="clear-btn" id="clearSearch">クリア</button>
+    </div>
+    <label for="propSelect">物件を選択してください（タップ）</label>
+    <select id="propSelect">
+      <option value="">-- 物件を選択 --</option>
+    </select>
+    <div class="hit-count" id="hitCount"></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="card">
+      <div class="placeholder">上のプルダウンから物件を選択すると、<br>その物件の記入箇所データが表示されます。</div>
+    </div>
+  </div>
+</main>
+
+<footer>計量物件表 記入箇所メモ v5-1</footer>
+
+<script>
+const properties = [
+  {
+    no: 1, name: "LA・MU", file: "LA・MU.xlsx",
+    fileNote: "",
+    mark: "①",
+    header: "ヘッダー行6: E=「可燃ごみ」G=「不燃ごみ」（単位表記なし、実測値はkg）",
+    cols: ["E列（可燃ごみ）", "G列（不燃ごみ）"],
+    rows: "8〜38行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 2, name: "セブンイレブン 伊賀緑ヶ丘東町店（店舗コード:1420）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）／ 形式: 横方向に日付（F列=1日〜AJ列=31日）／ 各店舗3行ずつ：E列「品名」に 可燃物 袋 / 不燃物 袋 / ダンボール kg の順",
+    mark: "①",
+    cols: ["F〜AJ列（各日数量）"],
+    rows: "2〜4行目",
+    notes: ["行2=「可燃物 袋」", "行3=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行4=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 3, name: "セブンイレブン 伊賀東条店（店舗コード:1442）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "②",
+    cols: ["F〜AJ列"],
+    rows: "5〜7行目",
+    notes: ["行5=「可燃物 袋」", "行6=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行7=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 4, name: "セブンイレブン 伊賀平野北谷店（店舗コード:1431）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "③",
+    cols: ["F〜AJ列"],
+    rows: "8〜10行目",
+    notes: ["行8=「可燃物 袋」", "行9=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行10=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 5, name: "セブンイレブン 伊賀四十九町北店（店舗コード:1432）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "④",
+    cols: ["F〜AJ列"],
+    rows: "11〜13行目",
+    notes: ["行11=「可燃物 袋」", "行12=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行13=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 6, name: "セブンイレブン 伊賀緑ヶ丘本町店（店舗コード:1422）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "⑤",
+    cols: ["F〜AJ列"],
+    rows: "14〜16行目",
+    notes: ["行14=「可燃物 袋」", "行15=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行16=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 7, name: "セブンイレブン 伊賀平野東町店（店舗コード:1449）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "⑥",
+    cols: ["F〜AJ列"],
+    rows: "17〜19行目",
+    notes: ["行17=「可燃物 袋」", "行18=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行19=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 8, name: "セブンイレブン 伊賀忍者市駅南店（店舗コード:2837）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "⑦",
+    cols: ["F〜AJ列"],
+    rows: "20〜22行目",
+    notes: ["行20=「可燃物 袋」", "行21=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) 袋」", "行22=「ﾀﾞﾝﾎﾞｰﾙ kg」"]
+  },
+  {
+    no: 9, name: "セカンドストリート 伊賀小田店（店舗コード:3628）",
+    file: "セブンイレブン、セカンドストリート.xlsx",
+    fileNote: "シート: 回収実績入力_（1シート・全店舗縦並び）",
+    mark: "⑧",
+    cols: ["F〜AJ列"],
+    rows: "23〜25行目",
+    notes: ["行23=「可燃物 kg」", "行24=「不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ) kg」", "行25=「ﾀﾞﾝﾎﾞｰﾙ kg」", "※セカンドストリートのみ袋ではなくkg単位"]
+  },
+  {
+    no: 10, name: "イオンタウン伊賀",
+    file: "イオンタウン、びっくりドンキー 伊賀上野店、KFC.xlsx",
+    fileNote: "各物件が別シートに分かれている／ 記入行: 8〜38行目（1日〜31日）／ ヘッダー行: 7行目／ 単位: 一般廃棄物・売買品目ともに ㎏",
+    mark: "①（シート: イオンタウン）",
+    cols: [
+      "【一般廃棄物（単位㎏）】 D列（ごみ）、E列（生ごみ）、F列（カン）、G列（ビン）、H列（われもの）、I列（蛍光灯）、J列（ハンガー）",
+      "【売買品目（単位㎏）】 N列（段ボール）、O列（新聞・雑誌・雑古紙）、P列（アルミ缶）、Q列（ペットボトル）、R列（牛乳パック）"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 11, name: "びっくりドンキー 伊賀上野店",
+    file: "イオンタウン、びっくりドンキー 伊賀上野店、KFC.xlsx",
+    fileNote: "各物件が別シートに分かれている／ 単位: ㎏",
+    mark: "②（シート: びっくりどんきー）",
+    cols: [
+      "【一般廃棄物（単位㎏）】 D列（ごみ）、E列（生ごみ）、F列（カン）、G列（ビン）、H列（われもの）、I列（蛍光灯）、J列（ハンガー）",
+      "【売買品目（単位㎏）】 N列（段ボール）、O列（新聞・雑誌・雑古紙）、P列（アルミ缶）、Q列（ペットボトル）、R列（牛乳パック）"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 12, name: "KFC イオンタウン伊賀上野店",
+    file: "イオンタウン、びっくりドンキー 伊賀上野店、KFC.xlsx",
+    fileNote: "各物件が別シートに分かれている／ 単位: ㎏",
+    mark: "③（シート: KFC）",
+    cols: [
+      "【一般廃棄物（単位㎏）】 D列（ごみ）、E列（生ごみ）、F列（カン）、G列（ビン）、H列（われもの）、I列（蛍光灯）、J列（ハンガー）",
+      "【売買品目（単位㎏）】 N列（段ボール）、O列（新聞・雑誌・雑古紙）、P列（アルミ缶）、Q列（ペットボトル）、R列（牛乳パック）"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 13, name: "いがっこ給食センター",
+    file: "いがっこ給食センター.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "D列（可燃ごみ 重量ｋｇ）",
+      "I列（不燃ごみ金属 重量ｋｇ）",
+      "M列（ビン・割れ物 重量ｋｇ）",
+      "R列（硬質プラスチック 重量ｋｇ）"
+    ],
+    rows: "8〜38行目（給食提供日のみ記入）",
+    notes: ["39行目が月合計"]
+  },
+  {
+    no: 14, name: "コカ・コーラボトラーズ",
+    file: "コカ・コーラボトラーズ.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: ["H列（袋　数）"],
+    rows: "水曜日の行のみ（月4回程度）",
+    notes: ["25日締め"]
+  },
+  {
+    no: 15, name: "チョーヤ梅酒",
+    file: "チョーヤ梅酒.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "B列（可燃物収集 ㎥）",
+      "C列（可燃物収集 ㎏）",
+      "D列（フィルター紙収集 ㎥）",
+      "E列（フィルター紙収集 ㎏）"
+    ],
+    rows: "12〜24行目（収集日のみ、月4回程度）",
+    notes: ["25行目に合計"]
+  },
+  {
+    no: 16, name: "ほっともっと 伊賀桑町店",
+    file: "ほっともっと 伊賀白鳳通り店, 伊賀桑町店.xlsx",
+    fileNote: "各店舗が別シートに分かれている／ 単位: すべて ㎏（行9に「単位：㎏」と記載）／ ヘッダー行: 10行目（大項目）、11行目（小項目）",
+    mark: "①（シート: 伊賀桑町店）",
+    cols: [
+      "D列（紙屑）　E列（厨芥（生ごみ））　F列（木屑）",
+      "G列（金属缶）　H列（ビン・ガラス）　I列（廃プラ）",
+      "J列（ハッポウ）　K列（ペットボトル）　L列（段ボール）"
+    ],
+    rows: "15〜46行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 17, name: "ほっともっと 伊賀白鳳通り店",
+    file: "ほっともっと 伊賀白鳳通り店, 伊賀桑町店.xlsx",
+    fileNote: "各店舗が別シートに分かれている／ 単位: すべて ㎏",
+    mark: "②（シート: 伊賀白鳳店）",
+    cols: ["D〜L列（伊賀桑町店と同じ列構成）"],
+    rows: "15〜46行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 18, name: "マックスバリュ 佐那具店",
+    file: "マックスバリュ佐那具店.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "【一般廃棄物（単位㎏）】 D列（ごみ）、E列（生ごみ）、F列（カン）、G列（ビン）、H列（われもの）、I列（アラ）"
+    ],
+    rows: "8〜39行目（1日〜31日）",
+    notes: []
+  },
+  {
+    no: 19, name: "マックスバリュ 上野店",
+    file: "マックスバリュ上野店.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "【一般廃棄物（単位㎏）】 D列（ごみ）、E列（生ごみ）、F列（カン）、G列（ビン）、H列（われもの）、I列（アラ）",
+      "【売買品目（単位㎏）】 N列（段ボール）、O列（新聞・雑誌・雑古紙）、P列（アルミ缶）、Q列（ペットボトル）、R列（牛乳パック）",
+      "【産業廃棄物（単位㎏）】 X列（発泡スチロール）"
+    ],
+    rows: "8〜39行目",
+    notes: []
+  },
+  {
+    no: 20, name: "㈱やさいの戸島屋",
+    file: "㈱やさいの戸島屋.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: ["D列（可燃ごみ（袋））"],
+    rows: "17〜25行目（火・金曜収集日のみ）",
+    notes: ["30行目に月合計"]
+  },
+  {
+    no: 21, name: "伊賀の街",
+    file: "伊賀の街, ライフテクノサービス.xlsx",
+    fileNote: "1ファイル・複数シート（月別）に2物件が縦並び",
+    mark: "①（シート上段）",
+    cols: [
+      "C列（可燃ごみ（1袋／4ｋｇ））",
+      "※L列=袋数（自動計算）、M列=Kｇ（Cの値をそのまま表示）"
+    ],
+    rows: "8〜38行目（毎日）",
+    notes: ["39行目に月合計"]
+  },
+  {
+    no: 22, name: "ライフテクノサービス",
+    file: "伊賀の街, ライフテクノサービス.xlsx",
+    fileNote: "1ファイル・複数シート（月別）に2物件が縦並び",
+    mark: "②（同シート下段・行43以降）",
+    cols: ["C列（可燃ごみ ㎏）", "F列（不燃ごみ ㎏）"],
+    rows: "50〜58行目（週2回程度）",
+    notes: ["62行目に月計（合計 ㎏ 表示あり）"]
+  },
+  {
+    no: 23, name: "伊賀神戸駅",
+    file: "伊賀神戸駅.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "C列（可燃ごみ（袋）（ダンボール含む））",
+      "E列（不燃ごみ（袋）（カン））",
+      "G列（不燃ごみ（袋）（ビン））",
+      "I列（その他（袋）（ガラス・蛍光灯））"
+    ],
+    rows: "14〜44行目（収集日のみ、週2〜3回）",
+    notes: ["45行目に月計"]
+  },
+  {
+    no: 24, name: "古本市場 上野店",
+    file: "株式会社サイリス 大阪支店　古本市場　上野店.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "D列（可燃物（紙ごみ・レシート・生ごみ/ビニール・PPバンド等） 袋）",
+      "F列（可燃物 ㎏）",
+      "H列（古紙（段ボール・厚紙/新聞紙等） ㎏）",
+      "J列（資源物（ビン・カン・ペットボトル等） 袋）",
+      "L列（資源物 ㎏）"
+    ],
+    rows: "12〜46行目（収集日のみ）",
+    notes: []
+  },
+  {
+    no: 25, name: "旧上野庁舎 SAKAKURA BASE",
+    file: "旧上野庁舎　SAKAKURABASE.xlsx",
+    fileNote: "",
+    mark: "①",
+    header: "ヘッダー行: 5行目（大項目）、7行目（可燃/不燃）、データ行の単位列に「ｋｇ」",
+    cols: [
+      "D列（ホテル（白） 可燃ごみ ｋｇ）",
+      "F列（ホテル（白） 不燃ごみ ｋｇ）",
+      "H列（図書館（青） 可燃ごみ ｋｇ）",
+      "J列（図書館（青） 不燃ごみ ｋｇ）",
+      "L列（物販（透明） 可燃ごみ ｋｇ）",
+      "N列（物販（透明） 不燃ごみ ｋｇ）",
+      "P列（カフェ（黒） 可燃ごみ ｋｇ）",
+      "R列（カフェ（黒） 不燃ごみ ｋｇ）"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: ["E/G/I/K/M/O/Q/S列は「ｋｇ」ラベル（固定）", "39行目が月合計"]
+  },
+  {
+    no: 26, name: "魚民 上野市駅前店",
+    file: "魚民 上野市駅前店.xlsx",
+    fileNote: "記入シート: Sheet2（日次記録）→ 月末にSheet1へ月計転記",
+    mark: "①",
+    cols: [
+      "【Sheet2】 C列（生（ごみ））　D列（紙）　E列（不燃ビニ）",
+      "F列（カン）　G列（ビン）　H列（ダン（ボール））",
+      "I列（割れ物）　J列（発砲（スチロール））"
+    ],
+    rows: "Sheet2: 3〜33行目",
+    notes: ["月末にSheet1のE〜N列・18行目へ月計を1行記入"]
+  },
+  {
+    no: 27, name: "厚板プレス工業",
+    file: "厚板プレス工業（株）.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "D列（可燃ごみ（㎏））",
+      "F列（不燃ごみ（㎏）（カン・ビン））",
+      "H列（その他（㎏）（パレット・木屑））"
+    ],
+    rows: "15〜26行目（収集日のみ、週2回）",
+    notes: ["27行目に月計"]
+  },
+  {
+    no: 28, name: "三重県伊賀庁舎",
+    file: "三重県伊賀庁舎.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "C列（古　紙 (㎏）)",
+      "E列（ダンボール（㎏））",
+      "G列（その他）"
+    ],
+    rows: "15〜39行目（収集日のみ）",
+    notes: ["段ボール週1〜2回、古紙は月1回", "39行目に月計"]
+  },
+  {
+    no: 29, name: "上野法務合同庁舎",
+    file: "上野法務合同庁舎.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "B列（可燃物（ｋｇ））",
+      "C列（資源ごみ（ｋｇ）（古紙 ダンボール類））",
+      "D列（不燃物（ｋｇ））"
+    ],
+    rows: "8行目（月単位で1行のみ記入）",
+    notes: ["月末にまとめて記入"]
+  },
+  {
+    no: 30, name: "ドラッグセイムス 伊賀小田店",
+    file: "大本紙料（株）ドラッグセイムス.xlsx",
+    fileNote: "1シート・2店舗が行17〜18に縦並び／ 形式: 横方向に日付（O列=1日〜AS列=31日）、AT列=月合計",
+    mark: "①（行17）",
+    cols: ["品目: 段ボール（単位 kg）", "O〜AS列（各収集日の段ボール kg）", "AT列（月合計）"],
+    rows: "17行目",
+    notes: []
+  },
+  {
+    no: 31, name: "ドラッグセイムス 伊賀上野店",
+    file: "大本紙料（株）ドラッグセイムス.xlsx",
+    fileNote: "1シート・2店舗が行17〜18に縦並び／ 形式: 横方向に日付（O列=1日〜AS列=31日）、AT列=月合計",
+    mark: "②（行18）",
+    cols: ["品目: 段ボール（単位 kg）", "O〜AS列（各収集日の段ボール kg）", "AT列（月合計）"],
+    rows: "18行目",
+    notes: []
+  },
+  {
+    no: 32, name: "津地方裁判所",
+    file: "津地方裁判所.xlsx",
+    fileNote: "",
+    mark: "①月報シート + ②年報シート",
+    header: "単位: ㎏（行6に「単位：㎏」と記載）",
+    cols: [
+      "【①月報シート：日次記録】",
+      "C列（シュレッダーごみ）",
+      "D列（新聞・雑誌 / 段ボール）",
+      "E列（可燃ごみ）",
+      "F列（不燃ごみ）",
+      "　",
+      "【②年報シート：月計転記】",
+      "B列（（ア）可燃ごみ）",
+      "D列（（イ）シュレッターごみ）",
+      "F列（（ウ）新聞紙・雑誌等）",
+      "H列（（ウ）ペットボトル）"
+    ],
+    rows: "月報: 11行目以降（収集日のみ）／ 年報: 10〜21行目（4月〜3月）",
+    notes: []
+  },
+  {
+    no: 33, name: "農業屋 伊賀上野店",
+    file: "株式会社 三輝 農業屋 伊賀上野店.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "C列（可燃ごみ 袋）　D列（可燃ごみ ㎏）",
+      "E列（不燃ごみ 袋）　F列（不燃ごみ ㎏）",
+      "G列（その他（苗木等） 袋）　H列（その他 ㎏）",
+      "J列（段ボール ㎏）"
+    ],
+    rows: "15〜31行目（火・金曜収集日のみ）",
+    notes: ["「袋の欄以外消さない（計算式あり）」"]
+  },
+  {
+    no: 34, name: "飯田金属",
+    file: "飯田金属.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "I列（ｋｇ　数）",
+      "M列（小計（累計）・自動）"
+    ],
+    rows: "11〜19行目（収集日のみ、週1〜2回）",
+    notes: ["26行目に月合計"]
+  },
+  {
+    no: 35, name: "あみやき亭",
+    file: "あみやき亭.xlsx",
+    fileNote: "",
+    mark: "①",
+    cols: [
+      "C列（可燃ごみ　kg）",
+      "E列（不燃ごみ　kg）",
+      "G列（段ボール　kg）",
+      "I列（ペットボトルkg）"
+    ],
+    rows: "2〜32行目（1日〜31日）",
+    notes: ["D・F・H・J列は小計（自動）", "33行目が月合計"]
+  },
+  {
+    no: 36, name: "すき家 伊賀上野店",
+    file: "すき屋.xlsx",
+    fileNote: "宛先: 安田産業株式会社",
+    mark: "①",
+    header: "ヘッダー行: 10行目（品目）、11行目（袋/kg単位）",
+    cols: [
+      "C列（可燃物 ( 70 )ℓ袋）　E列（可燃物 ｋｇ）",
+      "G列（ビン・缶・PET ( 70 )ℓ袋）　I列（ビン・缶・PET ｋｇ）",
+      "K列（われもの等 ( 70 )ℓ袋）　M列（われもの等 ｋｇ）",
+      "Q列（ダンボール ｋｇ）"
+    ],
+    rows: "12〜41行目（1日〜30日）",
+    notes: ["A列の日付は自動", "43行目が合計"]
+  },
+  {
+    no: 37, name: "クスリのアオキ 伊賀上野店",
+    file: "クスリのアオキ伊賀上野店.xlsx",
+    fileNote: "対象期間: 前月21日〜当月20日（月サイクル）",
+    mark: "①（シート: 伊賀上野店）",
+    cols: [
+      "B列（生活ゴミ(可燃) kg）　C列（生活ゴミ(可燃) 袋数）",
+      "E列（生活ゴミ(不燃) kg）　F列（生活ゴミ(不燃) 袋数）"
+    ],
+    rows: "6〜36行目（21日〜翌20日）",
+    notes: ["37行目が合計", "締め日は20日"]
+  },
+  {
+    no: 38, name: "クスリのアオキ 平野東店",
+    file: "クスリのアオキ平野東店.xlsx",
+    fileNote: "対象期間: 前月21日〜当月20日（月サイクル）",
+    mark: "①（シート: 平野東店）",
+    cols: [
+      "B列（生活ゴミ(可燃) kg）　C列（生活ゴミ(可燃) 袋数）",
+      "E列（生活ゴミ(不燃) kg）　F列（生活ゴミ(不燃) 袋数）"
+    ],
+    rows: "6〜36行目（21日〜翌20日）",
+    notes: ["37行目が合計", "締め日は20日"]
+  },
+  {
+    no: 39, name: "ナフコ 伊賀店",
+    file: "ナフコ.xlsx",
+    fileNote: "宛先: （株）アレックス（ナフコ伊賀店向け）",
+    mark: "①",
+    header: "ヘッダー行: 6行目（品目）、7行目（備考）",
+    cols: [
+      "D列（可燃物（軟質ビニール含む） ㎏）",
+      "G列（ペットボトル ㎏）",
+      "I列（発砲スチロール ㎏）",
+      "K列（木くず ㎏）",
+      "N列（その他 ㎏）"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: ["E/H/J/L/O列は「㎏」単位ラベル（固定）", "39行目が合計"]
+  },
+  {
+    no: 40, name: "創価学会 伊賀上野文化会館",
+    file: "創価学会.xlsx",
+    fileNote: "",
+    mark: "①",
+    header: "ヘッダー行: 14行目",
+    cols: [
+      "C列（古　紙（㎏））",
+      "E列（可燃ごみ（㎏））",
+      "G列（その他（㎏））"
+    ],
+    rows: "A列に日付がある行のみ（月8〜10回程度）",
+    notes: ["43行目が月計"]
+  },
+  {
+    no: 41, name: "西松屋 伊賀上野店",
+    file: "西松屋.xlsx",
+    fileNote: "",
+    mark: "①",
+    header: "ヘッダー行: 6行目（大項目）、7行目（袋数/重量）",
+    cols: [
+      "C列（可燃物 袋　数）　D列（可燃物 重量（Kg))",
+      "E列（不燃物 袋　数）　F列（不燃物 重量（Kg))",
+      "G列（ダンボール 重量（Kg))",
+      "H列（ビン 重量（Kg))",
+      "I列（カン 重量（Kg))",
+      "J列（ペットボトル 重量（Kg))"
+    ],
+    rows: "8〜38行目（1日〜31日）",
+    notes: ["39行目が合計", "M4〜P4に年月日入力済み"]
+  },
+  {
+    no: 42, name: "コメリ ＨＣ上野店",
+    file: "コメリ.xlsx",
+    fileNote: "",
+    mark: "①（シート: (4)）",
+    header: "ヘッダー行: 5行目（大項目）、6行目（品目）、7行目（袋/㎏）",
+    cols: [
+      "D列（可燃物 袋）　F列（可燃物 ㎏）",
+      "H列（不燃物１ ビン・缶・ＰＥＴ 袋）　J列（不燃物１ ㎏）",
+      "L列（不燃物２ 容器包装系 袋）　N列（不燃物２ ㎏）",
+      "P列（粗大ごみ／その他 袋）　R列（粗大ごみ／その他 ㎏）"
+    ],
+    rows: "7〜37行目（1日〜31日）",
+    notes: []
+  }
+];
+
+// 初期表示・検索
+const APP_VERSION = 'v5-1';
+const UPDATED_AT = '2026年5月19日';
+const select = document.getElementById('propSelect');
+const content = document.getElementById('content');
+const searchInput = document.getElementById('propSearch');
+const clearSearch = document.getElementById('clearSearch');
+const hitCount = document.getElementById('hitCount');
+const headerSub = document.getElementById('headerSub');
+const fileCount = new Set(properties.map(p => p.file)).size;
+headerSub.textContent = `${APP_VERSION}　／　全${properties.length}物件（${fileCount}ファイル）　／　更新日: ${UPDATED_AT}`;
+
+function propertySearchText(p) {
+  return [
+    p.no, p.name, p.file, p.fileNote, p.mark, p.header, p.rows,
+    ...(p.cols || []), ...(p.notes || [])
+  ].join(' ').toLowerCase();
+}
+
+function populateSelect(list, selectedNo) {
+  select.innerHTML = '<option value="">-- 物件を選択 --</option>';
+  list.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.no;
+    opt.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
+    select.appendChild(opt);
+  });
+  if (selectedNo && list.some(p => p.no === selectedNo)) select.value = selectedNo;
+  hitCount.textContent = `表示候補：${list.length} / ${properties.length}物件`;
+}
+
+function applySearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  const selectedNo = parseInt(select.value, 10) || null;
+  const list = q ? properties.filter(p => propertySearchText(p).includes(q)) : properties;
+  populateSelect(list, selectedNo);
+  if (q && list.length === 1) {
+    select.value = list[0].no;
+    content.innerHTML = renderProperty(list[0]);
+  } else if (q && list.length === 0) {
+    content.innerHTML = `<div class="card"><div class="placeholder">該当する物件がありません。<br>検索文字を変えてください。</div></div>`;
+  }
+}
+
+populateSelect(properties, null);
+
+searchInput.addEventListener('input', applySearch);
+clearSearch.addEventListener('click', () => {
+  searchInput.value = '';
+  populateSelect(properties, parseInt(select.value, 10) || null);
+  searchInput.focus();
+});
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function renderProperty(p) {
+  const fileNoteHtml = p.fileNote
+    ? `<div class="file-header-note">${escapeHtml(p.fileNote)}</div>` : "";
+  const headerHtml = p.header
+    ? `<div class="section-title">ヘッダー</div><div class="detail">${escapeHtml(p.header)}</div>` : "";
+  const colsHtml = p.cols && p.cols.length
+    ? `<div class="section-title">記入列</div><ul class="columns-list">${p.cols.map(c => `<li>${escapeHtml(c)}</li>`).join("")}</ul>`
+    : "";
+  const rowsHtml = p.rows
+    ? `<div class="section-title">記入行</div><div class="detail">${escapeHtml(p.rows)}</div>` : "";
+  const notesHtml = p.notes && p.notes.length
+    ? `<div class="section-title">備考</div><div class="note-block">${p.notes.map(n => escapeHtml(n)).join("<br>")}</div>`
+    : "";
+
+  return `
+    <div class="card">
+      <div class="property-header">
+        <span class="property-no">物件No.${p.no}</span>
+        <span class="property-name">${escapeHtml(p.mark || "")} ${escapeHtml(p.name)}</span>
+      </div>
+      <span class="file-tag">📄 ${escapeHtml(p.file)}</span>
+      ${fileNoteHtml}
+      ${headerHtml}
+      ${colsHtml}
+      ${rowsHtml}
+      ${notesHtml}
+    </div>
+  `;
+}
+
+select.addEventListener("change", (e) => {
+  const no = parseInt(e.target.value, 10);
+  if (!no) {
+    content.innerHTML = `<div class="card"><div class="placeholder">上のプルダウンから物件を選択すると、<br>その物件の記入箇所データが表示されます。</div></div>`;
+    return;
+  }
+  const p = properties.find(x => x.no === no);
+  if (!p) return;
+  content.innerHTML = renderProperty(p);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+</script>
+<script>
+(function(){
+  const RESUME_KEY = 'ueno_seisou_resume_v1';
+  const PAGE = 'index_5-1.html';
+  let timer = null;
+  function saveResume(){
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, updatedAt: Date.now()}));
+    } catch(e) {}
+  }
+  window.addEventListener('load', () => {
+    try {
+      const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
+      if(r && r.page === PAGE && typeof r.scrollY === 'number') setTimeout(() => window.scrollTo(0, r.scrollY), 120);
+    } catch(e) {}
+    saveResume();
+  });
+  window.addEventListener('scroll', () => {
+    clearTimeout(timer);
+    timer = setTimeout(saveResume, 250);
+  }, {passive:true});
+  window.addEventListener('pagehide', saveResume);
+})();
+</script>
+
+</body>
+</html>

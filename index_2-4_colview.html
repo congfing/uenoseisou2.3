@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>列選択ビューア</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { overscroll-behavior-x: contain; margin:0; font-family:'Hiragino Sans','ヒラギノ角ゴ ProN','Meiryo','メイリオ',sans-serif; font-size:13px; font-weight:400; }
+
+  #app-header {
+    padding:10px 16px;
+    display:flex; align-items:center; gap:10px;
+    position:sticky; top:0; z-index:120;
+    box-shadow:0 2px 6px rgba(0,0,0,0.25);
+    min-height:44px;
+  }
+  #app-header h1 { margin:0; font-size:15px; font-weight:700; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #backBtn {
+    padding:5px 14px; background:rgba(255,255,255,0.2);
+    border:1px solid rgba(255,255,255,0.5); border-radius:4px;
+    color:#fff; font-size:12px; cursor:pointer; white-space:nowrap; font-family:inherit;
+  }
+  #backBtn:hover { background:rgba(255,255,255,0.35); }
+  #fileNameDisplay { font-size:10px; opacity:0.8; line-height:1.3; text-align:right; flex-shrink:0; max-width:38%; overflow:hidden; }
+
+  #toolbar {
+    border-bottom:1px solid #b5cef5;
+    position:sticky; top:44px; z-index:119;
+  }
+  #toolbar-inner {
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    padding:7px 14px;
+    overflow:hidden; max-height:300px;
+    transition: max-height 0.22s ease, padding 0.22s ease;
+  }
+  #toolbar.collapsed #toolbar-inner {
+    max-height:0; padding-top:0; padding-bottom:0;
+  }
+  #toolbar-toggle {
+    display:flex; align-items:center; justify-content:center;
+    width:100%; padding:2px 0;
+    border:none; border-top:1px solid #b5cef5;
+    cursor:pointer; font-size:10px; color:#4a6fa5;
+    font-family:inherit; transition:background 0.15s;
+  }
+  #toolbar-toggle:active { background:#bdd6f5; }
+  #toolbar.collapsed #toolbar-toggle { border-top:none; padding:4px 0; }
+  .tb-btn {
+    padding:4px 10px; border:1px solid #a0b8d8; border-radius:4px;
+    cursor:pointer; font-size:11px; font-family:inherit; white-space:nowrap;
+  }
+  .tb-btn:hover { background:#d4e5f9; }
+  #searchInput {
+    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
+    font-size:12px; font-family:inherit; width:150px;
+  }
+  #gitFileSelector {
+    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
+    font-size:12px; max-width:190px;
+  }
+  #sheetSelector {
+    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
+    font-size:12px; max-width:150px;
+  }
+  #sheetSelector:disabled { color: #aaa; }
+  #statusBar { font-size:11px; color:#555; }
+
+  /* 列チェックボックスパネル */
+  #colPanel {
+    border-bottom:2px solid #b5cef5;
+    padding:8px 14px; display:none; flex-wrap:wrap; gap:6px; align-items:center;
+    position:sticky; top:88px; z-index:118;
+    max-height:160px; overflow-y:auto;
+  }
+  #colPanel.active { display:flex; }
+  .col-lbl {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:3px 9px; border:1px solid #b5cef5; border-radius:12px;
+    cursor:pointer; font-size:11px; white-space:nowrap; user-select:none;
+  }
+  .col-lbl:hover { background:#d4e5f9; }
+  .col-lbl input { cursor:pointer; margin:0; }
+  .col-lbl.on { background:#1a6eb5; color:#fff; border-color:#1558a0; }
+
+  /* テーブルラッパー：残り全高を占有、縦横両方スクロール */
+  #tableWrapper {
+    overflow: auto;
+    height: calc(100vh - 88px); /* JS で動的更新 */
+    padding: 0;
+  }
+  #emptyMsg { text-align:center; padding:40px; color:#888; font-size:14px; }
+
+  #dataTable { border-collapse:collapse; min-width:100%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+  /* thead は tableWrapper のスクロールコンテナ内で top:0 に固定 */
+  #dataTable thead { position:sticky; top:0; z-index:50; }
+  #dataTable thead th {
+    background:#1a6eb5; color:#fff; padding:8px 12px;
+    text-align:left; font-size:13px; font-weight:600;
+    white-space:nowrap; border-right:1px solid rgba(255,255,255,0.15);
+    cursor:pointer; user-select:none;
+  }
+  #dataTable thead th:hover { background:#1558a0; }
+  #dataTable thead th.sorted-asc::after  { content:' ▲'; font-size:9px; }
+  #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
+  #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
+  #dataTable tbody tr:hover { background:#f0f6ff; }
+  #dataTable tbody td {
+    padding:4px 7px; font-size:13px; font-weight:400;
+    vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    box-sizing:border-box;
+  }
+  #dataTable tbody td.rn { color:#aaa; font-size:11px; text-align:right; min-width:32px; }
+
+  /* フィルター＋ソートポップアップ */
+  #filterPopup {
+    display:none; position:fixed; z-index:300;
+    border:1px solid #b5cef5; border-radius:6px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.22); padding:12px 14px;
+    min-width:210px; max-width:270px;
+  }
+  #filterPopup .fp-header {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
+  }
+  #filterPopupTitle { font-size:14px; font-weight:700; color:#1a6eb5; }
+  #filterPopupClose { background:none;border:none;font-size:16px;cursor:pointer;color:#888;padding:0 2px; }
+  .fp-row { display:flex; gap:5px; margin-bottom:8px; }
+  .fp-row button {
+    flex:1; padding:4px 0; font-size:11px;
+    border:1px solid #a0b8d8; border-radius:3px;
+    cursor:pointer; font-family:inherit;
+  }
+  .fp-row button:hover { background:#d4e5f9; }
+  #filterValueList {
+    max-height:220px; overflow-y:auto;
+    border:1px solid #dde8f5; border-radius:4px;
+    padding:4px 6px; margin-bottom:10px;
+  }
+  #filterApplyBtn {
+    width:100%; padding:7px 0; background:#1a6eb5; color:#fff;
+    border:none; border-radius:4px; cursor:pointer;
+    font-family:inherit; font-size:13px; font-weight:600;
+  }
+  #filterApplyBtn:hover { background:#1558a0; }
+  /* チェックボックスリスト */
+  .youbi-check-item {
+    display:flex; align-items:center; gap:7px;
+    padding:4px 2px; border-radius:3px; cursor:pointer; font-size:13px;
+  }
+  .youbi-check-item:hover { background:#e8f0fb; }
+  .youbi-check-item input[type=checkbox] {
+    width:15px; height:15px; cursor:pointer; accent-color:#1a6eb5; flex-shrink:0;
+  }
+  .youbi-check-label { flex:1; }
+  .youbi-check-cnt { font-size:11px; color:#888; white-space:nowrap; }
+
+  /* 保存ダイアログ */
+  #saveDialog {
+    display:none; position:fixed; inset:0; z-index:500;
+    background:rgba(0,0,0,0.45); align-items:center; justify-content:center;
+  }
+  #saveDialog.active { display:flex; }
+  #saveDialogBox {
+    border-radius:12px; padding:22px 22px 18px;
+    width:calc(100% - 40px); max-width:340px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.28);
+  }
+  #saveDialogBox h3 { font-size:15px; color:#1a6eb5; margin-bottom:6px; }
+  #saveDialogFilename {
+    font-size:11px; color:#666;
+    border:1px solid #dde8f5; border-radius:4px;
+    padding:6px 10px; margin:10px 0 16px; word-break:break-all;
+  }
+  .sdlg-btn {
+    display:block; width:100%; padding:11px 0; margin-bottom:8px;
+    border-radius:6px; border:none; cursor:pointer;
+    font-size:13px; font-weight:600; font-family:inherit;
+  }
+  #sdlgOverwrite { background:#1a6eb5; color:#fff; }
+  #sdlgOverwrite:hover { background:#1558a0; }
+  #sdlgSaveAs { color:#1a6eb5; border:1px solid #b5cef5; }
+  #sdlgSaveAs:hover { background:#d4e5f9; }
+  #sdlgCancel { background:none; color:#888; font-size:12px; margin-bottom:0; }
+  #sdlgNewName {
+    font-size:11px; color:#888; text-align:center;
+    margin-top:-4px; margin-bottom:10px;
+  }
+
+  /* 計量リンクセル */
+  a.keiryou-link-cell {
+    display:inline-block; padding:1px 10px; line-height:18px; box-sizing:border-box;
+    background:#1a6eb5; color:#fff; border-radius:3px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+    text-decoration:none; cursor:pointer;
+  }
+  a.keiryou-link-cell:hover { background:#1558a0; }
+  td.keiryou-td { text-align:center; }
+
+  /* トースト */
+  #toast {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    padding:8px 18px;
+    border-radius:20px; font-size:13px; display:none; z-index:400;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* ===== 履歴パネル ===== */
+  #hist-overlay {
+    display:none; position:fixed; inset:0; z-index:600;
+    background:rgba(0,0,0,0.45);
+  }
+  #hist-overlay.show { display:block; }
+  #hist-panel {
+    position:fixed; top:44px; right:-105%; width:min(340px,92vw);
+    height:calc(100dvh - 44px); z-index:700;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.2);
+    transition:right 0.25s ease;
+    display:flex; flex-direction:column;
+    font-family:'Hiragino Sans','Meiryo',sans-serif;
+  }
+  #hist-panel.open { right:0; }
+  #hist-panel-hdr {
+    padding:12px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0;
+  }
+  #hist-panel-hdr span { flex:1; font-size:14px; font-weight:700; }
+  #hist-panel-hdr button {
+    background:rgba(255,255,255,0.2); border:none; color:#fff;
+    width:28px; height:28px; border-radius:50%; font-size:14px; cursor:pointer;
+  }
+  #hist-save-btn {
+    margin:10px 12px 8px; padding:10px 0;
+    color:#fff; border:none; border-radius:9px;
+    font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;
+    flex-shrink:0; transition:opacity 0.15s;
+  }
+  #hist-save-btn:active { opacity:0.8; }
+  #hist-save-btn.saved { background:linear-gradient(135deg,#166534,#16a34a); }
+  #hist-list { overflow-y:auto; flex:1; padding:0 10px 10px; -webkit-overflow-scrolling:touch; }
+  .hist-item {
+    display:flex; align-items:center; gap:8px; padding:9px 10px;
+    border:1px solid #c7daf5; border-radius:8px;
+    margin-bottom:6px; cursor:pointer; transition:background 0.15s;
+  }
+  .hist-item:active { background:#dbeafe; }
+  .hist-item-body { flex:1; min-width:0; }
+  .hist-item-file { font-size:12px; font-weight:700; color:#1e3a6e;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-item-cols { font-size:11px; color:#1a6eb5; margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-item-meta { font-size:10px; color:#6b7280; margin-top:2px; }
+  .hist-item-time { font-size:10px; color:#93c5fd; margin-top:1px; }
+  .hist-del-btn { background:none; border:none; color:#fca5a5;
+    font-size:15px; cursor:pointer; padding:3px; flex-shrink:0; }
+  .hist-del-btn:active { color:#ef4444; }
+  #hist-empty { text-align:center; color:#9ca3af; font-size:12px; padding:28px 0 10px; line-height:1.8; }
+
+
+</style>
+
+</head>
+<body>
+
+<div id="app-header">
+  <h1>📋 列選択ビューアv2-4</h1>
+
+</div>
+
+<div id="toolbar">
+  <div id="toolbar-inner">
+    <label class="tb-btn" for="localFileInput" style="cursor:pointer;">📂 ファイルを開く</label>
+    <input type="file" id="localFileInput" accept=".xlsx,.xls" style="display:none;">
+    <select id="gitFileSelector"><option value="">⏳ 取得中…</option></select>
+    <select id="sheetSelector" title="シートを選択" disabled><option value="">― シート ―</option></select>
+    <button class="tb-btn" id="btnReload">🔄 最新を取得</button>
+    <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
+    <button class="tb-btn" id="btnAllOn">全列表示</button>
+    <button class="tb-btn" id="btnAllOff">全列非表示</button>
+    <input type="text" id="searchInput" placeholder="🔍 検索">
+    <button class="tb-btn" id="btnSave" style="background:#27ae60;color:#fff;border-color:#1e8449;">💾 保存</button>
+    <button class="tb-btn" onclick="toggleHistPanel()" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:700;">📌 履歴</button>
+    <span id="statusBar">— 読み込み中 —</span>
+  </div>
+  <button id="toolbar-toggle" onclick="toggleToolbar()">▲ 閉じる</button>
+</div>
+
+<!-- 保存ダイアログ -->
+<div id="saveDialog">
+  <div id="saveDialogBox">
+    <h3>💾 保存方法を選択</h3>
+    <div id="saveDialogFilename"></div>
+    <button class="sdlg-btn" id="sdlgOverwrite">上書き保存</button>
+    <button class="sdlg-btn" id="sdlgSaveAs">別名で保存</button>
+    <div id="sdlgNewName"></div>
+    <button class="sdlg-btn" id="sdlgCancel">キャンセル</button>
+  </div>
+</div>
+
+<div id="colPanel"></div>
+
+<div id="tableWrapper">
+  <div id="emptyMsg">GitHubの候補からExcelファイルを選択してください。</div>
+  <table id="dataTable" style="display:none;">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- フィルター＋ソートポップアップ -->
+<div id="filterPopup">
+  <div class="fp-header">
+    <span id="filterPopupTitle"></span>
+    <button id="filterPopupClose">✕</button>
+  </div>
+  <div class="fp-row">
+    <button id="fpSortAsc">↑ 昇順</button>
+    <button id="fpSortDesc">↓ 降順</button>
+    <button id="fpSortClear">解除</button>
+  </div>
+  <div class="fp-row">
+    <button id="fpSelAll">全選択</button>
+    <button id="fpSelNone">全解除</button>
+  </div>
+  <div id="filterValueList"></div>
+  <button id="filterApplyBtn">適用して表示</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.3@main/flat';
+const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.3@main/';
+const FALLBACK_XLSX_FILES = [
+  '2026年度物件表_KMN置換.xlsx',
+  '2026年度物件表_KMN置換_列移動_20260513_計量リンク.xlsx',
+  '2026年度物件表①②③（20260509更新）.xlsx',
+  '令和8年度収集カレンダー.xlsx'
+];
+
+const gitFileSel    = document.getElementById('gitFileSelector');
+const sheetSel      = document.getElementById('sheetSelector');
+const statusBar     = document.getElementById('statusBar');
+const colPanel      = document.getElementById('colPanel');
+const searchInput   = document.getElementById('searchInput');
+const tableHead     = document.getElementById('tableHead');
+const tableBody     = document.getElementById('tableBody');
+const dataTable     = document.getElementById('dataTable');
+const emptyMsg      = document.getElementById('emptyMsg');
+const toast         = document.getElementById('toast');
+const filterPopup   = document.getElementById('filterPopup');
+const filterTitle   = document.getElementById('filterPopupTitle');
+const filterValList = document.getElementById('filterValueList');
+const filterApply   = document.getElementById('filterApplyBtn');
+
+let headers     = [];
+let dataArray   = [];
+let visibleCols = new Set();
+let sortState   = { col: -1, dir: 0 };
+let currentFilename = '';
+let currentSheetName = '';
+let workbook    = null;   // 読み込んだExcelワークブック
+// フィルター状態: { colIdx, selectedValues: Set, filterType: 'exact'|'prefix' }
+let filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+let filterPopupCol = -1;
+let toastTimer  = null;
+let displayedRows = [];  // 現在表示中の行（フィルター＋ソート済み）
+let gitListLoading = false;
+let gitListLoadedAt = 0;
+
+// ===== localStorage 状態保存・復元 =====
+const STORAGE_KEY = 'keiryou_colview_state';
+const STORAGE_MAP_KEY = 'keiryou_colview_state_by_sheet';
+
+function makeStorageId(filename, sheetName) {
+  return String(filename || '') + '::' + String(sheetName || '');
+}
+
+function buildStateSnapshot() {
+  return {
+    filename:    currentFilename,
+    sheetName:   currentSheetName,
+    visibleCols: [...visibleCols],
+    filterState: {
+      colIdx:         filterState.colIdx,
+      selectedValues: [...filterState.selectedValues],
+      filterType:     filterState.filterType
+    },
+    sortState:   { ...sortState },
+    searchQuery: searchInput.value
+  };
+}
+
+function saveState() {
+  try {
+    const snapshot = buildStateSnapshot();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+
+    const map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}');
+    map[makeStorageId(snapshot.filename, snapshot.sheetName)] = snapshot;
+    localStorage.setItem(STORAGE_MAP_KEY, JSON.stringify(map));
+  } catch(e) {}
+}
+
+function loadSavedState() {
+  try {
+    const map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}');
+    const exact = map[makeStorageId(currentFilename, currentSheetName || '')];
+    if (exact) return exact;
+
+    const legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!legacy || legacy.filename !== currentFilename) return null;
+    if (!legacy.sheetName || legacy.sheetName === currentSheetName) return legacy;
+    return null;
+  } catch(e) { return null; }
+}
+
+// 保存済み状態をデータ読込後に適用
+function applyRestoredState(saved) {
+  if (!saved) return;
+  // 列表示
+  if (saved.visibleCols && saved.visibleCols.length) {
+    visibleCols = new Set(saved.visibleCols.filter(i => i < headers.length));
+    if (visibleCols.size === 0) visibleCols = new Set(headers.map((_,i) => i));
+    syncCheckboxes();
+  }
+  // フィルター
+  if (saved.filterState && saved.filterState.colIdx !== null) {
+    filterState = {
+      colIdx:         saved.filterState.colIdx,
+      selectedValues: new Set(saved.filterState.selectedValues || []),
+      filterType:     saved.filterState.filterType || 'exact'
+    };
+  }
+  // ソート
+  if (saved.sortState) sortState = saved.sortState;
+  // 検索
+  if (saved.searchQuery) searchInput.value = saved.searchQuery;
+}
+
+function showToast(m) {
+  toast.textContent = m; toast.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.style.display='none', 2500);
+}
+function updateStatus(m) { statusBar.textContent = m; }
+
+// ヘッダー行自動検出
+function detectHeaderRow(raw) {
+  const ne = r => (r||[]).filter(c => String(c).trim()!=='').length;
+  let idx=0;
+  for (let i=0; i<Math.min(5,raw.length-1); i++) {
+    if (ne(raw[i])<=1 && ne(raw[i])<ne(raw[i+1])) idx=i+1;
+    else break;
+  }
+  return idx;
+}
+
+// 指定シートのデータをロードして表示（シート切替にも使用）
+function loadSheet(sheetName) {
+  if (!workbook) return;
+  const ws  = workbook.Sheets[sheetName];
+  if (!ws) return;
+  currentSheetName = sheetName;
+  const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' })
+                  .map(r => r.map(c => c===null||c===undefined ? '' : String(c)));
+  const hIdx = detectHeaderRow(raw);
+  headers   = raw[hIdx] ? [...raw[hIdx]] : [];
+  dataArray = raw.slice(hIdx+1);
+  visibleCols  = new Set(headers.map((_,i) => i));
+  sortState    = { col:-1, dir:0 };
+  filterState  = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+  searchInput.value = '';
+  buildColPanel();
+  renderTable();
+  saveState();
+}
+
+// Excel読み込み
+function loadWorkbookData(buf, filename, sourcePath) {
+  try {
+    const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+    workbook = wb;
+
+    // シートセレクタを更新
+    sheetSel.innerHTML = '';
+    wb.SheetNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sheetSel.appendChild(opt);
+    });
+    sheetSel.value = wb.SheetNames[0];
+    sheetSel.disabled = false;
+    currentSheetName = wb.SheetNames[0];
+
+    // 最初のシートのデータを展開
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' })
+                    .map(r => r.map(c => c===null||c===undefined ? '' : String(c)));
+    const hIdx = detectHeaderRow(raw);
+    headers   = raw[hIdx] ? [...raw[hIdx]] : [];
+    dataArray = raw.slice(hIdx+1);
+    currentFilename = filename;
+    visibleCols  = new Set(headers.map((_,i) => i));
+    sortState    = { col:-1, dir:0 };
+    filterState  = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+    searchInput.value = '';
+    buildColPanel();
+    // 保存済み状態を復元（同じファイル・同じシートの場合のみ）
+    const saved = loadSavedState();
+    if (saved) applyRestoredState(saved);
+    renderTable();
+    saveState();
+    showToast('✅ ' + filename + ' を読み込みました');
+  } catch(e) { updateStatus('⚠️ エラー: ' + e.message); }
+}
+
+// シートセレクタ変更イベント
+sheetSel.addEventListener('change', function() {
+  if (!workbook || !this.value) return;
+  loadSheet(this.value);
+});
+
+// GitHub ファイル一覧
+function uniqueXlsxNames(names) {
+  return [...new Set(names.map(name => String(name || '').replace(/^\//, '')))]
+    .filter(name => /\.xlsx$/i.test(name));
+}
+
+function getGitHubXlsxNames() {
+  return fetch(GITHUB_API_URL + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => { if(!r.ok) throw new Error('GitHub API HTTP ' + r.status); return r.json(); })
+    .then(files => uniqueXlsxNames(files.filter(f => f.type === 'file').map(f => f.name)))
+    .catch(apiErr => {
+      console.warn('GitHub API一覧取得エラー。予備取得に切替:', apiErr);
+      return fetch(GITHUB_JSDELIVR_API + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => { if(!r.ok) throw new Error('jsDelivr HTTP ' + r.status); return r.json(); })
+        .then(data => uniqueXlsxNames((data.files || []).map(f => f.name)))
+        .catch(fallbackErr => {
+          console.warn('予備一覧取得エラー。固定候補を表示:', fallbackErr);
+          return uniqueXlsxNames(FALLBACK_XLSX_FILES);
+        });
+    });
+}
+
+function fetchGitHubFileList() {
+  if (gitListLoading) return;
+  gitListLoading = true;
+  const previousValue = gitFileSel.value;
+  getGitHubXlsxNames()
+    .then(xlsxNames => {
+      gitFileSel.innerHTML = '';
+      if (!xlsxNames.length) { gitFileSel.innerHTML='<option value="">ファイルなし</option>'; return; }
+      const ph = document.createElement('option');
+      ph.value=''; ph.textContent='📂 ファイルを選択…';
+      gitFileSel.appendChild(ph);
+      xlsxNames.forEach(name => {
+        const o = document.createElement('option');
+        o.value = encodeURIComponent(name);
+        o.textContent = name;
+        gitFileSel.appendChild(o);
+      });
+      const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
+      gitFileSel.value = existsPrevious ? previousValue : '';
+      gitListLoadedAt = Date.now();
+      const target = xlsxNames[0];
+      if (target) {
+        gitFileSel.value = encodeURIComponent(target);
+        loadFromGitHub(target);
+      } else {
+        updateStatus('GitHubのExcel候補を更新しました。候補を選ぶと読み込みます。');
+      }
+    })
+    .catch(() => { gitFileSel.innerHTML='<option value="">⚠️ 候補更新失敗</option>'; })
+    .finally(() => { gitListLoading = false; });
+}
+
+function loadFromGitHub(filename) {
+  if (!filename) {
+    const v = gitFileSel.value; if(!v) return;
+    filename = decodeURIComponent(v);
+  }
+  const btn = document.getElementById('btnReload');
+  btn.textContent='⏳ 読込中…'; btn.disabled=true;
+  updateStatus('読み込み中…');
+  fetch(GITHUB_RAW_BASE + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+    .catch(err => {
+      console.warn('raw.githubusercontent.com 読み込みエラー。予備取得に切替:', err);
+      return fetch(GITHUB_JSDELIVR_RAW + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => { if(!r.ok) throw new Error('jsDelivr HTTP '+r.status); return r.arrayBuffer(); });
+    })
+    .then(buf => {
+      loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.3');
+      if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
+        setTimeout(function() { window._histPendingRestore.applyFn(); delete window._histPendingRestore; }, 100);
+      }
+    })
+    .catch(e => updateStatus('⚠️ 読み込み失敗: '+e.message))
+    .finally(() => { btn.textContent='🔄 最新を取得'; btn.disabled=false; });
+}
+
+gitFileSel.addEventListener('change', function() {
+  if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
+});
+gitFileSel.addEventListener('pointerdown', function() {
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+});
+gitFileSel.addEventListener('focus', function() {
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+});
+
+// ローカルファイルを開く
+document.getElementById('localFileInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  // ドロップダウンにローカルファイル名を表示
+  let localOpt = gitFileSel.querySelector('option[value="__local__"]');
+  if (!localOpt) {
+    localOpt = document.createElement('option');
+    localOpt.value = '__local__';
+    gitFileSel.insertBefore(localOpt, gitFileSel.firstChild);
+  }
+  localOpt.textContent = '📁 ' + file.name;
+  gitFileSel.value = '__local__';
+  const reader = new FileReader();
+  reader.onload = e => loadWorkbookData(e.target.result, file.name, 'ローカルファイル');
+  reader.readAsArrayBuffer(file);
+  this.value = '';
+});
+document.getElementById('btnReload').addEventListener('click', () => {
+  if (gitFileSel.value && gitFileSel.value !== '__local__') loadFromGitHub();
+  else fetchGitHubFileList();
+});
+
+// 列チェックパネル構築
+function buildColPanel() {
+  colPanel.innerHTML = '';
+  headers.forEach((h, i) => {
+    const lbl = document.createElement('label');
+    lbl.className = 'col-lbl on';
+    const cb = document.createElement('input');
+    cb.type='checkbox'; cb.checked=true; cb.dataset.col=i;
+    cb.addEventListener('change', function() {
+      const ci = parseInt(this.dataset.col);
+      if (this.checked) visibleCols.add(ci);
+      else visibleCols.delete(ci);
+      lbl.className = 'col-lbl' + (this.checked ? ' on' : '');
+      renderTable(); saveState();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(h || `列${i+1}`));
+    colPanel.appendChild(lbl);
+  });
+}
+
+function syncCheckboxes() {
+  colPanel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    const ci = parseInt(cb.dataset.col);
+    cb.checked = visibleCols.has(ci);
+    cb.closest('label').className = 'col-lbl' + (cb.checked ? ' on' : '');
+  });
+}
+
+document.getElementById('btnTogglePanel').addEventListener('click', () => {
+  colPanel.classList.toggle('active');
+  // thead の sticky top を調整
+  adjustWrapperHeight();
+});
+document.getElementById('btnAllOn').addEventListener('click', () => {
+  visibleCols = new Set(headers.map((_,i) => i));
+  syncCheckboxes(); renderTable(); saveState();
+});
+document.getElementById('btnAllOff').addEventListener('click', () => {
+  visibleCols.clear(); syncCheckboxes(); renderTable(); saveState();
+});
+
+function adjustWrapperHeight() {
+  const headerH  = document.getElementById('app-header').offsetHeight;
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  const panelH   = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
+  document.getElementById('tableWrapper').style.height =
+    `calc(100vh - ${headerH + toolbarH + panelH}px)`;
+}
+
+// 検索
+searchInput.addEventListener('input', () => { renderTable(); saveState(); });
+
+// ===== プレフィックス抽出（例: "N-1" → "N-", "K-30" → "K-"）=====
+function extractPrefix(v) {
+  const m = v.match(/^([^\d\s\-]{1,10}[-－ー])(\d)/);
+  return m ? m[1] : null;
+}
+
+// ===== フィルター＋ソートポップアップ =====
+function showFilterPopup(ci, thEl) {
+  filterPopupCol = ci;
+  filterApply.dataset.colIdx = ci;
+  filterTitle.textContent = headers[ci] || `列${ci+1}`;
+
+  // ユニーク値と件数を集計
+  const valCount = new Map();
+  dataArray.forEach(row => {
+    const v = String(row[ci] || '').trim();
+    valCount.set(v, (valCount.get(v) || 0) + 1);
+  });
+
+  // プレフィックスグループ検出
+  const prefixCount = new Map();
+  valCount.forEach((cnt, v) => {
+    const pfx = extractPrefix(v);
+    if (pfx) prefixCount.set(pfx, (prefixCount.get(pfx) || 0) + cnt);
+  });
+  const usePrefix = prefixCount.size > 0 && prefixCount.size < valCount.size;
+  filterApply.dataset.filterType = usePrefix ? 'prefix' : 'exact';
+
+  const sortedKeys = keys => [...keys].sort((a, b) => {
+    if (a === '') return 1; if (b === '') return -1;
+    return natCmp(a, b);
+  });
+
+  const sameCol  = filterState.colIdx === ci;
+  const sameType = filterState.filterType === (usePrefix ? 'prefix' : 'exact');
+  const prev = (sameCol && sameType) ? filterState.selectedValues : null;
+
+  filterValList.innerHTML = '';
+
+  if (usePrefix) {
+    sortedKeys(prefixCount.keys()).forEach(pfx => {
+      const lbl = document.createElement('label');
+      lbl.className = 'youbi-check-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = pfx;
+      cb.checked = prev ? prev.has(pfx) : true;
+      const ns = document.createElement('span'); ns.className = 'youbi-check-label'; ns.textContent = pfx + '…';
+      const cs = document.createElement('span'); cs.className = 'youbi-check-cnt'; cs.textContent = prefixCount.get(pfx) + '件';
+      lbl.append(cb, ns, cs); filterValList.appendChild(lbl);
+    });
+    valCount.forEach((cnt, v) => {
+      if (v !== '' && extractPrefix(v)) return;
+      const lbl = document.createElement('label');
+      lbl.className = 'youbi-check-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = '\x00exact:' + v;
+      cb.checked = prev ? prev.has('\x00exact:' + v) : true;
+      const ns = document.createElement('span'); ns.className = 'youbi-check-label'; ns.textContent = v === '' ? '（空白）' : v;
+      const cs = document.createElement('span'); cs.className = 'youbi-check-cnt'; cs.textContent = cnt + '件';
+      lbl.append(cb, ns, cs); filterValList.appendChild(lbl);
+    });
+  } else {
+    sortedKeys(valCount.keys()).forEach(v => {
+      const lbl = document.createElement('label');
+      lbl.className = 'youbi-check-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = v;
+      cb.checked = prev ? prev.has(v) : true;
+      const ns = document.createElement('span'); ns.className = 'youbi-check-label'; ns.textContent = v === '' ? '（空白）' : v;
+      const cs = document.createElement('span'); cs.className = 'youbi-check-cnt'; cs.textContent = valCount.get(v) + '件';
+      lbl.append(cb, ns, cs); filterValList.appendChild(lbl);
+    });
+  }
+
+  const rect = thEl.getBoundingClientRect();
+  filterPopup.style.display = 'block';
+  const pw = filterPopup.offsetWidth || 220;
+  let left = rect.left;
+  if (left + pw > window.innerWidth) left = window.innerWidth - pw - 8;
+  filterPopup.style.left = Math.max(4, left) + 'px';
+  filterPopup.style.top  = (rect.bottom + 4) + 'px';
+}
+
+// ソートボタン
+document.getElementById('fpSortAsc').addEventListener('click', () => {
+  sortState = { col: filterPopupCol, dir: 1 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
+document.getElementById('fpSortDesc').addEventListener('click', () => {
+  sortState = { col: filterPopupCol, dir: -1 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
+document.getElementById('fpSortClear').addEventListener('click', () => {
+  sortState = { col: -1, dir: 0 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
+
+// 全選択・全解除
+document.getElementById('fpSelAll').addEventListener('click', () => {
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+});
+document.getElementById('fpSelNone').addEventListener('click', () => {
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+});
+
+// 適用
+filterApply.addEventListener('click', () => {
+  const ci = parseInt(filterApply.dataset.colIdx, 10);
+  const filterType = filterApply.dataset.filterType;
+  const checked = new Set();
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    if (cb.checked) checked.add(cb.value);
+  });
+  const total = filterValList.querySelectorAll('input[type=checkbox]').length;
+  if (checked.size === total) {
+    filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+  } else {
+    filterState = { colIdx: ci, selectedValues: checked, filterType };
+  }
+  filterPopup.style.display = 'none';
+  renderTable();
+  saveState();
+});
+
+// 閉じる
+document.getElementById('filterPopupClose').addEventListener('click', () => {
+  filterPopup.style.display = 'none';
+});
+document.addEventListener('click', e => {
+  if (filterPopup.style.display === 'none') return;
+  if (!filterPopup.contains(e.target) && !e.target.closest('#dataTable thead')) {
+    filterPopup.style.display = 'none';
+  }
+});
+
+// 自然順ソート
+function natCmp(a, b) {
+  const re=/(\d+)/g;
+  const sp = s => {
+    const p=[]; let last=0, m; re.lastIndex=0;
+    while((m=re.exec(s))!==null){
+      if(m.index>last) p.push({t:'s',v:s.slice(last,m.index)});
+      p.push({t:'n',v:parseInt(m[0],10)}); last=m.index+m[0].length;
+    }
+    if(last<s.length) p.push({t:'s',v:s.slice(last)});
+    return p;
+  };
+  const pa=sp(a), pb=sp(b);
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){
+    const xa=pa[i],xb=pb[i];
+    if(!xa) return -1; if(!xb) return 1;
+    if(xa.t==='n'&&xb.t==='n'){ if(xa.v!==xb.v) return xa.v-xb.v; }
+    else { const c=String(xa.v).localeCompare(String(xb.v),'ja'); if(c!==0) return c; }
+  }
+  return 0;
+}
+
+// テーブル描画
+function renderTable() {
+  const q = searchInput.value.trim().toLowerCase();
+  const visArr = [...visibleCols].sort((a,b) => a-b);
+
+  if (!headers.length) {
+    dataTable.style.display='none'; emptyMsg.style.display='block';
+    emptyMsg.textContent='データがありません'; updateStatus('— データなし —');
+    return;
+  }
+
+  // フィルター適用
+  let rows = dataArray.filter(row => {
+    if (filterState.colIdx !== null && filterState.selectedValues.size > 0) {
+      const v = String(row[filterState.colIdx] || '').trim();
+      if (filterState.filterType === 'prefix') {
+        let ok = false;
+        for (const sel of filterState.selectedValues) {
+          if (sel.startsWith('\x00exact:')) { if (v === sel.slice(7)) { ok=true; break; } }
+          else { if (v.startsWith(sel)) { ok=true; break; } }
+        }
+        if (!ok) return false;
+      } else {
+        if (!filterState.selectedValues.has(v)) return false;
+      }
+    }
+    return !q || row.some(c => String(c).toLowerCase().includes(q));
+  });
+
+  if (sortState.col >= 0 && sortState.dir !== 0) {
+    const ci = sortState.col;
+    rows = [...rows].sort((a,b) => {
+      const va=String(a[ci]||'').trim(), vb=String(b[ci]||'').trim();
+      if(va===''&&vb==='') return 0;
+      if(va==='') return 1; if(vb==='') return -1;
+      return sortState.dir * natCmp(va,vb);
+    });
+  }
+
+  // ヘッダー描画
+  tableHead.innerHTML='';
+  const htr = document.createElement('tr');
+  const thN = document.createElement('th');
+  thN.textContent='#'; thN.style.cursor='default'; thN.style.minWidth='32px';
+  htr.appendChild(thN);
+  visArr.forEach(ci => {
+    const th = document.createElement('th');
+    const isFiltered = filterState.colIdx === ci && filterState.selectedValues.size > 0;
+    let label = headers[ci] || `列${ci+1}`;
+    if (isFiltered) {
+      const vals = [...filterState.selectedValues]
+        .map(v => v.startsWith('\x00exact:') ? (v.slice(7)||'空白') : v)
+        .join('・');
+      label += ` 🔽${vals}`;
+    }
+    th.textContent = label;
+    if (sortState.col===ci) th.classList.add(sortState.dir===1?'sorted-asc':'sorted-desc');
+    th.addEventListener('click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
+    htr.appendChild(th);
+  });
+  tableHead.appendChild(htr);
+
+  displayedRows = rows;  // 保存用に保持
+
+  // ボディ描画
+  // 「計量」列はHome側のTabで切り替えるため、ページ移動リンクは出さない。
+  tableBody.innerHTML='';
+  rows.forEach((row,ri) => {
+    const tr = document.createElement('tr');
+    const tdN = document.createElement('td');
+    tdN.className='rn'; tdN.textContent=ri+1; tr.appendChild(tdN);
+    visArr.forEach(ci => {
+      const td = document.createElement('td');
+      const cell = String(row[ci] || '').trim();
+      const header = String(headers[ci] || '').trim();
+      if ((header === '計量' && cell !== '') || cell === '計量') {
+        td.className = 'keiryou-td';
+        td.textContent = '計量';
+      } else {
+        td.textContent = cell;
+      }
+      tr.appendChild(td);
+    });
+    tableBody.appendChild(tr);
+  });
+
+  dataTable.style.display = rows.length ? '' : 'none';
+  emptyMsg.style.display  = rows.length ? 'none' : 'block';
+  if (!rows.length) emptyMsg.textContent = '表示するデータがありません';
+  const filterInfo = (filterState.colIdx !== null && filterState.selectedValues.size > 0)
+    ? ` 🔽${headers[filterState.colIdx]||''}フィルター中` : '';
+  updateStatus(`${rows.length}件 ／ 全${dataArray.length}件　列:${visArr.length}/${headers.length}${filterInfo}`);
+  adjustWrapperHeight();
+}
+
+// ===== 保存機能 =====
+function getTimestamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+function makeTimestampedName(filename) {
+  return filename.replace(/\.xlsx$/i, '') + '_' + getTimestamp() + '.xlsx';
+}
+
+function doSaveExcel(filename) {
+  if (!headers.length || !displayedRows.length) {
+    showToast('⚠️ 保存するデータがありません');
+    return;
+  }
+  const visArr = [...visibleCols].sort((a,b) => a-b);
+  const wsData = [visArr.map(ci => headers[ci]), ...displayedRows.map(row => visArr.map(ci => row[ci] || ''))];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+  showToast('✅ ' + filename + ' を保存しました');
+}
+
+const saveDialog    = document.getElementById('saveDialog');
+const sdlgFilename  = document.getElementById('saveDialogFilename');
+const sdlgNewName   = document.getElementById('sdlgNewName');
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  if (!headers.length) { showToast('⚠️ ファイルを読み込んでください'); return; }
+  const fn = currentFilename || '物件表.xlsx';
+  sdlgFilename.textContent = fn;
+  sdlgNewName.textContent  = '別名: ' + makeTimestampedName(fn);
+  saveDialog.classList.add('active');
+});
+
+document.getElementById('sdlgOverwrite').addEventListener('click', () => {
+  const fn = currentFilename || '物件表.xlsx';
+  saveDialog.classList.remove('active');
+  doSaveExcel(fn);
+});
+
+document.getElementById('sdlgSaveAs').addEventListener('click', () => {
+  const fn = currentFilename || '物件表.xlsx';
+  saveDialog.classList.remove('active');
+  doSaveExcel(makeTimestampedName(fn));
+});
+
+document.getElementById('sdlgCancel').addEventListener('click', () => {
+  saveDialog.classList.remove('active');
+});
+
+fetchGitHubFileList();
+
+// 初期高さ設定（フォント/レイアウト確定後）
+window.addEventListener('load', adjustWrapperHeight);
+window.addEventListener('resize', adjustWrapperHeight);
+
+// ===== ツールバー折りたたみ =====
+(function() {
+  const toolbar   = document.getElementById('toolbar');
+  const toggleBtn = document.getElementById('toolbar-toggle');
+  const colPanel  = document.getElementById('colPanel');
+  const wrapper   = document.getElementById('tableWrapper');
+  const header    = document.getElementById('app-header');
+
+  function adjustHeights() {
+    const hdH = header ? header.offsetHeight : 44;
+    const tbH = toolbar.offsetHeight;
+    const cpH = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
+    colPanel.style.top = (hdH + tbH) + 'px';
+    wrapper.style.height = 'calc(100vh - ' + (hdH + tbH + cpH) + 'px)';
+  }
+
+  window.toggleToolbar = function() {
+    const collapsed = toolbar.classList.toggle('collapsed');
+    toggleBtn.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
+    setTimeout(adjustHeights, 230);
+    try { localStorage.setItem('colview_toolbar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  };
+
+  // 初期状態復元
+  try {
+    if (localStorage.getItem('colview_toolbar_collapsed') === '1') {
+      toolbar.classList.add('collapsed');
+      toggleBtn.textContent = '▼ 開く';
+    }
+  } catch(e) {}
+
+  window.addEventListener('resize', adjustHeights);
+  setTimeout(adjustHeights, 100);
+})();
+
+// ===== コンテキスト公開（履歴機能から参照するため） =====
+window._colviewCtx = {
+  getFilename:    () => currentFilename,
+  getSheetName:   () => currentSheetName,
+  getSortState:   () => sortState,
+  setSortState:   (v) => { sortState = v; },
+  getDataArray:   () => dataArray,
+  getVisibleCols: () => visibleCols,
+  setVisibleCols: (v) => { visibleCols = v; },
+  getFilterState: () => filterState,
+  setFilterState: (v) => {
+    if (!v || v.colIdx === null) {
+      filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+    } else {
+      filterState = {
+        colIdx:         v.colIdx,
+        selectedValues: new Set(v.selectedValues),
+        filterType:     v.filterType || 'exact'
+      };
+    }
+  },
+  getSearchQuery:  () => searchInput ? searchInput.value : '',
+  setSearchQuery:  (v) => { if (searchInput) searchInput.value = v || ''; },
+  getHeaders:      () => headers,
+  getTotalCount:   () => dataArray.length,
+  renderTable, updateStatus, loadFromGitHub, syncCheckboxes,
+};
+</script>
+<script>
+(function(){
+  const RESUME_KEY = 'ueno_seisou_resume_v1';
+  const PAGE = 'index_2-4_colview.html';
+  let timer = null;
+  function saveResume(){
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, tableTop: document.getElementById('tableWrapper')?.scrollTop || 0, updatedAt: Date.now()}));
+    } catch(e) {}
+  }
+  window.addEventListener('load', () => {
+    try {
+      const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
+      if(r && r.page === PAGE) setTimeout(() => {
+        window.scrollTo(0, r.scrollY || 0);
+        const w = document.getElementById('tableWrapper');
+        if(w && typeof r.tableTop === 'number') w.scrollTop = r.tableTop;
+      }, 250);
+    } catch(e) {}
+    saveResume();
+  });
+  window.addEventListener('scroll', () => {
+    clearTimeout(timer);
+    timer = setTimeout(saveResume, 250);
+  }, {passive:true});
+  const wrapper = document.getElementById('tableWrapper');
+  if(wrapper) wrapper.addEventListener('scroll', () => {
+    clearTimeout(timer);
+    timer = setTimeout(saveResume, 250);
+  }, {passive:true});
+  window.addEventListener('pagehide', saveResume);
+})();
+</script>
+<script src="app-tabs.js?v=20260518shadowlabel"></script>
+
+<!-- 履歴パネル -->
+<div id="hist-overlay" onclick="closeHistPanel()"></div>
+<div id="hist-panel">
+  <div id="hist-panel-hdr">
+    <span>📌 列ビュー 履歴</span>
+    <button onclick="closeHistPanel()">✕</button>
+  </div>
+  <button id="hist-save-btn" onclick="saveHistItem()">💾 今の状態を保存</button>
+  <div id="hist-list"></div>
+</div>
+
+<script>
+// ===== 列選択ビューア 履歴機能 =====
+(function() {
+  const HIST_KEY = 'colview_history';
+  const MAX_HIST = 30;
+
+  function ctx() { return window._colviewCtx || null; }
+
+  function getHist() {
+    try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function setHist(h) {
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch(e) {}
+  }
+
+  function snapshot() {
+    const c = ctx(); if (!c) return null;
+    const fs = c.getFilterState();
+    const hdrs = c.getHeaders();
+    const visCols = [...c.getVisibleCols()].sort((a,b) => a-b);
+    const ss = c.getSortState();
+    return {
+      id:              Date.now(),
+      timestamp:       Date.now(),
+      filename:        c.getFilename(),
+      sheetName:       c.getSheetName(),
+      visibleCols:     visCols,
+      visibleColNames: visCols.map(i => hdrs[i] || `列${i+1}`),
+      totalCount:      c.getTotalCount(),
+      sortState:       { ...ss },
+      sortColName:     (ss && ss.col >= 0) ? (hdrs[ss.col] || `列${ss.col+1}`) : '',
+      searchQuery:     c.getSearchQuery(),
+      filterState: (fs && fs.colIdx !== null) ? {
+        colIdx:         fs.colIdx,
+        colName:        hdrs[fs.colIdx] || `列${fs.colIdx+1}`,
+        selectedValues: [...fs.selectedValues],
+        filterType:     fs.filterType
+      } : null
+    };
+  }
+
+  function makeLabel(item) {
+    const parts = [];
+    // ソート
+    if (item.sortState && item.sortState.col >= 0) {
+      const name = item.sortColName || (item.visibleColNames
+        ? (item.visibleColNames[item.visibleCols ? item.visibleCols.indexOf(item.sortState.col) : -1] || `列${item.sortState.col+1}`)
+        : `列${item.sortState.col+1}`);
+      parts.push((item.sortState.dir === 1 ? '▲' : '▼') + name);
+    }
+    // フィルター・検索
+    if (item.filterState && item.filterState.colIdx !== null && item.filterState.selectedValues && item.filterState.selectedValues.length > 0) {
+      const colName = item.filterState.colName || `列${item.filterState.colIdx+1}`;
+      const rawVals = item.filterState.selectedValues.map(v => v.startsWith('\x00exact:') ? v.slice(7) : v);
+      const vals = rawVals.slice(0, 3).join('・');
+      const more = rawVals.length > 3 ? `…他${rawVals.length - 3}件` : '';
+      parts.push(`🔍${colName}: ${vals}${more}`);
+    }
+    if (item.searchQuery) parts.push(`"${item.searchQuery}"`);
+    return parts.length > 0 ? parts.join(' · ') : '';
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts), p = n => String(n).padStart(2,'0');
+    return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  function renderHist() {
+    const items = getHist();
+    const el = document.getElementById('hist-list');
+    if (!el) return;
+    if (items.length === 0) {
+      el.innerHTML = '<div id="hist-empty">保存した履歴はありません<br><small>「今の状態を保存」で現在の<br>列選択・ソートを記録できます</small></div>';
+      return;
+    }
+    el.innerHTML = items.map(item => {
+      const colNames = item.visibleColNames && item.visibleColNames.length
+        ? item.visibleColNames.join('・')
+        : (item.visibleCols ? `${item.visibleCols.length}列` : '全列');
+      const meta = makeLabel(item);
+      const count = item.totalCount != null ? ` 全${item.totalCount}件` : '';
+      return `
+      <div class="hist-item" onclick="restoreHist(${item.id})">
+        <div class="hist-item-body">
+          <div class="hist-item-file">📋 ${item.filename || '(ファイル未選択)'}${item.sheetName ? ' / ' + item.sheetName : ''}${count}</div>
+          <div class="hist-item-cols">${colNames}</div>
+          ${meta ? `<div class="hist-item-meta">${meta}</div>` : ''}
+          <div class="hist-item-time">🕐 ${fmtTime(item.timestamp)}</div>
+        </div>
+        <button class="hist-del-btn" onclick="event.stopPropagation(); deleteHist(${item.id})">🗑</button>
+      </div>
+      `;
+    }).join('');
+  }
+
+  window.saveHistItem = function() {
+    const item = snapshot();
+    if (!item || !item.filename) { alert('先にファイルを読み込んでください。'); return; }
+    const h = getHist();
+    h.unshift(item);
+    if (h.length > MAX_HIST) h.length = MAX_HIST;
+    setHist(h);
+    renderHist();
+    const btn = document.getElementById('hist-save-btn');
+    btn.textContent = '✅ 保存しました';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = '💾 今の状態を保存'; btn.classList.remove('saved'); }, 1800);
+  };
+
+  window.deleteHist = function(id) {
+    setHist(getHist().filter(x => x.id !== id));
+    renderHist();
+  };
+
+  window.restoreHist = function(id) {
+    const item = getHist().find(x => x.id === id);
+    if (!item) return;
+    closeHistPanel();
+
+    function applyState() {
+      const c = ctx(); if (!c) return;
+      if (item.sheetName && item.sheetName !== c.getSheetName()) {
+        const sheetSel = document.getElementById('sheetSelector');
+        if (sheetSel && Array.from(sheetSel.options).some(opt => opt.value === item.sheetName)) {
+          sheetSel.value = item.sheetName;
+          loadSheet(item.sheetName);
+        }
+      }
+      // 列表示
+      if (item.visibleCols && item.visibleCols.length > 0) {
+        c.setVisibleCols(new Set(item.visibleCols));
+        c.syncCheckboxes();
+      }
+      // ソート
+      if (item.sortState && item.sortState.col >= 0) {
+        c.setSortState({ ...item.sortState });
+        const ci = item.sortState.col, dir = item.sortState.dir;
+        if (dir !== 0) {
+          c.getDataArray().sort((a, b) => {
+            const va = String(a[ci]||'').trim(), vb = String(b[ci]||'').trim();
+            if (va===vb) return 0; if (va==='') return 1; if (vb==='') return -1;
+            return dir * (va < vb ? -1 : 1);
+          });
+        }
+      } else {
+        c.setSortState({ col: -1, dir: 0 });
+      }
+      // 検索
+      if (item.searchQuery !== undefined) c.setSearchQuery(item.searchQuery);
+      // フィルター
+      c.setFilterState(item.filterState || null);
+      // 再描画
+      c.renderTable();
+      c.updateStatus('📌 履歴を復元しました');
+    }
+
+    if (item.filename && item.filename !== ctx().getFilename()) {
+      window._histPendingRestore = { applyFn: applyState, filename: item.filename };
+      const sel = document.getElementById('gitFileSelector');
+      if (sel) {
+        for (const opt of sel.options) {
+          if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
+        }
+      }
+      ctx().loadFromGitHub(item.filename);
+    } else {
+      applyState();
+    }
+  };
+
+  window.toggleHistPanel = function() {
+    const panel = document.getElementById('hist-panel');
+    const overlay = document.getElementById('hist-overlay');
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open'); overlay.classList.remove('show');
+    } else {
+      renderHist(); panel.classList.add('open'); overlay.classList.add('show');
+    }
+  };
+  window.closeHistPanel = function() {
+    document.getElementById('hist-panel').classList.remove('open');
+    document.getElementById('hist-overlay').classList.remove('show');
+  };
+})();
+</script>
+
+</body>
+</html>

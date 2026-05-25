@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excelビューア</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  display: flex; flex-direction: column;
+  font-family: 'Hiragino Sans', 'ヒラギノ角ゴ ProN', 'Meiryo', sans-serif;
+  font-size: 12px; -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== HEADER ===== */
+#app-header {
+  height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+#app-header h1 { font-size: 14px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#file-label { font-size: 10px; opacity: 0.6; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+
+/* ===== TOOL PANEL ===== */
+#tool-panel { flex-shrink: 0; }
+#tool-panel-inner {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+}
+#tool-panel-inner::-webkit-scrollbar { display: none; }
+#tool-panel.collapsed #tool-panel-inner { display: none; }
+
+.tool-btn {
+  border: 1px solid; padding: 5px 11px; border-radius: 7px; font-size: 12px;
+  cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+}
+.tool-btn:disabled { opacity: 0.4; cursor: default; }
+.tool-btn.active { font-weight: 800; }
+.tool-sep { opacity: 0.3; flex-shrink: 0; }
+
+/* ===== TOOLBAR TOGGLE ===== */
+#toolbar-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 2px 0; border: none; border-top: 1px solid;
+  cursor: pointer; font-size: 10px; font-family: inherit;
+}
+#tool-panel.collapsed #toolbar-toggle { border-top: none; padding: 4px 0; }
+
+/* ===== GITHUB MODAL ===== */
+#gh-modal {
+  display: none; position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
+}
+#gh-modal.open { display: flex; }
+#gh-modal-box {
+  border: 1px solid; border-radius: 12px; padding: 16px 18px;
+  max-width: 440px; width: 92%; box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+  display: flex; flex-direction: column; max-height: 75vh;
+}
+#gh-modal-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+#gh-search {
+  width: 100%; padding: 8px 10px; border: 1px solid; border-radius: 8px;
+  font: inherit; font-size: 13px; margin-bottom: 8px; outline: none; background: transparent;
+}
+#gh-file-list {
+  overflow-y: auto; flex: 1; border: 1px solid; border-radius: 8px; min-height: 60px;
+}
+.gh-file-item {
+  display: block; width: 100%; text-align: left; padding: 9px 14px; font-size: 12px;
+  font-family: inherit; background: none; border: none; border-bottom: 1px solid;
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gh-file-item:last-child { border-bottom: none; }
+.gh-file-item:hover { opacity: 0.75; }
+.gh-status { padding: 12px 14px; font-size: 12px; opacity: 0.6; }
+.gh-section-title { padding: 6px 14px 4px; font-size: 10px; font-weight: 700; opacity: 0.5; border-bottom: 1px solid; }
+#gh-modal-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+#gh-modal-footer button { padding: 6px 16px; border: 1px solid; border-radius: 7px; font: inherit; font-size: 12px; cursor: pointer; }
+
+/* ===== PATH BAR ===== */
+#path-bar {
+  font-size: 10px; padding: 3px 10px; border-bottom: 1px solid; flex-shrink: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: none;
+}
+
+/* ===== SHEET TABS ===== */
+#sheet-tabs {
+  border-bottom: 1px solid; padding: 6px 10px; overflow-x: auto;
+  white-space: nowrap; scrollbar-width: none; min-height: 38px; flex-shrink: 0;
+}
+#sheet-tabs::-webkit-scrollbar { display: none; }
+.sheet-btn {
+  display: inline-block; padding: 4px 12px; margin-right: 5px;
+  border: 1px solid; border-radius: 16px; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: inherit;
+}
+.sheet-btn.active { font-weight: 800; }
+
+/* ===== TABLE AREA ===== */
+/* リストビュー: ヘッダー行を固定、ボディをスクロール */
+#list-header-wrap {
+  display: none; flex-shrink: 0; overflow: hidden; border-bottom: 2px solid;
+}
+#list-header-wrap.show { display: block; }
+#list-body-wrap {
+  display: none; flex: 1; overflow: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px;
+}
+#list-body-wrap.show { display: block; }
+
+/* グリッドビュー: wrap全体をスクロール */
+#grid-wrap {
+  display: none; flex: 1; overflow: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px;
+}
+#grid-wrap.show { display: block; }
+
+/* ===== STATUS ===== */
+#status-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+}
+#status { font-size: 14px; line-height: 2; opacity: 0.5; text-align: center; padding: 20px; }
+
+/* ===== TABLE 共通 ===== */
+.xl-table {
+  border-collapse: collapse; font-size: 11px; white-space: nowrap;
+}
+.xl-table th, .xl-table td {
+  border: 1px solid; padding: 3px 8px;
+  overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+  vertical-align: top; min-width: 72px;
+}
+
+/* ===== リストヘッダー ===== */
+#list-header-wrap .xl-table th {
+  font-weight: 700; text-align: left; font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ===== リストボディ ===== */
+#list-body-wrap .xl-table td.num { text-align: right; }
+#list-body-wrap .xl-table tr.alt-row { } /* テーマが偶数行を色付けする場合用 */
+
+/* ===== グリッド: 列記号・行番号 ===== */
+#grid-wrap .xl-table th.col-ltr {
+  text-align: center; font-size: 10px; opacity: 0.6; min-width: 72px;
+  position: sticky; top: 0; z-index: 2;
+  background: var(--grid-header-bg, #f0f0f0);
+}
+#grid-wrap .xl-table td.rn, #grid-wrap .xl-table th.rn-corner {
+  text-align: right; font-size: 10px; opacity: 0.5; min-width: 34px; max-width: 42px;
+  position: sticky; left: 0; z-index: 1;
+  background: var(--grid-header-bg, #f0f0f0);
+  padding: 2px 5px 2px 3px;
+}
+#grid-wrap .xl-table th.rn-corner { z-index: 3; text-align: center; }
+#grid-wrap .xl-table td.num { text-align: right; }
+
+/* ===== 編集モード ===== */
+body.edit-mode .xl-table td:not(.rn),
+body.edit-mode .xl-table th:not(.rn-corner):not(.col-ltr) {
+  cursor: cell;
+}
+body.edit-mode .xl-table td:not(.rn):hover,
+body.edit-mode .xl-table th:not(.rn-corner):not(.col-ltr):hover {
+  outline: 2px solid; outline-offset: -2px;
+}
+.cell-editing { padding: 0 !important; }
+.cell-editing input {
+  display: block; width: 100%; min-height: 22px;
+  box-sizing: border-box; border: none; outline: 2px solid;
+  padding: 2px 7px; font: inherit; background: transparent;
+}
+.cell-modified { font-style: italic; }
+.cell-selected { outline: 2px solid #1a6eb5 !important; outline-offset: -2px; background-color: rgba(26,110,181,0.07) !important; }
+
+/* ===== 別名保存ダイアログ ===== */
+#saveas-overlay {
+  display: none; position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
+}
+#saveas-overlay.open { display: flex; }
+#saveas-box {
+  border: 1px solid; border-radius: 12px; padding: 22px 24px;
+  max-width: 380px; width: 92%; box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+}
+#saveas-box h2 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+#saveas-box label { display: block; font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+#saveas-name {
+  width: 100%; padding: 7px 10px; border: 1px solid; border-radius: 6px;
+  font: inherit; font-size: 13px; margin-bottom: 12px; outline: none; background: transparent;
+}
+#saveas-ts-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  font-size: 12px; cursor: pointer; user-select: none;
+}
+#saveas-preview {
+  font-size: 11px; opacity: 0.65; padding: 5px 8px;
+  border: 1px dashed; border-radius: 5px; margin-bottom: 16px; word-break: break-all;
+}
+#saveas-btns { display: flex; gap: 8px; justify-content: flex-end; }
+#saveas-btns button {
+  padding: 7px 18px; border: 1px solid; border-radius: 7px;
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <h1>📊 Excelビューア</h1>
+  <div id="file-label">ファイルを選択…</div>
+</div>
+
+<div id="tool-panel">
+  <div id="tool-panel-inner">
+    <button class="tool-btn" onclick="document.getElementById('file-input').click()">📂 開く</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+    <button class="tool-btn" id="gh-btn" onclick="openGhModal()">☁️ GitHub</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn active" id="btn-list" onclick="setView('list')">≡ リスト</button>
+    <button class="tool-btn"        id="btn-grid" onclick="setView('grid')">⊞ グリッド</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn" id="edit-btn" onclick="toggleEdit()">✏️ 編集</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn" id="select-all-btn" onclick="selectAll()" disabled title="全セル選択">⬛ 全選択</button>
+    <button class="tool-btn" id="align-l-btn" onclick="applyAlign('left')"   title="左寄せ">≡L</button>
+    <button class="tool-btn" id="align-c-btn" onclick="applyAlign('center')" title="中央">≡C</button>
+    <button class="tool-btn" id="align-r-btn" onclick="applyAlign('right')"  title="右寄せ">≡R</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn" id="addrow-btn" onclick="addRow()" disabled title="選択行の上に挿入（未選択なら末尾）">＋ 行追加</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn" id="save-btn"   onclick="saveFile()"   disabled>💾 保存</button>
+    <button class="tool-btn" id="saveas-btn" onclick="openSaveAs()" disabled>📝 別名保存</button>
+    <span class="tool-sep">|</span>
+    <button class="tool-btn" onclick="changeZoom(-0.2)" title="縮小">🔍－</button>
+    <span id="zoom-label" style="font-size:11px;flex-shrink:0;">100%</span>
+    <button class="tool-btn" onclick="changeZoom(+0.2)" title="拡大">🔍＋</button>
+  </div>
+  <button id="toolbar-toggle" onclick="toggleToolPanel()">▲ 閉じる</button>
+</div>
+
+<div id="gh-modal">
+  <div id="gh-modal-box">
+    <div id="gh-modal-title">☁️ GitHubからExcelを開く</div>
+    <input type="search" id="gh-search" placeholder="ファイル名で検索…" oninput="renderGhFiles(this.value)">
+    <div id="gh-file-list"><div class="gh-status">読み込み中…</div></div>
+    <div id="gh-modal-footer"><button onclick="closeGhModal()">キャンセル</button></div>
+  </div>
+</div>
+
+<div id="path-bar"></div>
+<div id="sheet-tabs"><span style="font-size:12px;line-height:26px;opacity:0.45;">ファイルを選択してください</span></div>
+
+<!-- リストビュー（ヘッダー固定 + スクロールボディ） -->
+<div id="list-header-wrap"><table class="xl-table" id="list-header-table"></table></div>
+<div id="list-body-wrap"><table class="xl-table" id="list-body-table"></table></div>
+
+<!-- グリッドビュー -->
+<div id="grid-wrap"><table class="xl-table" id="grid-table"></table></div>
+
+<!-- 初期ステータス -->
+<div id="status-wrap">
+  <div id="status">📂 「▼ ツール」→「📂 開く」からExcelファイルを選択してください。</div>
+</div>
+
+<!-- 別名保存ダイアログ -->
+<div id="saveas-overlay">
+  <div id="saveas-box">
+    <h2>📝 別名保存</h2>
+    <label>ファイル名（拡張子なし）</label>
+    <input type="text" id="saveas-name" oninput="updatePreview()">
+    <div id="saveas-ts-row" onclick="document.getElementById('saveas-ts').click()">
+      <input type="checkbox" id="saveas-ts" onchange="updatePreview()" onclick="event.stopPropagation()">
+      <span>タイムスタンプを追加</span>
+      <span style="opacity:0.5;font-size:11px;">（_YYYYMMDD_HHmmss）</span>
+    </div>
+    <div id="saveas-preview"></div>
+    <div id="saveas-btns">
+      <button onclick="closeSaveAs()">キャンセル</button>
+      <button onclick="executeSaveAs()" style="font-weight:700;">⬇ ダウンロード</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== GitHub設定 =====
+const GH_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+const GITHUB_FILES = [
+  { name: '令和8年度収集カレンダー.xlsx',         url: GH_BASE + encodeURIComponent('令和8年度収集カレンダー.xlsx') },
+  { name: '令和8年度収集カレンダー（縦通し）.xlsx', url: GH_BASE + encodeURIComponent('令和8年度収集カレンダー（縦通し）.xlsx') },
+  { name: '2026年度物件表_KMN置換.xlsx',          url: GH_BASE + encodeURIComponent('2026年度物件表_KMN置換.xlsx') },
+];
+
+// ===== State =====
+let workbook      = null;
+let _currentSheet = null;
+let _filename     = '';
+let _viewMode     = 'list';
+let _editMode     = false;
+let _selRange   = null;        // { r1,c1,r2,c2 } 選択範囲
+let _isDragging = false;
+const _selEls   = new Map();   // "r:c" → el 選択中の要素
+const _cellEls  = new Map();   // "r:c" → el 描画済み全セル
+const _alignments = new Map(); // "sheet:r:c" → 'left'|'center'|'right'
+let _recentFiles = [];         // IndexedDB から読み込んだ最近のファイル
+
+// ===== GitHub dropdown =====
+// ===== ツールパネル =====
+function toggleToolPanel() {
+  const p = document.getElementById('tool-panel'), b = document.getElementById('toolbar-toggle');
+  const c = p.classList.toggle('collapsed');
+  b.textContent = c ? '▼ ツール' : '▲ 閉じる';
+}
+function closeToolPanel() {
+  document.getElementById('tool-panel').classList.add('collapsed');
+  document.getElementById('toolbar-toggle').textContent = '▼ ツール';
+}
+
+// ===== GitHub モーダル =====
+const GH_API = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+let _ghFiles = [];
+
+async function openGhModal() {
+  document.getElementById('gh-modal').classList.add('open');
+  document.getElementById('gh-search').value = '';
+  _ghFiles = [...GITHUB_FILES];
+  _recentFiles = await getRecentFiles();
+  renderGhFiles('');
+  try {
+    const res = await fetch(GH_API);
+    if (res.ok) {
+      const items = await res.json();
+      const found = items
+        .filter(f => f.type === 'file' && /\.(xlsx|xls)$/i.test(f.name))
+        .map(f => ({ name: f.name, url: GH_BASE + encodeURIComponent(f.name) }));
+      const existing = new Set(_ghFiles.map(f => f.name));
+      found.forEach(f => { if (!existing.has(f.name)) _ghFiles.push(f); });
+      renderGhFiles(document.getElementById('gh-search').value);
+    }
+  } catch(e) {}
+}
+
+function renderGhFiles(query) {
+  const list = document.getElementById('gh-file-list');
+  const q = query.trim().toLowerCase();
+  list.innerHTML = '';
+
+  // 最近のファイルセクション
+  const filteredRecent = _recentFiles.filter(f => !q || f.name.toLowerCase().includes(q));
+  if (filteredRecent.length) {
+    const title = document.createElement('div');
+    title.className = 'gh-section-title'; title.textContent = '最近のファイル';
+    list.appendChild(title);
+    filteredRecent.forEach(f => {
+      const btn = document.createElement('button');
+      btn.className = 'gh-file-item'; btn.textContent = '💾 ' + f.name;
+      btn.onclick = () => loadFromRecent(f);
+      list.appendChild(btn);
+    });
+  }
+
+  // GitHubセクション
+  const filteredGh = q ? _ghFiles.filter(f => f.name.toLowerCase().includes(q)) : _ghFiles;
+  if (filteredGh.length) {
+    const title = document.createElement('div');
+    title.className = 'gh-section-title'; title.textContent = 'GitHubのファイル';
+    list.appendChild(title);
+    filteredGh.forEach(f => {
+      const btn = document.createElement('button');
+      btn.className = 'gh-file-item'; btn.textContent = '☁️ ' + f.name;
+      btn.onclick = () => { closeGhModal(); loadFromGitHub(f, 0); };
+      list.appendChild(btn);
+    });
+  }
+
+  if (!filteredRecent.length && !filteredGh.length) {
+    list.innerHTML = '<div class="gh-status">ファイルが見つかりません</div>';
+  }
+}
+
+function closeGhModal() { document.getElementById('gh-modal').classList.remove('open'); }
+document.getElementById('gh-modal').addEventListener('click', e => {
+  if (e.target.id === 'gh-modal') closeGhModal();
+});
+
+// ===== IndexedDB（最近のファイル）=====
+const DB_NAME = 'excel-viewer-db';
+const DB_VER  = 1;
+const STORE   = 'recent-files';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'name' });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function saveRecent(name, buf) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put({ name, data: new Uint8Array(buf), savedAt: Date.now() });
+  } catch(e) { /* ignore */ }
+}
+
+async function getRecentFiles() {
+  try {
+    const db = await openDB();
+    return await new Promise((resolve, reject) => {
+      const tx  = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result.sort((a, b) => b.savedAt - a.savedAt));
+      req.onerror   = () => reject(req.error);
+    });
+  } catch(e) { return []; }
+}
+
+function loadFromRecent(file) {
+  closeGhModal();
+  _filename = file.name;
+  document.getElementById('file-label').textContent = file.name;
+  setPathBar('💾 ' + file.name, '');
+  closeToolPanel();
+  loadWorkbook(file.data.buffer);
+}
+async function loadFromGitHub(file, idx) {
+  const btn = document.getElementById('gh-btn'); btn.disabled = true;
+  try {
+    const res = await fetch(file.url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const buf = await res.arrayBuffer();
+    _filename = file.name;
+    document.getElementById('file-label').textContent = file.name;
+    setPathBar('☁️ ' + file.name, file.url);
+    closeToolPanel(); loadWorkbook(buf);
+  } catch(e) { alert('GitHubからの読み込みに失敗しました。\n' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+// ===== ズーム =====
+let _zoom = 1.0;
+function changeZoom(delta) {
+  _zoom = Math.max(0.4, Math.min(4.0, Math.round((_zoom + delta) * 10) / 10));
+  const pct = Math.round(_zoom * 100) + '%';
+  document.getElementById('zoom-label').textContent = pct;
+  ['grid-table','list-header-table','list-body-table'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.zoom = _zoom;
+  });
+}
+
+// ===== ローカルファイル =====
+document.getElementById('file-input').addEventListener('change', function() {
+  const f = this.files[0]; if (!f) return;
+  _filename = f.name;
+  document.getElementById('file-label').textContent = f.name;
+  setPathBar('📂 ' + f.name, '');
+  closeToolPanel();
+  const r = new FileReader();
+  r.onload = e => loadWorkbook(e.target.result);
+  r.readAsArrayBuffer(f);
+  this.value = '';
+});
+
+function setPathBar(name, url) {
+  const b = document.getElementById('path-bar');
+  b.textContent = url ? '📄 ' + name + '  |  ' + url : '📄 ' + name;
+  b.style.display = 'block';
+}
+
+// ===== ワークブック読み込み =====
+function loadWorkbook(buf) {
+  try {
+    workbook = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true, cellNF: true, cellStyles: true });
+  } catch(e) { alert('読み込みに失敗しました。\n' + e.message); return; }
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('saveas-btn').disabled = false;
+  document.getElementById('addrow-btn').disabled = false;
+  document.getElementById('select-all-btn').disabled = false;
+  _alignments.clear();
+  document.getElementById('status-wrap').style.display = 'none';
+
+  const tabsEl = document.getElementById('sheet-tabs');
+  tabsEl.innerHTML = '';
+  workbook.SheetNames.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sheet-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = name;
+    btn.addEventListener('click', () => selectSheet(name));
+    tabsEl.appendChild(btn);
+  });
+  const first = workbook.SheetNames[0];
+  if (first) { _currentSheet = first; renderSheet(first); }
+}
+
+function selectSheet(name) {
+  _currentSheet = name;
+  document.querySelectorAll('.sheet-btn').forEach(b => b.classList.toggle('active', b.textContent === name));
+  renderSheet(name);
+}
+
+// ===== ビュー切替 =====
+function setView(mode) {
+  _viewMode = mode;
+  document.getElementById('btn-list').classList.toggle('active', mode === 'list');
+  document.getElementById('btn-grid').classList.toggle('active', mode === 'grid');
+  if (workbook && _currentSheet) renderSheet(_currentSheet);
+}
+
+// ===== 編集モード切替 =====
+function toggleEdit() {
+  _editMode = !_editMode;
+  document.body.classList.toggle('edit-mode', _editMode);
+  const btn = document.getElementById('edit-btn');
+  btn.textContent = _editMode ? '✅ 編集中' : '✏️ 編集';
+  btn.classList.toggle('active', _editMode);
+}
+
+// ===== Excelの列幅からcolgroup生成 =====
+function buildColgroup(ws, sC, eC, hasRowNum) {
+  const cols = ws['!cols'] || [];
+  const cg = document.createElement('colgroup');
+  if (hasRowNum) {
+    const c = document.createElement('col'); c.style.width = '38px'; cg.appendChild(c);
+  }
+  for (let ci = sC; ci <= eC; ci++) {
+    const info = cols[ci];
+    const col = document.createElement('col');
+    if (info && (info.wpx || info.wch)) {
+      col.style.width = Math.max(40, info.wpx || Math.round((info.wch || 8) * 7 + 8)) + 'px';
+    }
+    cg.appendChild(col);
+  }
+  return cg;
+}
+
+// ===== 列記号 =====
+function colLetter(n) {
+  let s = ''; n++;
+  while (n > 0) { s = String.fromCharCode(64 + (n - 1) % 26 + 1) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+// ===== セル値取得 =====
+function getCellText(ws, r, c) {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })];
+  if (!cell) return '';
+  return cell.w != null ? String(cell.w) : (cell.v != null ? String(cell.v) : '');
+}
+function getCellRaw(ws, r, c) { return ws[XLSX.utils.encode_cell({ r, c })]; }
+
+// ===== セル更新 =====
+function updateCell(r, c, val) {
+  if (!workbook || !_currentSheet) return;
+  const ws = workbook.Sheets[_currentSheet];
+  const addr = XLSX.utils.encode_cell({ r, c });
+  if (val === '') { delete ws[addr]; return; }
+  const num = parseFloat(val);
+  ws[addr] = (!isNaN(num) && String(num) === val.trim())
+    ? { t: 'n', v: num, w: val }
+    : { t: 's', v: val, w: val };
+  const rng = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+  if (r > rng.e.r) rng.e.r = r;
+  if (c > rng.e.c) rng.e.c = c;
+  ws['!ref'] = XLSX.utils.encode_range(rng);
+}
+
+// ===== セル選択・整列 =====
+function cellKey(r, c) { return `${r}:${c}`; }
+function alignKey(r, c) { return `${_currentSheet}:${r}:${c}`; }
+
+function getCellDisplayAlign(cell, r, c) {
+  const ov = _alignments.get(alignKey(r, c));
+  if (ov) return ov;
+  const h = cell?.s?.alignment?.horizontal;
+  if (h === 'center' || h === 'right' || h === 'left') return h;
+  if (!cell) return null;
+  // 数値は右寄せ
+  if (typeof cell.v === 'number') return 'right';
+  // 祝日セル「憲法記念日 3」のように末尾がスペース＋日付数字（1〜31）の文字列も右寄せ
+  if (typeof cell.v === 'string') {
+    const m = cell.v.match(/[\s　](\d{1,2})$/);
+    if (m && parseInt(m[1], 10) <= 31) return 'right';
+  }
+  return null;
+}
+
+function updateAlignBtns(align) {
+  document.getElementById('align-l-btn').classList.toggle('active', align === 'left');
+  document.getElementById('align-c-btn').classList.toggle('active', align === 'center');
+  document.getElementById('align-r-btn').classList.toggle('active', align === 'right');
+}
+
+function clearSelection() {
+  _selEls.forEach(el => el.classList.remove('cell-selected'));
+  _selEls.clear();
+}
+
+function applySelectionHighlight() {
+  clearSelection();
+  if (!_selRange) return;
+  const minR = Math.min(_selRange.r1, _selRange.r2), maxR = Math.max(_selRange.r1, _selRange.r2);
+  const minC = Math.min(_selRange.c1, _selRange.c2), maxC = Math.max(_selRange.c1, _selRange.c2);
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      const el = _cellEls.get(cellKey(r, c));
+      if (el) { el.classList.add('cell-selected'); _selEls.set(cellKey(r, c), el); }
+    }
+  }
+  // アライメントボタンを最初の選択セルの値で更新
+  const firstKey = _selEls.keys().next().value;
+  if (firstKey) {
+    const [fr, fc] = firstKey.split(':').map(Number);
+    const ws = workbook?.Sheets[_currentSheet];
+    const align = getCellDisplayAlign(ws ? getCellRaw(ws, fr, fc) : null, fr, fc) || 'left';
+    updateAlignBtns(align);
+  }
+}
+
+function selectAll() {
+  if (!workbook || !_currentSheet) return;
+  const ws = workbook.Sheets[_currentSheet];
+  if (!ws || !ws['!ref']) return;
+  const rng = XLSX.utils.decode_range(ws['!ref']);
+  _selRange = { r1: rng.s.r, c1: rng.s.c, r2: rng.e.r, c2: rng.e.c };
+  applySelectionHighlight();
+}
+
+function applyAlign(align) {
+  if (_selEls.size === 0) return;
+  _selEls.forEach((el, key) => {
+    const [r, c] = key.split(':').map(Number);
+    _alignments.set(alignKey(r, c), align);
+    el.style.textAlign = align;
+  });
+  updateAlignBtns(align);
+}
+
+// ===== 行追加（選択行の上に挿入、未選択なら末尾） =====
+function addRow() {
+  if (!workbook || !_currentSheet) return;
+  const ws = workbook.Sheets[_currentSheet];
+  if (!ws['!ref']) ws['!ref'] = 'A1:A1';
+  const rng = XLSX.utils.decode_range(ws['!ref']);
+  const insertAt = _selRange ? Math.min(_selRange.r1, _selRange.r2) : rng.e.r + 1;
+
+  // 挿入行以降のセルを降順で1行下にシフト（競合防止）
+  const cellKeys = Object.keys(ws)
+    .filter(k => !k.startsWith('!'))
+    .sort((a, b) => XLSX.utils.decode_cell(b).r - XLSX.utils.decode_cell(a).r);
+  for (const addr of cellKeys) {
+    const ref = XLSX.utils.decode_cell(addr);
+    if (ref.r >= insertAt) {
+      ws[XLSX.utils.encode_cell({ r: ref.r + 1, c: ref.c })] = ws[addr];
+      delete ws[addr];
+    }
+  }
+
+  // !rows も1行シフト
+  if (ws['!rows']) {
+    ws['!rows'] = [
+      ...ws['!rows'].slice(0, insertAt),
+      null,
+      ...ws['!rows'].slice(insertAt)
+    ];
+  }
+
+  // アライメントのキーをシフト
+  for (const [key, val] of [..._alignments.entries()]) {
+    const parts = key.split(':');
+    const r = parseInt(parts[parts.length - 2]);
+    if (r >= insertAt) {
+      _alignments.delete(key);
+      parts[parts.length - 2] = String(r + 1);
+      _alignments.set(parts.join(':'), val);
+    }
+  }
+
+  rng.e.r++;
+  ws['!ref'] = XLSX.utils.encode_range(rng);
+  _selRange = null;
+  renderSheet(_currentSheet);
+}
+
+// ===== セル編集 =====
+document.addEventListener('mouseup', () => { _isDragging = false; });
+
+function attachEdit(el, r, c) {
+  _cellEls.set(cellKey(r, c), el);
+
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    _isDragging = true;
+    _selRange = { r1: r, c1: c, r2: r, c2: c };
+    applySelectionHighlight();
+  });
+
+  el.addEventListener('mouseenter', () => {
+    if (!_isDragging || !_selRange) return;
+    _selRange.r2 = r; _selRange.c2 = c;
+    applySelectionHighlight();
+  });
+
+  el.addEventListener('click', () => {
+    if (!_editMode || el.classList.contains('cell-editing') || _selEls.size > 1) return;
+    const ws = workbook.Sheets[_currentSheet];
+    const old = getCellText(ws, r, c);
+    el.classList.add('cell-editing');
+    el.textContent = '';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = old;
+    el.appendChild(inp); inp.focus(); inp.select();
+
+    const commit = () => {
+      const nv = inp.value;
+      el.classList.remove('cell-editing');
+      el.textContent = nv;
+      if (nv !== old) { updateCell(r, c, nv); el.classList.add('cell-modified'); }
+    };
+    const cancel = () => { el.classList.remove('cell-editing'); el.textContent = old; };
+
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); inp.removeEventListener('blur', commit); commit(); }
+      if (e.key === 'Escape') { inp.removeEventListener('blur', commit); cancel(); }
+      if (e.key === 'Tab') {
+        e.preventDefault(); inp.removeEventListener('blur', commit); commit();
+        const next = el.parentElement?.cells?.[el.cellIndex + (e.shiftKey ? -1 : 1)];
+        if (next && !next.classList.contains('rn') && !next.classList.contains('rn-corner')) next.click();
+      }
+    });
+  });
+}
+
+// ===== レンダリング =====
+function renderSheet(name) {
+  if (!workbook) return;
+  const ws = workbook.Sheets[name];
+  _cellEls.clear();
+  clearSelection();
+  _selRange = null;
+
+  // 各テーブルをリセット
+  ['list-header-table','list-body-table','grid-table'].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+  showZone(null);
+
+  if (!ws || !ws['!ref']) {
+    document.getElementById('status-wrap').style.display = '';
+    document.getElementById('status').textContent = '（空のシート）';
+    return;
+  }
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const sR = range.s.r, sC = range.s.c;
+  const eR = range.e.r, eC = range.e.c;
+
+  if (_viewMode === 'list') renderList(ws, sR, sC, eR, eC);
+  else                      renderGrid(ws, sR, sC, eR, eC);
+}
+
+function showZone(mode) {
+  document.getElementById('list-header-wrap').classList.toggle('show', mode === 'list');
+  document.getElementById('list-body-wrap').classList.toggle('show',   mode === 'list');
+  document.getElementById('grid-wrap').classList.toggle('show',         mode === 'grid');
+  document.getElementById('status-wrap').style.display = mode ? 'none' : '';
+}
+
+// ===== リストビュー =====
+function renderList(ws, sR, sC, eR, eC) {
+  showZone('list');
+
+  const hTbl = document.getElementById('list-header-table');
+  const bTbl = document.getElementById('list-body-table');
+  hTbl.appendChild(buildColgroup(ws, sC, eC, false));
+  bTbl.appendChild(buildColgroup(ws, sC, eC, false));
+
+  // ヘッダー（sR行目）
+  const hThead = hTbl.createTHead();
+  const hTr    = hThead.insertRow();
+  for (let c = sC; c <= eC; c++) {
+    const th = document.createElement('th');
+    const v  = getCellText(ws, sR, c);
+    th.textContent = v || colLetter(c);
+    th.title = th.textContent;
+    attachEdit(th, sR, c);
+    hTr.appendChild(th);
+  }
+
+  // ボディ（sR+1 以降）
+  const bTbody = bTbl.createTBody();
+  for (let r = sR + 1; r <= eR; r++) {
+    const tr = bTbody.insertRow();
+    for (let c = sC; c <= eC; c++) {
+      const td   = tr.insertCell();
+      const cell = getCellRaw(ws, r, c);
+      const v    = getCellText(ws, r, c);
+      td.textContent = v; if (v) td.title = v;
+      const align = getCellDisplayAlign(cell, r, c);
+      if (align) td.style.textAlign = align;
+      attachEdit(td, r, c);
+    }
+  }
+
+  // ヘッダーとボディの列幅を同期
+  syncColWidths(hTbl, bTbl);
+}
+
+// 列幅同期（ヘッダー基準でボディに合わせる）
+function syncColWidths(headerTbl, bodyTbl) {
+  requestAnimationFrame(() => {
+    const hCells = headerTbl.rows[0]?.cells;
+    const bCells = bodyTbl.rows[0]?.cells;
+    if (!hCells || !bCells) return;
+    for (let i = 0; i < hCells.length; i++) {
+      const w = Math.max(hCells[i]?.offsetWidth || 0, bCells[i]?.offsetWidth || 0);
+      if (hCells[i]) hCells[i].style.width = w + 'px';
+      if (bCells[i]) bCells[i].style.width = w + 'px';
+    }
+  });
+}
+
+// ===== グリッドビュー =====
+function renderGrid(ws, sR, sC, eR, eC) {
+  showZone('grid');
+  const tbl = document.getElementById('grid-table');
+  tbl.appendChild(buildColgroup(ws, sC, eC, true));
+  const thead = tbl.createTHead();
+  const htr   = thead.insertRow();
+
+  // 左上コーナー
+  const corner = document.createElement('th');
+  corner.className = 'rn-corner'; htr.appendChild(corner);
+  // 列記号
+  for (let c = sC; c <= eC; c++) {
+    const th = document.createElement('th');
+    th.className = 'col-ltr'; th.textContent = colLetter(c); htr.appendChild(th);
+  }
+
+  const tbody = tbl.createTBody();
+  const rowInfos = ws['!rows'] || [];
+  for (let r = sR; r <= eR; r++) {
+    const tr = tbody.insertRow();
+    const ri = rowInfos[r];
+    const hpx = ri ? (ri.hpx || (ri.hpt ? Math.round(ri.hpt * 96 / 72) : 0)) : 0;
+    tr.style.height = Math.max(18, hpx) + 'px';
+    const rnTd = tr.insertCell();
+    rnTd.className = 'rn'; rnTd.textContent = r + 1;
+    for (let c = sC; c <= eC; c++) {
+      const td   = tr.insertCell();
+      const cell = getCellRaw(ws, r, c);
+      const v    = getCellText(ws, r, c);
+      td.textContent = v; if (v) td.title = v;
+      const align = getCellDisplayAlign(cell, r, c);
+      if (align) td.style.textAlign = align;
+      attachEdit(td, r, c);
+    }
+  }
+}
+
+// ===== 保存 =====
+function saveFile() {
+  if (!workbook) return;
+  const name = _filename || 'download.xlsx';
+  const buf = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  download(buf, name);
+  saveRecent(name, buf);
+}
+function download(data, filename) {
+  const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  // ツールバーを確実に維持
+  setTimeout(() => {
+    document.getElementById('tool-panel').classList.remove('collapsed');
+    document.getElementById('toolbar-toggle').textContent = '▲ 閉じる';
+  }, 50);
+}
+
+// ===== 別名保存 =====
+function getTimestamp() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
+}
+function openSaveAs() {
+  if (!workbook) return;
+  document.getElementById('saveas-name').value = _filename.replace(/\.[^.]+$/, '') || 'download';
+  document.getElementById('saveas-ts').checked = false;
+  updatePreview();
+  document.getElementById('saveas-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('saveas-name').focus(), 80);
+}
+function closeSaveAs() { document.getElementById('saveas-overlay').classList.remove('open'); }
+function updatePreview() {
+  const name = document.getElementById('saveas-name').value || 'download';
+  const ts   = document.getElementById('saveas-ts').checked ? '_' + getTimestamp() : '';
+  document.getElementById('saveas-preview').textContent = '→ ' + name + ts + '.xlsx';
+}
+function executeSaveAs() {
+  const name  = (document.getElementById('saveas-name').value.trim() || 'download');
+  const ts    = document.getElementById('saveas-ts').checked ? '_' + getTimestamp() : '';
+  const fname = name + ts + '.xlsx';
+  const buf   = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  download(buf, fname);
+  saveRecent(fname, buf);
+  closeSaveAs();
+}
+document.getElementById('saveas-overlay').addEventListener('click', e => { if (e.target.id === 'saveas-overlay') closeSaveAs(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSaveAs(); });
+
+// ===== URLパラメータで自動読み込み =====
+// ?gh=0  → GITHUB_FILES[0] を自動ロード
+// ?gh=1  → GITHUB_FILES[1] を自動ロード
+(function() {
+  const p = new URLSearchParams(location.search);
+  const gh = p.get('gh');
+  if (gh === null) return;
+  const idx = parseInt(gh);
+  if (isNaN(idx) || idx < 0 || idx >= GITHUB_FILES.length) return;
+  loadFromGitHub(GITHUB_FILES[idx], idx);
+})();
+</script>
+</body>
+</html>
