@@ -681,7 +681,7 @@
     root.setProperty("--software-text", theme.softwareText);
     root.setProperty("--software-border", theme.softwareBorder);
     root.setProperty("--text-lift-shadow", theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none");
-    root.setProperty("--text-gradient-bg", theme.textGradient ? `linear-gradient(135deg, ${theme.textGradientStart}, ${theme.textGradientEnd})` : "transparent");
+    root.setProperty("--text-gradient-bg", theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : "transparent");
     textLift.checked = theme.textLift;
     textGradient.checked = theme.textGradient;
     document.querySelectorAll("[data-theme]").forEach((input) => {
@@ -848,7 +848,7 @@
       }
       h1, h2, h3, legend, .brand, .title, .screen-title, .section-title,
       .panel-title, .card-title, .prop-name {
-        background: ${theme.textGradient ? `linear-gradient(135deg, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
+        background: ${theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
         border-radius: 7px !important;
       }
       button, input[type="button"], input[type="submit"], input[type="reset"],
