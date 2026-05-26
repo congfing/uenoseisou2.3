@@ -617,7 +617,7 @@ function navTo(n){
   if(n===1){ showScreen(1); return; }
   if(n===2){ renderStaffList(); showScreen(2); return; }
   if(n===3){ renderPropertyList(); showScreen(3); return; }
-  if(n===6){ renderHistory(); showScreen(6); return; }
+  if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
   if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
   if(n===8){ showScreen(8); initConvertScreen(); return; }
 }
@@ -1243,6 +1243,8 @@ function selectSug(event,val){
 function hideFieldDropdown(input){ setTimeout(()=>{input.parentElement.querySelector('.field-dropdown').classList.remove('open');},200); }
 
 // ===== HISTORY =====
+let displayedHistoryRecords=[];
+
 function checkPastData(dateVal){
   const banner=document.getElementById('pastDataBanner');
   const entries=document.getElementById('pastDataEntries');
@@ -1265,6 +1267,7 @@ function renderHistory(filterDate){
   const c=document.getElementById('historyList'); c.innerHTML='';
   let hist=getAllHistory();
   if(filterDate) hist=hist.filter(h=>h.date===filterDate);
+  displayedHistoryRecords=hist;
   if(!hist.length){
     c.innerHTML='<div class="empty-state"><div class="icon">📭</div><div>履歴がありません</div></div>';
     return;
@@ -1324,10 +1327,7 @@ function toggleHist(ri){
 
 function reloadHistoryEntry(ri,event){
   event.stopPropagation();
-  let hist=getAllHistory();
-  const filterDate=state._histFilterDate||null;
-  if(filterDate) hist=hist.filter(h=>h.date===filterDate);
-  const record=hist[ri];
+  const record=displayedHistoryRecords[ri];
   if(!record)return;
   // Set state from history
   state.date=record.date;
@@ -1335,10 +1335,13 @@ function reloadHistoryEntry(ri,event){
   state.dayName=DAYS_JP[d.getDay()];
   state.selectedStaff=record.staffName;
   state.entryData={...record.entryData};
+  state.entryDraft={};
   state.entryOrder=Object.keys(record.entryData);
+  state.currentPropertyIndex=-1;
   document.getElementById('dateInput').value=record.date;
-  updateNav(3);
+  document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
   renderPropertyList();
+  renderDaySaveSingle();
   showScreen(3);
 }
 
