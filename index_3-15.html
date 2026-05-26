@@ -690,7 +690,7 @@ function renderStaffList(){
     const badge=saved?`<span class="order-saved-badge">順番保存済み</span>`:'';
     const div=document.createElement('div');
     div.className='staff-item'+(state.selectedStaff===name?' selected':'');
-    div.innerHTML=`<div><span style="font-size:16px;font-weight:500">${name}</span>${badge}</div>
+    div.innerHTML=`<div><span class="staff-name" style="font-size:16px;font-weight:500">${name}</span>${badge}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="staff-check">✓</span>
         <button class="btn btn-danger btn-sm" onclick="removeStaff('${name}',event)">削除</button>

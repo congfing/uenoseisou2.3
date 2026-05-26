@@ -884,10 +884,15 @@
         border-top: 2px solid ${theme.softwareBorder} !important;
       }
       #screen1 .card {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
         padding: 16px !important;
       }
       #screen1 #dateInput {
         display: block !important;
+        flex: 0 1 100% !important;
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
@@ -895,7 +900,7 @@
         box-sizing: border-box !important;
       }
       h1, h2, h3, legend, .brand, .title, .screen-title, .section-title,
-      .panel-title, .card-title, .prop-name {
+      .panel-title, .card-title, .prop-name, .staff-name {
         background: ${theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
         border-radius: 7px !important;
       }
@@ -908,7 +913,8 @@
         border: 2px solid ${theme.softwareHeadingBorder} !important;
         border-radius: 8px !important;
       }
-      .prop-name, #propEntryTitle {
+      .prop-name, #propEntryTitle, .staff-name {
+        display: inline-block !important;
         padding: 3px 7px !important;
         border: 2px solid ${theme.softwareHeadingBorder} !important;
         border-radius: 8px !important;
