@@ -595,6 +595,7 @@
       <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareBg"></label>
       <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareText"></label>
       <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareBorder"></label>
+      <label class="theme-group"><span class="theme-label">見出し枠線</span><input class="theme-color" type="color" data-theme="softwareHeadingBorder"></label>
     </div>
     <div class="theme-section">
       <span class="theme-section-name">ソフトボタン</span>
@@ -665,6 +666,7 @@
     softwareBg: "#ffffff",
     softwareText: "#000000",
     softwareBorder: "#000000",
+    softwareHeadingBorder: "#000000",
     softwareButtonBg: "#ffffff",
     softwareButtonText: "#000000",
     softwareButtonBorder: "#000000",
@@ -885,6 +887,15 @@
       .panel-title, .card-title, .prop-name {
         background: ${theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
         border-radius: 7px !important;
+      }
+      #app-header h1, #app-header .header-title, .app-header #brand,
+      .app-header .header-title, .topbar .brand, body > h1 {
+        display: inline-block !important;
+        flex: 0 0 auto !important;
+        width: fit-content !important;
+        padding: 3px 7px !important;
+        border: 2px solid ${theme.softwareHeadingBorder} !important;
+        border-radius: 8px !important;
       }
       button, input[type="button"], input[type="submit"], input[type="reset"],
       [role="button"], .btn, .toolbar-btn, .tb-btn, .nav-tab {
