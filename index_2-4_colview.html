@@ -328,65 +328,31 @@
 <div id="toast"></div>
 
 <script>
-const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
-const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.3@main/flat';
-const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.3@main/';
+const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.1/contents/';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.1/main/';
+const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.1@main/flat';
+const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.1@main/';
 const FALLBACK_XLSX_FILES = [
   '2026年度物件表_KMN置換.xlsx',
   '2026年度物件表_KMN置換_列移動_20260513_計量リンク.xlsx',
   '2026年度物件表①②③（20260509更新）.xlsx',
-  '令和8年度収集カレンダー.xlsx'
+  '収集カレンダー_令和8年度(祝日いり)_v11.xlsx'
 ];
 
-// 安全な要素取得ヘルパー（堅牢化）
-function safeEl(id) {
-  try {
-    const el = document.getElementById(id);
-    return el || null;
-  } catch(e) { return null; }
-}
-
-const gitFileSel    = safeEl('gitFileSelector')    || document.getElementById('gitFileSelector');
-const sheetSel      = safeEl('sheetSelector')      || document.getElementById('sheetSelector');
-const statusBar     = safeEl('statusBar')          || document.getElementById('statusBar');
-const colPanel      = safeEl('colPanel')           || document.getElementById('colPanel');
-const searchInput   = safeEl('searchInput')        || document.getElementById('searchInput');
-const tableHead     = safeEl('tableHead')          || document.getElementById('tableHead');
-const tableBody     = safeEl('tableBody')          || document.getElementById('tableBody');
-const dataTable     = safeEl('dataTable')          || document.getElementById('dataTable');
-const emptyMsg      = safeEl('emptyMsg')           || document.getElementById('emptyMsg');
-const toast         = safeEl('toast')              || document.getElementById('toast');
-const filterPopup   = safeEl('filterPopup')        || document.getElementById('filterPopup');
-const filterTitle   = safeEl('filterPopupTitle')   || document.getElementById('filterPopupTitle');
-const filterValList = safeEl('filterValueList')    || document.getElementById('filterValueList');
-const filterApply   = safeEl('filterApplyBtn')     || document.getElementById('filterApplyBtn');
-
-// 安全なイベントリスナー登録ヘルパー
-function safeAddListener(el, type, handler, options) {
-  try {
-    if (el && typeof el.addEventListener === 'function' && typeof handler === 'function') {
-      el.addEventListener(type, handler, options);
-    }
-  } catch(e) {}
-}
-
-// クリティカル要素チェック（堅牢化 - 初期化シーケンス）
-const criticalMissing = [];
-if (!tableBody) criticalMissing.push('tableBody');
-if (!dataTable) criticalMissing.push('dataTable');
-if (!gitFileSel) criticalMissing.push('gitFileSelector');
-if (!searchInput) criticalMissing.push('searchInput');
-if (!colPanel) criticalMissing.push('colPanel');
-
-if (criticalMissing.length > 0) {
-  console.error('[colview] 初期化エラー: 必須要素が見つかりません →', criticalMissing.join(', '));
-}
-
-// 安全な初期高さ設定
-const safeAdjust = () => { try { if (typeof adjustWrapperHeight === 'function') adjustWrapperHeight(); } catch(e) {} };
-window.addEventListener('load', safeAdjust);
-window.addEventListener('resize', safeAdjust);
+const gitFileSel    = document.getElementById('gitFileSelector');
+const sheetSel      = document.getElementById('sheetSelector');
+const statusBar     = document.getElementById('statusBar');
+const colPanel      = document.getElementById('colPanel');
+const searchInput   = document.getElementById('searchInput');
+const tableHead     = document.getElementById('tableHead');
+const tableBody     = document.getElementById('tableBody');
+const dataTable     = document.getElementById('dataTable');
+const emptyMsg      = document.getElementById('emptyMsg');
+const toast         = document.getElementById('toast');
+const filterPopup   = document.getElementById('filterPopup');
+const filterTitle   = document.getElementById('filterPopupTitle');
+const filterValList = document.getElementById('filterValueList');
+const filterApply   = document.getElementById('filterApplyBtn');
 
 let headers     = [];
 let dataArray   = [];
@@ -412,37 +378,18 @@ function makeStorageId(filename, sheetName) {
 }
 
 function buildStateSnapshot() {
-  try {
-    const safeVisible = (visibleCols && typeof visibleCols.size === 'number')
-      ? [...visibleCols]
-      : [];
-
-    const safeFilter = filterState ? {
+  return {
+    filename:    currentFilename,
+    sheetName:   currentSheetName,
+    visibleCols: [...visibleCols],
+    filterState: {
       colIdx:         filterState.colIdx,
-      selectedValues: filterState.selectedValues ? [...filterState.selectedValues] : [],
-      filterType:     filterState.filterType || 'exact'
-    } : { colIdx: null, selectedValues: [], filterType: 'exact' };
-
-    return {
-      version:     1,   // 将来のマイグレーション用
-      filename:    currentFilename || '',
-      sheetName:   currentSheetName || '',
-      visibleCols: safeVisible,
-      filterState: safeFilter,
-      sortState:   sortState ? { ...sortState } : { col: -1, dir: 0 },
-      searchQuery: (searchInput && searchInput.value) ? searchInput.value : ''
-    };
-  } catch (e) {
-    return {
-      version: 1,
-      filename: currentFilename || '',
-      sheetName: currentSheetName || '',
-      visibleCols: [],
-      filterState: { colIdx: null, selectedValues: [], filterType: 'exact' },
-      sortState: { col: -1, dir: 0 },
-      searchQuery: ''
-    };
-  }
+      selectedValues: [...filterState.selectedValues],
+      filterType:     filterState.filterType
+    },
+    sortState:   { ...sortState },
+    searchQuery: searchInput.value
+  };
 }
 
 function saveState() {
@@ -450,117 +397,46 @@ function saveState() {
     const snapshot = buildStateSnapshot();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
 
-    let map = {};
-    try {
-      map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}') || {};
-    } catch (e) {
-      map = {};
-    }
-
+    const map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}');
     map[makeStorageId(snapshot.filename, snapshot.sheetName)] = snapshot;
     localStorage.setItem(STORAGE_MAP_KEY, JSON.stringify(map));
-  } catch(e) {
-    // 状態保存失敗はユーザー体験を損なわないよう静かに失敗させる
-  }
+  } catch(e) {}
 }
 
 function loadSavedState() {
   try {
-    let map = {};
-    try {
-      map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}') || {};
-    } catch (e) { map = {}; }
-
+    const map = JSON.parse(localStorage.getItem(STORAGE_MAP_KEY) || '{}');
     const exact = map[makeStorageId(currentFilename, currentSheetName || '')];
-    if (exact && typeof exact === 'object') {
-      // 将来のバージョン違いに備えて最低限の互換性を確保
-      if (exact.version === undefined || exact.version === 1) {
-        return exact;
-      }
-    }
+    if (exact) return exact;
 
-    let legacy = null;
-    try {
-      legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    } catch (e) { legacy = null; }
-
-    if (!legacy || typeof legacy !== 'object') return null;
-    if (legacy.filename !== currentFilename) return null;
+    const legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!legacy || legacy.filename !== currentFilename) return null;
     if (!legacy.sheetName || legacy.sheetName === currentSheetName) return legacy;
     return null;
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
-// 保存済み状態をデータ読込後に適用（堅牢化版）
+// 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
-  if (!saved || typeof saved !== 'object') return;
-
-  try {
-    // 列表示の復元（不正インデックスを除外）
-    if (Array.isArray(saved.visibleCols) && Array.isArray(headers)) {
-      const validCols = saved.visibleCols
-        .filter(i => Number.isInteger(i) && i >= 0 && i < headers.length);
-      visibleCols = new Set(validCols);
-
-      if (visibleCols.size === 0 && headers.length > 0) {
-        visibleCols = new Set(headers.map((_, i) => i));
-      }
-      if (typeof syncCheckboxes === 'function') syncCheckboxes();
-    }
-
-    // フィルター状態の復元
-    if (saved.filterState && typeof saved.filterState === 'object') {
-      const fs = saved.filterState;
-      const colIdx = Number.isInteger(fs.colIdx) ? fs.colIdx : null;
-
-      if (colIdx !== null && colIdx >= 0 && colIdx < (headers.length || 0)) {
-        let selectedValues = [];
-        if (Array.isArray(fs.selectedValues)) {
-          selectedValues = fs.selectedValues;
-        } else if (fs.selectedValues && typeof fs.selectedValues[Symbol.iterator] === 'function') {
-          selectedValues = [...fs.selectedValues];
-        }
-
-        filterState = {
-          colIdx:         colIdx,
-          selectedValues: new Set(selectedValues),
-          filterType:     (fs.filterType === 'prefix' || fs.filterType === 'exact') ? fs.filterType : 'exact'
-        };
-      } else {
-        filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
-      }
-    }
-
-    // ソート状態の復元
-    if (saved.sortState && typeof saved.sortState === 'object') {
-      const ss = saved.sortState;
-      const col = Number.isInteger(ss.col) ? ss.col : -1;
-      const dir = (ss.dir === 1 || ss.dir === -1 || ss.dir === 0) ? ss.dir : 0;
-
-      sortState = {
-        col: (col >= 0 && col < (headers.length || 0)) ? col : -1,
-        dir: dir
-      };
-    } else {
-      sortState = { col: -1, dir: 0 };
-    }
-
-    // 検索クエリの復元
-    if (typeof saved.searchQuery === 'string' && searchInput) {
-      searchInput.value = saved.searchQuery;
-    }
-
-  } catch (e) {
-    console.warn('[colview] applyRestoredState でエラーが発生しました。デフォルト状態にリセットします。', e);
-    // 安全側に倒す
-    visibleCols = new Set(headers.map((_, i) => i));
-    filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
-    sortState = { col: -1, dir: 0 };
-    if (searchInput) searchInput.value = '';
-    if (typeof syncCheckboxes === 'function') syncCheckboxes();
+  if (!saved) return;
+  // 列表示
+  if (saved.visibleCols && saved.visibleCols.length) {
+    visibleCols = new Set(saved.visibleCols.filter(i => i < headers.length));
+    if (visibleCols.size === 0) visibleCols = new Set(headers.map((_,i) => i));
+    syncCheckboxes();
   }
+  // フィルター
+  if (saved.filterState && saved.filterState.colIdx !== null) {
+    filterState = {
+      colIdx:         saved.filterState.colIdx,
+      selectedValues: new Set(saved.filterState.selectedValues || []),
+      filterType:     saved.filterState.filterType || 'exact'
+    };
+  }
+  // ソート
+  if (saved.sortState) sortState = saved.sortState;
+  // 検索
+  if (saved.searchQuery) searchInput.value = saved.searchQuery;
 }
 
 function showToast(m) {
@@ -649,40 +525,19 @@ sheetSel.addEventListener('change', function() {
 
 // GitHub ファイル一覧
 function uniqueXlsxNames(names) {
-  try {
-    if (!Array.isArray(names)) return [];
-    const cleaned = names
-      .map(name => String(name || '').replace(/^\//, '').trim())
-      .filter(Boolean);
-    return [...new Set(cleaned)].filter(name => /\.xlsx$/i.test(name));
-  } catch (e) {
-    return [];
-  }
+  return [...new Set(names.map(name => String(name || '').replace(/^\//, '')))]
+    .filter(name => /\.xlsx$/i.test(name));
 }
 
 function getGitHubXlsxNames() {
   return fetch(GITHUB_API_URL + '?t=' + Date.now(), { cache: 'no-store' })
-    .then(r => {
-      if (!r.ok) throw new Error('GitHub API HTTP ' + r.status);
-      return r.json();
-    })
-    .then(files => {
-      const fileNames = (files || [])
-        .filter(f => f && f.type === 'file')
-        .map(f => f.name);
-      return uniqueXlsxNames(fileNames);
-    })
+    .then(r => { if(!r.ok) throw new Error('GitHub API HTTP ' + r.status); return r.json(); })
+    .then(files => uniqueXlsxNames(files.filter(f => f.type === 'file').map(f => f.name)))
     .catch(apiErr => {
-      console.warn('GitHub API一覧取得エラー。jsDelivrに切替:', apiErr);
+      console.warn('GitHub API一覧取得エラー。予備取得に切替:', apiErr);
       return fetch(GITHUB_JSDELIVR_API + '?t=' + Date.now(), { cache: 'no-store' })
-        .then(r => {
-          if (!r.ok) throw new Error('jsDelivr HTTP ' + r.status);
-          return r.json();
-        })
-        .then(data => {
-          const fileNames = (data && data.files) ? data.files.map(f => f.name) : [];
-          return uniqueXlsxNames(fileNames);
-        })
+        .then(r => { if(!r.ok) throw new Error('jsDelivr HTTP ' + r.status); return r.json(); })
+        .then(data => uniqueXlsxNames((data.files || []).map(f => f.name)))
         .catch(fallbackErr => {
           console.warn('予備一覧取得エラー。固定候補を表示:', fallbackErr);
           return uniqueXlsxNames(FALLBACK_XLSX_FILES);
@@ -693,159 +548,92 @@ function getGitHubXlsxNames() {
 function fetchGitHubFileList() {
   if (gitListLoading) return;
   gitListLoading = true;
-
-  const sel = gitFileSel;
-  if (!sel) { gitListLoading = false; return; }
-
-  const previousValue = sel.value;
-
+  const previousValue = gitFileSel.value;
   getGitHubXlsxNames()
     .then(xlsxNames => {
-      try {
-        sel.innerHTML = '';
-        if (!xlsxNames.length) {
-          sel.innerHTML = '<option value="">ファイルなし</option>';
-          return;
-        }
-        const ph = document.createElement('option');
-        ph.value = '';
-        ph.textContent = '📂 ファイルを選択…';
-        sel.appendChild(ph);
-
-        xlsxNames.forEach(name => {
-          const o = document.createElement('option');
-          o.value = encodeURIComponent(name);
-          o.textContent = name;
-          sel.appendChild(o);
-        });
-
-        const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
-        sel.value = existsPrevious ? previousValue : '';
-        gitListLoadedAt = Date.now();
-
-        const target = xlsxNames[0];
-        if (target) {
-          sel.value = encodeURIComponent(target);
-          loadFromGitHub(target);
-        } else {
-          updateStatus('GitHubのExcel候補を更新しました。候補を選ぶと読み込みます。');
-        }
-      } catch (e) {
-        console.warn('[colview] GitHubファイルリストDOM操作エラー:', e);
-        try { sel.innerHTML = '<option value="">⚠️ 表示エラー</option>'; } catch(e2) {}
+      gitFileSel.innerHTML = '';
+      if (!xlsxNames.length) { gitFileSel.innerHTML='<option value="">ファイルなし</option>'; return; }
+      const ph = document.createElement('option');
+      ph.value=''; ph.textContent='📂 ファイルを選択…';
+      gitFileSel.appendChild(ph);
+      xlsxNames.forEach(name => {
+        const o = document.createElement('option');
+        o.value = encodeURIComponent(name);
+        o.textContent = name;
+        gitFileSel.appendChild(o);
+      });
+      const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
+      gitFileSel.value = existsPrevious ? previousValue : '';
+      gitListLoadedAt = Date.now();
+      const target = xlsxNames[0];
+      if (target) {
+        gitFileSel.value = encodeURIComponent(target);
+        loadFromGitHub(target);
+      } else {
+        updateStatus('GitHubのExcel候補を更新しました。候補を選ぶと読み込みます。');
       }
     })
-    .catch(() => {
-      try { sel.innerHTML = '<option value="">⚠️ 候補更新失敗</option>'; } catch(e) {}
-    })
+    .catch(() => { gitFileSel.innerHTML='<option value="">⚠️ 候補更新失敗</option>'; })
     .finally(() => { gitListLoading = false; });
 }
 
 function loadFromGitHub(filename) {
-  try {
-    if (!filename) {
-      const v = gitFileSel ? gitFileSel.value : '';
-      if (!v) return;
-      filename = decodeURIComponent(v);
-    }
-
-    const btn = safeEl('btnReload') || document.getElementById('btnReload');
-    if (btn) { btn.textContent = '⏳ 読込中…'; btn.disabled = true; }
-
-    updateStatus('読み込み中…');
-
-    const url = GITHUB_RAW_BASE + encodeURIComponent(filename) + '?t=' + Date.now();
-
-    fetch(url, { cache: 'no-store' })
-      .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.arrayBuffer();
-      })
-      .catch(err => {
-        console.warn('raw.githubusercontent.com 読み込みエラー。jsDelivrに切替:', err);
-        return fetch(GITHUB_JSDELIVR_RAW + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
-          .then(r => {
-            if (!r.ok) throw new Error('jsDelivr HTTP ' + r.status);
-            return r.arrayBuffer();
-          });
-      })
-      .then(buf => {
-        loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.3');
-        if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
-          setTimeout(() => {
-            try {
-              window._histPendingRestore.applyFn();
-              delete window._histPendingRestore;
-            } catch(e) {}
-          }, 100);
-        }
-      })
-      .catch(e => {
-        updateStatus('⚠️ 読み込み失敗: ' + (e.message || e));
-        console.warn('GitHub読み込みエラー:', e);
-      })
-      .finally(() => {
-        if (btn) {
-          btn.textContent = '🔄 最新を取得';
-          btn.disabled = false;
-        }
-      });
-  } catch (e) {
-    console.error('[colview] loadFromGitHub 同期エラー:', e);
-    const btn = safeEl('btnReload') || document.getElementById('btnReload');
-    if (btn) {
-      btn.textContent = '🔄 最新を取得';
-      btn.disabled = false;
-    }
+  if (!filename) {
+    const v = gitFileSel.value; if(!v) return;
+    filename = decodeURIComponent(v);
   }
+  const btn = document.getElementById('btnReload');
+  btn.textContent='⏳ 読込中…'; btn.disabled=true;
+  updateStatus('読み込み中…');
+  fetch(GITHUB_RAW_BASE + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+    .catch(err => {
+      console.warn('raw.githubusercontent.com 読み込みエラー。予備取得に切替:', err);
+      return fetch(GITHUB_JSDELIVR_RAW + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => { if(!r.ok) throw new Error('jsDelivr HTTP '+r.status); return r.arrayBuffer(); });
+    })
+    .then(buf => {
+      loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.1');
+      if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
+        setTimeout(function() { window._histPendingRestore.applyFn(); delete window._histPendingRestore; }, 100);
+      }
+    })
+    .catch(e => updateStatus('⚠️ 読み込み失敗: '+e.message))
+    .finally(() => { btn.textContent='🔄 最新を取得'; btn.disabled=false; });
 }
 
-if (gitFileSel) {
-  gitFileSel.addEventListener('change', function() {
-    if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
-  });
-  gitFileSel.addEventListener('pointerdown', function() {
-    if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
-  });
-  gitFileSel.addEventListener('focus', function() {
-    if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
-  });
-}
+gitFileSel.addEventListener('change', function() {
+  if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
+});
+gitFileSel.addEventListener('pointerdown', function() {
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+});
+gitFileSel.addEventListener('focus', function() {
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+});
 
 // ローカルファイルを開く
-const localFileInput = safeEl('localFileInput') || document.getElementById('localFileInput');
-if (localFileInput) {
-  localFileInput.addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-
-    const sel = gitFileSel;
-    if (!sel) return;
-
-    // ドロップダウンにローカルファイル名を表示
-    let localOpt = sel.querySelector('option[value="__local__"]');
-    if (!localOpt) {
-      localOpt = document.createElement('option');
-      localOpt.value = '__local__';
-      sel.insertBefore(localOpt, sel.firstChild);
-    }
-    localOpt.textContent = '📁 ' + file.name;
-    sel.value = '__local__';
-
-    const reader = new FileReader();
-    reader.onload = e => loadWorkbookData(e.target.result, file.name, 'ローカルファイル');
-  });
-}
+document.getElementById('localFileInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  // ドロップダウンにローカルファイル名を表示
+  let localOpt = gitFileSel.querySelector('option[value="__local__"]');
+  if (!localOpt) {
+    localOpt = document.createElement('option');
+    localOpt.value = '__local__';
+    gitFileSel.insertBefore(localOpt, gitFileSel.firstChild);
+  }
+  localOpt.textContent = '📁 ' + file.name;
+  gitFileSel.value = '__local__';
+  const reader = new FileReader();
+  reader.onload = e => loadWorkbookData(e.target.result, file.name, 'ローカルファイル');
   reader.readAsArrayBuffer(file);
   this.value = '';
 });
-const btnReload3 = safeEl('btnReload') || document.getElementById('btnReload');
-if (btnReload3) {
-  btnReload3.addEventListener('click', () => {
-    if (gitFileSel && gitFileSel.value && gitFileSel.value !== '__local__') loadFromGitHub();
-    else fetchGitHubFileList();
-  });
-}
+document.getElementById('btnReload').addEventListener('click', () => {
+  if (gitFileSel.value && gitFileSel.value !== '__local__') loadFromGitHub();
+  else fetchGitHubFileList();
+});
 
 // 列チェックパネル構築
 function buildColPanel() {
@@ -869,76 +657,32 @@ function buildColPanel() {
 }
 
 function syncCheckboxes() {
-  try {
-    if (!colPanel || typeof colPanel.querySelectorAll !== 'function') return;
-    colPanel.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      try {
-        const ci = parseInt(cb.dataset.col);
-        const isVisible = visibleCols && visibleCols.has(ci);
-        cb.checked = isVisible;
-        const label = cb.closest('label');
-        if (label) {
-          label.className = 'col-lbl' + (isVisible ? ' on' : '');
-        }
-      } catch(e) {}
-    });
-  } catch(e) {
-    console.warn('[colview] syncCheckboxes error:', e);
-  }
-}
-
-const btnTogglePanel = safeEl('btnTogglePanel') || document.getElementById('btnTogglePanel');
-const btnAllOn       = safeEl('btnAllOn')       || document.getElementById('btnAllOn');
-const btnAllOff      = safeEl('btnAllOff')      || document.getElementById('btnAllOff');
-
-if (btnTogglePanel) {
-  btnTogglePanel.addEventListener('click', () => {
-    if (colPanel) {
-      colPanel.classList.toggle('active');
-      adjustWrapperHeight();
-    }
+  colPanel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    const ci = parseInt(cb.dataset.col);
+    cb.checked = visibleCols.has(ci);
+    cb.closest('label').className = 'col-lbl' + (cb.checked ? ' on' : '');
   });
 }
 
-if (btnAllOn) {
-  btnAllOn.addEventListener('click', () => {
-    try {
-      if (!Array.isArray(headers)) return;
-      visibleCols = new Set(headers.map((_,i) => i));
-      syncCheckboxes();
-      renderTable();
-      saveState();
-    } catch(e) { console.warn('[colview] btnAllOn error:', e); }
-  });
-}
-
-if (btnAllOff) {
-  btnAllOff.addEventListener('click', () => {
-    try {
-      visibleCols.clear();
-      syncCheckboxes();
-      renderTable();
-      saveState();
-    } catch(e) { console.warn('[colview] btnAllOff error:', e); }
-  });
-}
+document.getElementById('btnTogglePanel').addEventListener('click', () => {
+  colPanel.classList.toggle('active');
+  // thead の sticky top を調整
+  adjustWrapperHeight();
+});
+document.getElementById('btnAllOn').addEventListener('click', () => {
+  visibleCols = new Set(headers.map((_,i) => i));
+  syncCheckboxes(); renderTable(); saveState();
+});
+document.getElementById('btnAllOff').addEventListener('click', () => {
+  visibleCols.clear(); syncCheckboxes(); renderTable(); saveState();
+});
 
 function adjustWrapperHeight() {
-  try {
-    const headerEl  = safeEl('app-header') || document.getElementById('app-header');
-    const toolbarEl = safeEl('toolbar')    || document.getElementById('toolbar');
-    const wrapperEl = safeEl('tableWrapper') || document.getElementById('tableWrapper');
-
-    const headerH  = headerEl  ? headerEl.offsetHeight  : 44;
-    const toolbarH = toolbarEl ? toolbarEl.offsetHeight : 44;
-    const panelH   = (colPanel && colPanel.classList.contains('active')) ? (colPanel.offsetHeight || 0) : 0;
-
-    if (wrapperEl) {
-      wrapperEl.style.height = `calc(100vh - ${headerH + toolbarH + panelH}px)`;
-    }
-  } catch(e) {
-    console.warn('[colview] adjustWrapperHeight error:', e);
-  }
+  const headerH  = document.getElementById('app-header').offsetHeight;
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  const panelH   = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
+  document.getElementById('tableWrapper').style.height =
+    `calc(100vh - ${headerH + toolbarH + panelH}px)`;
 }
 
 // 検索
@@ -1027,69 +771,39 @@ function showFilterPopup(ci, thEl) {
   filterPopup.style.top  = (rect.bottom + 4) + 'px';
 }
 
-// ソートボタン（安全化）
-const fpSortAsc   = safeEl('fpSortAsc')   || document.getElementById('fpSortAsc');
-const fpSortDesc  = safeEl('fpSortDesc')  || document.getElementById('fpSortDesc');
-const fpSortClear = safeEl('fpSortClear') || document.getElementById('fpSortClear');
-const fpSelAll    = safeEl('fpSelAll')    || document.getElementById('fpSelAll');
-const fpSelNone   = safeEl('fpSelNone')   || document.getElementById('fpSelNone');
-
-if (fpSortAsc) {
-  fpSortAsc.addEventListener('click', () => {
-    sortState = { col: filterPopupCol, dir: 1 };
-    if (filterPopup) filterPopup.style.display = 'none';
-    renderTable(); saveState();
-  });
-}
-if (fpSortDesc) {
-  fpSortDesc.addEventListener('click', () => {
-    sortState = { col: filterPopupCol, dir: -1 };
-    if (filterPopup) filterPopup.style.display = 'none';
-    renderTable(); saveState();
-  });
-}
-if (fpSortClear) {
-  fpSortClear.addEventListener('click', () => {
-    sortState = { col: -1, dir: 0 };
-    if (filterPopup) filterPopup.style.display = 'none';
-    renderTable(); saveState();
-  });
-}
+// ソートボタン
+document.getElementById('fpSortAsc').addEventListener('click', () => {
+  sortState = { col: filterPopupCol, dir: 1 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
+document.getElementById('fpSortDesc').addEventListener('click', () => {
+  sortState = { col: filterPopupCol, dir: -1 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
+document.getElementById('fpSortClear').addEventListener('click', () => {
+  sortState = { col: -1, dir: 0 };
+  filterPopup.style.display = 'none';
+  renderTable(); saveState();
+});
 
 // 全選択・全解除
-if (fpSelAll) {
-  fpSelAll.addEventListener('click', () => {
-    if (filterValList) {
-      filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
-    }
-  });
-}
-if (fpSelNone) {
-  fpSelNone.addEventListener('click', () => {
-    if (filterValList) {
-      filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
-    }
-  });
-}
+document.getElementById('fpSelAll').addEventListener('click', () => {
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+});
+document.getElementById('fpSelNone').addEventListener('click', () => {
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+});
 
 // 適用
-if (filterApply) {
-  filterApply.addEventListener('click', () => {
-    try {
-      const ci = parseInt(filterApply.dataset.colIdx, 10);
-      const filterType = filterApply.dataset.filterType || 'exact';
-      const checked = new Set();
-      if (filterValList) {
-        filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => {
-          if (cb.checked) checked.add(cb.value);
-        });
-      }
-      // ... (rest of the logic continues below)
-    } catch(e) {
-      console.warn('[colview] filter apply error:', e);
-    }
+filterApply.addEventListener('click', () => {
+  const ci = parseInt(filterApply.dataset.colIdx, 10);
+  const filterType = filterApply.dataset.filterType;
+  const checked = new Set();
+  filterValList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    if (cb.checked) checked.add(cb.value);
   });
-}
   const total = filterValList.querySelectorAll('input[type=checkbox]').length;
   if (checked.size === total) {
     filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
@@ -1102,20 +816,14 @@ if (filterApply) {
 });
 
 // 閉じる
-const filterPopupClose = safeEl('filterPopupClose') || document.getElementById('filterPopupClose');
-if (filterPopupClose) {
-  filterPopupClose.addEventListener('click', () => {
-    if (filterPopup) filterPopup.style.display = 'none';
-  });
-}
-
+document.getElementById('filterPopupClose').addEventListener('click', () => {
+  filterPopup.style.display = 'none';
+});
 document.addEventListener('click', e => {
-  try {
-    if (!filterPopup || filterPopup.style.display === 'none') return;
-    if (!filterPopup.contains(e.target) && !e.target.closest('#dataTable thead')) {
-      filterPopup.style.display = 'none';
-    }
-  } catch(e) {}
+  if (filterPopup.style.display === 'none') return;
+  if (!filterPopup.contains(e.target) && !e.target.closest('#dataTable thead')) {
+    filterPopup.style.display = 'none';
+  }
 });
 
 // 自然順ソート
@@ -1142,123 +850,85 @@ function natCmp(a, b) {
 
 // テーブル描画
 function renderTable() {
-  try {
-    const q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
-    const visArr = (visibleCols && typeof visibleCols.size === 'number')
-      ? [...visibleCols].sort((a,b) => a-b)
-      : [];
+  const q = searchInput.value.trim().toLowerCase();
+  const visArr = [...visibleCols].sort((a,b) => a-b);
 
-    if (!Array.isArray(headers) || headers.length === 0) {
-      if (dataTable) dataTable.style.display = 'none';
-      if (emptyMsg) {
-        emptyMsg.style.display = 'block';
-        emptyMsg.textContent = 'データがありません';
-      }
-      updateStatus('— データなし —');
-      return;
-    }
+  if (!headers.length) {
+    dataTable.style.display='none'; emptyMsg.style.display='block';
+    emptyMsg.textContent='データがありません'; updateStatus('— データなし —');
+    return;
+  }
 
   // フィルター適用
-  let rows = (Array.isArray(dataArray) ? dataArray : []).filter(row => {
-    try {
-      if (!Array.isArray(row)) return false;
-
-      if (filterState && filterState.colIdx !== null && filterState.selectedValues && filterState.selectedValues.size > 0) {
-        const v = String(row[filterState.colIdx] || '').trim();
-        if (filterState.filterType === 'prefix') {
-          let ok = false;
-          for (const sel of filterState.selectedValues) {
-            if (sel.startsWith('\x00exact:')) { if (v === sel.slice(7)) { ok = true; break; } }
-            else { if (v.startsWith(sel)) { ok = true; break; } }
-          }
-          if (!ok) return false;
-        } else {
-          if (!filterState.selectedValues.has(v)) return false;
+  let rows = dataArray.filter(row => {
+    if (filterState.colIdx !== null && filterState.selectedValues.size > 0) {
+      const v = String(row[filterState.colIdx] || '').trim();
+      if (filterState.filterType === 'prefix') {
+        let ok = false;
+        for (const sel of filterState.selectedValues) {
+          if (sel.startsWith('\x00exact:')) { if (v === sel.slice(7)) { ok=true; break; } }
+          else { if (v.startsWith(sel)) { ok=true; break; } }
         }
+        if (!ok) return false;
+      } else {
+        if (!filterState.selectedValues.has(v)) return false;
       }
-      return !q || row.some(c => String(c).toLowerCase().includes(q));
-    } catch(e) {
-      return false;
     }
+    return !q || row.some(c => String(c).toLowerCase().includes(q));
   });
 
-  if (sortState && sortState.col >= 0 && sortState.dir !== 0) {
+  if (sortState.col >= 0 && sortState.dir !== 0) {
     const ci = sortState.col;
-    if (ci < headers.length) {
-      rows = [...rows].sort((a,b) => {
-        try {
-          if (!Array.isArray(a) || !Array.isArray(b)) return 0;
-          const va = String(a[ci]||'').trim(), vb = String(b[ci]||'').trim();
-          if (va === '' && vb === '') return 0;
-          if (va === '') return 1; if (vb === '') return -1;
-          return sortState.dir * natCmp(va, vb);
-        } catch(e) { return 0; }
-      });
-    }
+    rows = [...rows].sort((a,b) => {
+      const va=String(a[ci]||'').trim(), vb=String(b[ci]||'').trim();
+      if(va===''&&vb==='') return 0;
+      if(va==='') return 1; if(vb==='') return -1;
+      return sortState.dir * natCmp(va,vb);
+    });
   }
 
   // ヘッダー描画
-  if (tableHead) {
-    tableHead.innerHTML = '';
-    const htr = document.createElement('tr');
-    const thN = document.createElement('th');
-    thN.textContent = '#'; thN.style.cursor = 'default'; thN.style.minWidth = '32px';
-    htr.appendChild(thN);
+  tableHead.innerHTML='';
+  const htr = document.createElement('tr');
+  const thN = document.createElement('th');
+  thN.textContent='#'; thN.style.cursor='default'; thN.style.minWidth='32px';
+  htr.appendChild(thN);
+  visArr.forEach(ci => {
+    const th = document.createElement('th');
+    const isFiltered = filterState.colIdx === ci && filterState.selectedValues.size > 0;
+    let label = headers[ci] || `列${ci+1}`;
+    if (isFiltered) {
+      const vals = [...filterState.selectedValues]
+        .map(v => v.startsWith('\x00exact:') ? (v.slice(7)||'空白') : v)
+        .join('・');
+      label += ` 🔽${vals}`;
+    }
+    th.textContent = label;
+    if (sortState.col===ci) th.classList.add(sortState.dir===1?'sorted-asc':'sorted-desc');
+    th.addEventListener('click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
+    htr.appendChild(th);
+  });
+  tableHead.appendChild(htr);
 
-    visArr.forEach(ci => {
-      try {
-        if (ci < 0 || ci >= headers.length) return;
-        const th = document.createElement('th');
-        const isFiltered = filterState && filterState.colIdx === ci && filterState.selectedValues && filterState.selectedValues.size > 0;
-        let label = headers[ci] || `列${ci+1}`;
-        if (isFiltered && filterState) {
-          const vals = [...filterState.selectedValues]
-            .map(v => v.startsWith('\x00exact:') ? (v.slice(7) || '空白') : v)
-            .join('・');
-          label += ` 🔽${vals}`;
-        }
-        th.textContent = label;
-        if (sortState && sortState.col === ci) {
-          th.classList.add(sortState.dir === 1 ? 'sorted-asc' : 'sorted-desc');
-        }
-        safeAddListener(th, 'click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
-        htr.appendChild(th);
-      } catch(e) {}
-    });
-    tableHead.appendChild(htr);
-  }
-
-  displayedRows = Array.isArray(rows) ? rows : [];
+  displayedRows = rows;  // 保存用に保持
 
   // ボディ描画
-  if (tableBody) {
-    tableBody.innerHTML = '';
-    displayedRows.forEach((row, ri) => {
-      try {
-        if (!Array.isArray(row)) return;
-        const tr = document.createElement('tr');
-        const tdN = document.createElement('td');
-        tdN.className = 'rn'; tdN.textContent = ri + 1; tr.appendChild(tdN);
-
-        visArr.forEach(ci => {
-          try {
-            if (ci < 0 || ci >= headers.length) return;
-            const td = document.createElement('td');
-            const cell = String(row[ci] || '').trim();
-            const header = String(headers[ci] || '').trim();
-            if ((header === '計量' && cell !== '') || cell === '計量') {
-              td.className = 'keiryou-td';
-              td.textContent = '計量';
-            } else {
-              td.textContent = cell;
-            }
-            tr.appendChild(td);
-          } catch(e) {}
-        });
-        tableBody.appendChild(tr);
-      } catch(e) {}
-    });
-  }
+  // 「計量」列はHome側のTabで切り替えるため、ページ移動リンクは出さない。
+  tableBody.innerHTML='';
+  rows.forEach((row,ri) => {
+    const tr = document.createElement('tr');
+    const tdN = document.createElement('td');
+    tdN.className='rn'; tdN.textContent=ri+1; tr.appendChild(tdN);
+    visArr.forEach(ci => {
+      const td = document.createElement('td');
+      const cell = String(row[ci] || '').trim();
+      const header = String(headers[ci] || '').trim();
+      if ((header === '計量' && cell !== '') || cell === '計量') {
+        td.className = 'keiryou-td';
+        td.textContent = '計量';
+      } else {
+        td.textContent = cell;
+      }
       tr.appendChild(td);
     });
     tableBody.appendChild(tr);
@@ -1298,90 +968,73 @@ function doSaveExcel(filename) {
   showToast('✅ ' + filename + ' を保存しました');
 }
 
-const saveDialog    = safeEl('saveDialog')           || document.getElementById('saveDialog');
-const sdlgFilename  = safeEl('saveDialogFilename')   || document.getElementById('saveDialogFilename');
-const sdlgNewName   = safeEl('sdlgNewName')          || document.getElementById('sdlgNewName');
-const btnSaveEl     = safeEl('btnSave')              || document.getElementById('btnSave');
-const sdlgOverwrite = safeEl('sdlgOverwrite')        || document.getElementById('sdlgOverwrite');
-const sdlgSaveAs    = safeEl('sdlgSaveAs')           || document.getElementById('sdlgSaveAs');
-const sdlgCancel    = safeEl('sdlgCancel')           || document.getElementById('sdlgCancel');
+const saveDialog    = document.getElementById('saveDialog');
+const sdlgFilename  = document.getElementById('saveDialogFilename');
+const sdlgNewName   = document.getElementById('sdlgNewName');
 
-if (btnSaveEl) {
-  btnSaveEl.addEventListener('click', () => {
-    if (!headers.length) { showToast('⚠️ ファイルを読み込んでください'); return; }
-    const fn = currentFilename || '物件表.xlsx';
-    if (sdlgFilename) sdlgFilename.textContent = fn;
-    if (sdlgNewName)  sdlgNewName.textContent  = '別名: ' + makeTimestampedName(fn);
-    if (saveDialog)   saveDialog.classList.add('active');
-  });
-}
+document.getElementById('btnSave').addEventListener('click', () => {
+  if (!headers.length) { showToast('⚠️ ファイルを読み込んでください'); return; }
+  const fn = currentFilename || '物件表.xlsx';
+  sdlgFilename.textContent = fn;
+  sdlgNewName.textContent  = '別名: ' + makeTimestampedName(fn);
+  saveDialog.classList.add('active');
+});
 
-if (sdlgOverwrite) {
-  sdlgOverwrite.addEventListener('click', () => {
-    if (saveDialog) saveDialog.classList.remove('active');
-    const fn = currentFilename || '物件表.xlsx';
-    doSaveExcel(fn);
-  });
-}
+document.getElementById('sdlgOverwrite').addEventListener('click', () => {
+  const fn = currentFilename || '物件表.xlsx';
+  saveDialog.classList.remove('active');
+  doSaveExcel(fn);
+});
 
-if (sdlgSaveAs) {
-  sdlgSaveAs.addEventListener('click', () => {
-    if (saveDialog) saveDialog.classList.remove('active');
-    const fn = currentFilename || '物件表.xlsx';
-    doSaveExcel(makeTimestampedName(fn));
-  });
-}
+document.getElementById('sdlgSaveAs').addEventListener('click', () => {
+  const fn = currentFilename || '物件表.xlsx';
+  saveDialog.classList.remove('active');
+  doSaveExcel(makeTimestampedName(fn));
+});
 
-if (sdlgCancel) {
-  sdlgCancel.addEventListener('click', () => {
-    if (saveDialog) saveDialog.classList.remove('active');
-  });
-}
+document.getElementById('sdlgCancel').addEventListener('click', () => {
+  saveDialog.classList.remove('active');
+});
 
 fetchGitHubFileList();
 
+// 初期高さ設定（フォント/レイアウト確定後）
+window.addEventListener('load', adjustWrapperHeight);
+window.addEventListener('resize', adjustWrapperHeight);
+
 // ===== ツールバー折りたたみ =====
 (function() {
-  const toolbar   = safeEl('toolbar')           || document.getElementById('toolbar');
-  const toggleBtn = safeEl('toolbar-toggle')    || document.getElementById('toolbar-toggle');
-  const colP      = safeEl('colPanel')          || document.getElementById('colPanel');
-  const wrapper   = safeEl('tableWrapper')      || document.getElementById('tableWrapper');
-  const header    = safeEl('app-header')        || document.getElementById('app-header');
-
-  if (!toolbar || !toggleBtn || !wrapper) {
-    console.warn('[colview] ツールバー折りたたみ初期化をスキップ');
-    return;
-  }
+  const toolbar   = document.getElementById('toolbar');
+  const toggleBtn = document.getElementById('toolbar-toggle');
+  const colPanel  = document.getElementById('colPanel');
+  const wrapper   = document.getElementById('tableWrapper');
+  const header    = document.getElementById('app-header');
 
   function adjustHeights() {
-    try {
-      const hdH = header ? header.offsetHeight : 44;
-      const tbH = toolbar.offsetHeight || 0;
-      const cpH = (colP && colP.classList.contains('active')) ? (colP.offsetHeight || 0) : 0;
-      if (colP) colP.style.top = (hdH + tbH) + 'px';
-      if (wrapper) wrapper.style.height = `calc(100vh - ${hdH + tbH + cpH}px)`;
-    } catch(e) {}
+    const hdH = header ? header.offsetHeight : 44;
+    const tbH = toolbar.offsetHeight;
+    const cpH = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
+    colPanel.style.top = (hdH + tbH) + 'px';
+    wrapper.style.height = 'calc(100vh - ' + (hdH + tbH + cpH) + 'px)';
   }
 
   window.toggleToolbar = function() {
-    try {
-      const collapsed = toolbar.classList.toggle('collapsed');
-      if (toggleBtn) toggleBtn.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
-      setTimeout(adjustHeights, 230);
-      localStorage.setItem('colview_toolbar_collapsed', collapsed ? '1' : '0');
-    } catch(e) {}
+    const collapsed = toolbar.classList.toggle('collapsed');
+    toggleBtn.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
+    setTimeout(adjustHeights, 230);
+    try { localStorage.setItem('colview_toolbar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
   };
 
   // 初期状態復元
   try {
     if (localStorage.getItem('colview_toolbar_collapsed') === '1') {
       toolbar.classList.add('collapsed');
-      if (toggleBtn) toggleBtn.textContent = '▼ 開く';
+      toggleBtn.textContent = '▼ 開く';
     }
   } catch(e) {}
 
   window.addEventListener('resize', adjustHeights);
-  setTimeout(adjustHeights, 120);
+  setTimeout(adjustHeights, 100);
 })();
 
 // ===== コンテキスト公開（履歴機能から参照するため） =====
@@ -1417,50 +1070,35 @@ window._colviewCtx = {
   const RESUME_KEY = 'ueno_seisou_resume_v1';
   const PAGE = 'index_2-4_colview.html';
   let timer = null;
-
-  function getWrapper() {
-    return document.getElementById('tableWrapper') || null;
-  }
-
   function saveResume(){
     try {
-      const w = getWrapper();
-      localStorage.setItem(RESUME_KEY, JSON.stringify({
-        page: PAGE,
-        scrollY: window.scrollY || 0,
-        tableTop: w ? w.scrollTop || 0 : 0,
-        updatedAt: Date.now()
-      }));
+      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, tableTop: document.getElementById('tableWrapper')?.scrollTop || 0, updatedAt: Date.now()}));
     } catch(e) {}
   }
-
   window.addEventListener('load', () => {
     try {
       const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
-      if (r && r.page === PAGE) setTimeout(() => {
+      if(r && r.page === PAGE) setTimeout(() => {
         window.scrollTo(0, r.scrollY || 0);
-        const w = getWrapper();
-        if (w && typeof r.tableTop === 'number') w.scrollTop = r.tableTop;
+        const w = document.getElementById('tableWrapper');
+        if(w && typeof r.tableTop === 'number') w.scrollTop = r.tableTop;
       }, 250);
     } catch(e) {}
     saveResume();
   });
-
   window.addEventListener('scroll', () => {
     clearTimeout(timer);
     timer = setTimeout(saveResume, 250);
   }, {passive:true});
-
-  const wrapper = getWrapper();
-  if (wrapper) wrapper.addEventListener('scroll', () => {
+  const wrapper = document.getElementById('tableWrapper');
+  if(wrapper) wrapper.addEventListener('scroll', () => {
     clearTimeout(timer);
     timer = setTimeout(saveResume, 250);
   }, {passive:true});
-
   window.addEventListener('pagehide', saveResume);
 })();
 </script>
-<!-- app-tabs.js は存在しないため削除（ueno-tabbar.js がグローバルタブバーを提供） -->
+<script src="app-tabs.js?v=20260518shadowlabel"></script>
 
 <!-- 履歴パネル -->
 <div id="hist-overlay" onclick="closeHistPanel()"></div>
@@ -1479,14 +1117,6 @@ window._colviewCtx = {
   const HIST_KEY = 'colview_history';
   const MAX_HIST = 30;
 
-  // このIIFE用ローカル安全ヘルパー
-  function safeElLocal(id) {
-    try {
-      const el = document.getElementById(id);
-      return el || null;
-    } catch (e) { return null; }
-  }
-
   function ctx() { return window._colviewCtx || null; }
 
   function getHist() {
@@ -1498,61 +1128,48 @@ window._colviewCtx = {
 
   function snapshot() {
     const c = ctx(); if (!c) return null;
-    try {
-      const fs = c.getFilterState ? c.getFilterState() : null;
-      const hdrs = Array.isArray(c.getHeaders ? c.getHeaders() : null) ? c.getHeaders() : [];
-      const visColsSet = c.getVisibleCols ? c.getVisibleCols() : new Set();
-      const visCols = [...visColsSet].sort((a,b) => a-b);
-      const ss = c.getSortState ? c.getSortState() : { col: -1, dir: 0 };
-
-      return {
-        id:              Date.now(),
-        timestamp:       Date.now(),
-        filename:        c.getFilename ? c.getFilename() : '',
-        sheetName:       c.getSheetName ? c.getSheetName() : '',
-        visibleCols:     visCols,
-        visibleColNames: visCols.map(i => (hdrs[i] || `列${i+1}`)),
-        totalCount:      c.getTotalCount ? c.getTotalCount() : 0,
-        sortState:       { ...ss },
-        sortColName:     (ss && ss.col >= 0) ? (hdrs[ss.col] || `列${ss.col+1}`) : '',
-        searchQuery:     c.getSearchQuery ? c.getSearchQuery() : '',
-        filterState: (fs && fs.colIdx !== null) ? {
-          colIdx:         fs.colIdx,
-          colName:        hdrs[fs.colIdx] || `列${fs.colIdx+1}`,
-          selectedValues: fs.selectedValues ? [...fs.selectedValues] : [],
-          filterType:     fs.filterType || 'exact'
-        } : null
-      };
-    } catch (e) {
-      return null;
-    }
+    const fs = c.getFilterState();
+    const hdrs = c.getHeaders();
+    const visCols = [...c.getVisibleCols()].sort((a,b) => a-b);
+    const ss = c.getSortState();
+    return {
+      id:              Date.now(),
+      timestamp:       Date.now(),
+      filename:        c.getFilename(),
+      sheetName:       c.getSheetName(),
+      visibleCols:     visCols,
+      visibleColNames: visCols.map(i => hdrs[i] || `列${i+1}`),
+      totalCount:      c.getTotalCount(),
+      sortState:       { ...ss },
+      sortColName:     (ss && ss.col >= 0) ? (hdrs[ss.col] || `列${ss.col+1}`) : '',
+      searchQuery:     c.getSearchQuery(),
+      filterState: (fs && fs.colIdx !== null) ? {
+        colIdx:         fs.colIdx,
+        colName:        hdrs[fs.colIdx] || `列${fs.colIdx+1}`,
+        selectedValues: [...fs.selectedValues],
+        filterType:     fs.filterType
+      } : null
+    };
   }
 
   function makeLabel(item) {
-    if (!item) return '';
     const parts = [];
-    try {
-      // ソート
-      if (item.sortState && item.sortState.col >= 0) {
-        let name = item.sortColName;
-        if (!name && Array.isArray(item.visibleColNames)) {
-          const idx = Array.isArray(item.visibleCols) ? item.visibleCols.indexOf(item.sortState.col) : -1;
-          name = item.visibleColNames[idx] || `列${item.sortState.col+1}`;
-        }
-        if (!name) name = `列${item.sortState.col+1}`;
-        parts.push((item.sortState.dir === 1 ? '▲' : '▼') + name);
-      }
-
-      // フィルター・検索
-      if (item.filterState && item.filterState.colIdx !== null && Array.isArray(item.filterState.selectedValues) && item.filterState.selectedValues.length > 0) {
-        const colName = item.filterState.colName || `列${item.filterState.colIdx+1}`;
-        const rawVals = item.filterState.selectedValues.map(v => v && v.startsWith('\x00exact:') ? v.slice(7) : v);
-        const vals = rawVals.slice(0, 3).join('・');
-        const more = rawVals.length > 3 ? `…他${rawVals.length - 3}件` : '';
-        parts.push(`🔍${colName}: ${vals}${more}`);
-      }
-      if (item.searchQuery) parts.push(`"${item.searchQuery}"`);
-    } catch(e) {}
+    // ソート
+    if (item.sortState && item.sortState.col >= 0) {
+      const name = item.sortColName || (item.visibleColNames
+        ? (item.visibleColNames[item.visibleCols ? item.visibleCols.indexOf(item.sortState.col) : -1] || `列${item.sortState.col+1}`)
+        : `列${item.sortState.col+1}`);
+      parts.push((item.sortState.dir === 1 ? '▲' : '▼') + name);
+    }
+    // フィルター・検索
+    if (item.filterState && item.filterState.colIdx !== null && item.filterState.selectedValues && item.filterState.selectedValues.length > 0) {
+      const colName = item.filterState.colName || `列${item.filterState.colIdx+1}`;
+      const rawVals = item.filterState.selectedValues.map(v => v.startsWith('\x00exact:') ? v.slice(7) : v);
+      const vals = rawVals.slice(0, 3).join('・');
+      const more = rawVals.length > 3 ? `…他${rawVals.length - 3}件` : '';
+      parts.push(`🔍${colName}: ${vals}${more}`);
+    }
+    if (item.searchQuery) parts.push(`"${item.searchQuery}"`);
     return parts.length > 0 ? parts.join(' · ') : '';
   }
 
@@ -1563,7 +1180,7 @@ window._colviewCtx = {
 
   function renderHist() {
     const items = getHist();
-    const el = safeElLocal('hist-list');
+    const el = document.getElementById('hist-list');
     if (!el) return;
     if (items.length === 0) {
       el.innerHTML = '<div id="hist-empty">保存した履歴はありません<br><small>「今の状態を保存」で現在の<br>列選択・ソートを記録できます</small></div>';
@@ -1597,17 +1214,10 @@ window._colviewCtx = {
     if (h.length > MAX_HIST) h.length = MAX_HIST;
     setHist(h);
     renderHist();
-    const btn = safeElLocal('hist-save-btn');
-    if (btn) {
-      btn.textContent = '✅ 保存しました';
-      btn.classList.add('saved');
-      setTimeout(() => {
-        if (btn) {
-          btn.textContent = '💾 今の状態を保存';
-          btn.classList.remove('saved');
-        }
-      }, 1800);
-    }
+    const btn = document.getElementById('hist-save-btn');
+    btn.textContent = '✅ 保存しました';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = '💾 今の状態を保存'; btn.classList.remove('saved'); }, 1800);
   };
 
   window.deleteHist = function(id) {
@@ -1623,18 +1233,16 @@ window._colviewCtx = {
     function applyState() {
       const c = ctx(); if (!c) return;
       if (item.sheetName && item.sheetName !== c.getSheetName()) {
-        const sheetSel = safeElLocal('sheetSelector');
-        if (sheetSel && Array.from(sheetSel.options || []).some(opt => opt.value === item.sheetName)) {
+        const sheetSel = document.getElementById('sheetSelector');
+        if (sheetSel && Array.from(sheetSel.options).some(opt => opt.value === item.sheetName)) {
           sheetSel.value = item.sheetName;
-          if (typeof loadSheet === 'function') loadSheet(item.sheetName);
+          loadSheet(item.sheetName);
         }
       }
       // 列表示
-      if (Array.isArray(item.visibleCols) && item.visibleCols.length > 0) {
-        try {
-          c.setVisibleCols(new Set(item.visibleCols));
-          if (typeof c.syncCheckboxes === 'function') c.syncCheckboxes();
-        } catch(e) {}
+      if (item.visibleCols && item.visibleCols.length > 0) {
+        c.setVisibleCols(new Set(item.visibleCols));
+        c.syncCheckboxes();
       }
       // ソート
       if (item.sortState && item.sortState.col >= 0) {
@@ -1661,40 +1269,30 @@ window._colviewCtx = {
 
     if (item.filename && item.filename !== ctx().getFilename()) {
       window._histPendingRestore = { applyFn: applyState, filename: item.filename };
-      const sel = safeElLocal('gitFileSelector');
+      const sel = document.getElementById('gitFileSelector');
       if (sel) {
         for (const opt of sel.options) {
-          try {
-            if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
-          } catch(e) {}
+          if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
         }
       }
-      if (ctx() && typeof ctx().loadFromGitHub === 'function') {
-        ctx().loadFromGitHub(item.filename);
-      }
+      ctx().loadFromGitHub(item.filename);
     } else {
       applyState();
     }
   };
 
   window.toggleHistPanel = function() {
-    const panel = safeElLocal('hist-panel');
-    const overlay = safeElLocal('hist-overlay');
-    if (!panel || !overlay) return;
+    const panel = document.getElementById('hist-panel');
+    const overlay = document.getElementById('hist-overlay');
     if (panel.classList.contains('open')) {
-      panel.classList.remove('open');
-      overlay.classList.remove('show');
+      panel.classList.remove('open'); overlay.classList.remove('show');
     } else {
-      renderHist();
-      panel.classList.add('open');
-      overlay.classList.add('show');
+      renderHist(); panel.classList.add('open'); overlay.classList.add('show');
     }
   };
   window.closeHistPanel = function() {
-    const panel = safeElLocal('hist-panel');
-    const overlay = safeElLocal('hist-overlay');
-    if (panel) panel.classList.remove('open');
-    if (overlay) overlay.classList.remove('show');
+    document.getElementById('hist-panel').classList.remove('open');
+    document.getElementById('hist-overlay').classList.remove('show');
   };
 })();
 </script>
