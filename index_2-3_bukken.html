@@ -735,6 +735,16 @@
 (function() {
   'use strict';
 
+  // グローバルエラーハンドラ（堅牢化）
+  window.addEventListener('error', function(e) {
+    console.error('[bukken 物件表エディタ] 予期せぬエラー:', e.error || e.message);
+  });
+
+  // Promise の未処理拒否も捕捉
+  window.addEventListener('unhandledrejection', function(e) {
+    console.error('[bukken 物件表エディタ] 未処理のPromise拒否:', e.reason);
+  });
+
   // ===== State =====
   let workbook = null;
   let currentSheetName = null;
@@ -794,32 +804,43 @@
 
   function applyRestoredState(saved) {
     if (!saved) return;
-    if (saved.sortState && saved.sortState.col >= 0) {
-      sortState = saved.sortState;
-      // dataArrayを実際に並び替える
-      const colIdx = sortState.col;
-      const dir = sortState.dir;
-      if (dir !== 0 && colIdx >= 0) {
-        dataArray.sort((a, b) => {
-          const va = String(a[colIdx] || '').trim();
-          const vb = String(b[colIdx] || '').trim();
-          if (va === vb) return 0;
-          if (va === '') return 1;
-          if (vb === '') return -1;
-          const na = parseFloat(va), nb = parseFloat(vb);
-          if (!isNaN(na) && !isNaN(nb)) return dir * (na - nb);
-          return dir * naturalCompare(va, vb);
-        });
+    try {
+      if (saved.sortState && typeof saved.sortState.col === 'number' && saved.sortState.col >= 0) {
+        sortState = { ...saved.sortState };
+        const colIdx = sortState.col;
+        const dir = sortState.dir;
+        if (dir !== 0 && colIdx >= 0 && Array.isArray(dataArray) && colIdx < (headers.length || 0)) {
+          dataArray.sort((a, b) => {
+            try {
+              if (!Array.isArray(a) || !Array.isArray(b)) return 0;
+              const va = String(a[colIdx] || '').trim();
+              const vb = String(b[colIdx] || '').trim();
+              if (va === vb) return 0;
+              if (va === '') return 1;
+              if (vb === '') return -1;
+              const na = parseFloat(va), nb = parseFloat(vb);
+              if (!isNaN(na) && !isNaN(nb)) return dir * (na - nb);
+              return dir * naturalCompare(va, vb);
+            } catch(e) { return 0; }
+          });
+        }
       }
-    }
-    if (saved.searchQuery && searchInput) {
-      searchInput.value = saved.searchQuery;
-    }
-    // youbiフィルター状態を復元（youbiFilterStateはこの後で宣言されるが、呼び出しは非同期後なので安全）
-    if (saved.youbiFilter && saved.youbiFilter.colIdx !== null
-        && saved.youbiFilter.selectedValues && saved.youbiFilter.selectedValues.length > 0) {
-      // 復元フラグとしてpendingに保存し、youbiFilterState宣言後に適用
-      window._pendingYoubiFilter = saved.youbiFilter;
+      if (saved.searchQuery && searchInput) {
+        searchInput.value = saved.searchQuery;
+      }
+      // youbiフィルター状態を復元
+      if (saved.youbiFilter && typeof saved.youbiFilter.colIdx === 'number' && saved.youbiFilter.colIdx !== null) {
+        const sv = saved.youbiFilter.selectedValues;
+        if (sv && (Array.isArray(sv) ? sv.length > 0 : sv.size > 0)) {
+          window._pendingYoubiFilter = {
+            colIdx: saved.youbiFilter.colIdx,
+            selectedValues: Array.isArray(sv) ? sv : Array.from(sv),
+            filterType: saved.youbiFilter.filterType || 'exact'
+          };
+        }
+      }
+    } catch(e) {
+      console.warn('[bukken] applyRestoredState failed:', e);
     }
   }
 
@@ -833,64 +854,127 @@
   let selectedSeiriBangoIdx   = null;  // dataArray index of selected row
   let selectedSeiriBangoValue = null;  // numeric value of selected cell
 
+  // クリティカルDOM要素の安全取得ヘルパー（堅牢化）
+  function safeEl(id) {
+    try {
+      const el = document.getElementById(id);
+      return el || null;
+    } catch(e) { return null; }
+  }
+
+  // 安全にイベントリスナーを登録するヘルパー
+  function safeAddListener(el, type, handler, options) {
+    try {
+      if (el && typeof el.addEventListener === 'function' && typeof handler === 'function') {
+        el.addEventListener(type, handler, options);
+      }
+    } catch(e) {}
+  }
+
   function clearSeiriBangoSelection() {
-    tableBody.querySelectorAll('td.selected-seiri').forEach(td => td.classList.remove('selected-seiri'));
+    try {
+      const tb = safeEl('tableBody') || tableBody;
+      if (tb && typeof tb.querySelectorAll === 'function') {
+        tb.querySelectorAll('td.selected-seiri').forEach(td => td.classList.remove('selected-seiri'));
+      }
+    } catch(e) {}
     selectedSeiriBangoIdx   = null;
     selectedSeiriBangoValue = null;
   }
 
   function reapplySeiriBangoSelection() {
-    if (selectedSeiriBangoIdx === null) return;
-    const colIdx = getSeiriBangoColIdx();
-    if (colIdx === -1) return;
-    tableBody.querySelectorAll('tr').forEach(tr => {
-      if (parseInt(tr.dataset.dataIdx, 10) === selectedSeiriBangoIdx) {
-        const cells = tr.querySelectorAll('td[contenteditable]');
-        if (cells[colIdx]) cells[colIdx].classList.add('selected-seiri');
-      }
-    });
+    try {
+      if (selectedSeiriBangoIdx === null) return;
+      const colIdx = getSeiriBangoColIdx();
+      if (colIdx === -1) return;
+
+      const tb = safeEl('tableBody') || tableBody;
+      if (!tb || typeof tb.querySelectorAll !== 'function') return;
+
+      tb.querySelectorAll('tr').forEach(tr => {
+        try {
+          if (parseInt(tr && tr.dataset ? tr.dataset.dataIdx : '', 10) === selectedSeiriBangoIdx) {
+            const cells = tr.querySelectorAll('td[contenteditable]');
+            if (cells && cells[colIdx]) cells[colIdx].classList.add('selected-seiri');
+          }
+        } catch(e) {}
+      });
+    } catch(e) {}
   }
 
-  const fileInput      = document.getElementById('fileInput');
-  const sheetSelector  = document.getElementById('sheetSelector');
-  const searchInput    = document.getElementById('searchInput');
-  const btnAddRow      = document.getElementById('btnAddRow');
-  const btnCheckBango  = document.getElementById('btnCheckBango');
-  const btnSave        = document.getElementById('btnSave');
-  const statusBar      = document.getElementById('statusBar');
-  const dupPanel       = document.getElementById('dupPanel');
-  const dupPanelMsg    = document.getElementById('dupPanelMsg');
-  const dupPanelBody   = document.getElementById('dupPanelBody');
-  const dupConfirm     = document.getElementById('dupConfirm');
-  const dupCancel      = document.getElementById('dupCancel');
-  const dupSection     = document.getElementById('dupSection');
-  const noDupSection   = document.getElementById('noDupSection');
-  const gapSection     = document.getElementById('gapSection');
-  const noGapSection   = document.getElementById('noGapSection');
-  const gapMsg          = document.getElementById('gapMsg');
-  const gapList         = document.getElementById('gapList');
-  const dupRenumberBtn  = document.getElementById('dupRenumberBtn');
-  const tableHead     = document.getElementById('tableHead');
-  const tableBody     = document.getElementById('tableBody');
-  const dataTable     = document.getElementById('dataTable');
-  const emptyMsg      = document.getElementById('emptyMsg');
-  const warnToast     = document.getElementById('warnToast');
-  const successToast  = document.getElementById('successToast');
+  const fileInput      = safeEl('fileInput')      || document.getElementById('fileInput');
+  const sheetSelector  = safeEl('sheetSelector')  || document.getElementById('sheetSelector');
+  const searchInput    = safeEl('searchInput')    || document.getElementById('searchInput');
+  const btnAddRow      = safeEl('btnAddRow')      || document.getElementById('btnAddRow');
+  const btnCheckBango  = safeEl('btnCheckBango')  || document.getElementById('btnCheckBango');
+  const btnSave        = safeEl('btnSave')        || document.getElementById('btnSave');
+  const statusBar      = safeEl('statusBar')      || document.getElementById('statusBar');
+  const dupPanel       = safeEl('dupPanel')       || document.getElementById('dupPanel');
+  const dupPanelMsg    = safeEl('dupPanelMsg')    || document.getElementById('dupPanelMsg');
+  const dupPanelBody   = safeEl('dupPanelBody')   || document.getElementById('dupPanelBody');
+  const dupConfirm     = safeEl('dupConfirm')     || document.getElementById('dupConfirm');
+  const dupCancel      = safeEl('dupCancel')      || document.getElementById('dupCancel');
+  const dupSection     = safeEl('dupSection')     || document.getElementById('dupSection');
+  const noDupSection   = safeEl('noDupSection')   || document.getElementById('noDupSection');
+  const gapSection     = safeEl('gapSection')     || document.getElementById('gapSection');
+  const noGapSection   = safeEl('noGapSection')   || document.getElementById('noGapSection');
+  const gapMsg          = safeEl('gapMsg')          || document.getElementById('gapMsg');
+  const gapList         = safeEl('gapList')         || document.getElementById('gapList');
+  const dupRenumberBtn  = safeEl('dupRenumberBtn')  || document.getElementById('dupRenumberBtn');
+  const tableHead     = safeEl('tableHead')     || document.getElementById('tableHead');
+  const tableBody     = safeEl('tableBody')     || document.getElementById('tableBody');
+  const dataTable     = safeEl('dataTable')     || document.getElementById('dataTable');
+  const emptyMsg      = safeEl('emptyMsg')      || document.getElementById('emptyMsg');
+  const warnToast     = safeEl('warnToast')     || document.getElementById('warnToast');
+  const successToast  = safeEl('successToast')  || document.getElementById('successToast');
   let toastTimer = null;
   let successTimer = null;
 
+  // クリティカル要素の存在チェック（堅牢化 - 初期化シーケンス）
+  const criticalMissing = [];
+  if (!tableBody) criticalMissing.push('tableBody');
+  if (!dataTable) criticalMissing.push('dataTable');
+  if (!sheetSelector) criticalMissing.push('sheetSelector');
+  if (!searchInput) criticalMissing.push('searchInput');
+  if (!btnSave) criticalMissing.push('btnSave');
+  if (!gitFileSelector) criticalMissing.push('gitFileSelector');
+
+  if (criticalMissing.length > 0) {
+    console.error('[bukken] 初期化エラー: 必須要素が見つかりません →', criticalMissing.join(', '));
+  }
+
+  // Youbi popup が完全に揃っているか（機能的に重要）
+  if (!youbiPopup || !youbiApplyBtn) {
+    console.warn('[bukken] 曜日フィルター機能が一部制限される可能性があります');
+  }
+
+  // 全体の堅牢化完了フラグ（デバッグ用）
+  window.__bukkenHardened = true;
+
   function showWarn(msg) {
-    warnToast.textContent = msg;
-    warnToast.style.display = 'block';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { warnToast.style.display = 'none'; }, 2500);
+    try {
+      if (warnToast) {
+        warnToast.textContent = msg;
+        warnToast.style.display = 'block';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { if (warnToast) warnToast.style.display = 'none'; }, 2500);
+      } else {
+        console.warn('[bukken]', msg);
+      }
+    } catch(e) {}
   }
 
   function showToast(msg) {
-    successToast.textContent = msg;
-    successToast.style.display = 'block';
-    clearTimeout(successTimer);
-    successTimer = setTimeout(() => { successToast.style.display = 'none'; }, 4000);
+    try {
+      if (successToast) {
+        successToast.textContent = msg;
+        successToast.style.display = 'block';
+        clearTimeout(successTimer);
+        successTimer = setTimeout(() => { if (successToast) successToast.style.display = 'none'; }, 4000);
+      } else {
+        console.log('[bukken]', msg);
+      }
+    } catch(e) {}
   }
 
 
@@ -898,25 +982,41 @@
   // ===== Excelデータをパースして表示する共通処理 =====
   function loadWorkbookData(arrayBuffer, filename, sourcePath) {
     try {
+      if (!arrayBuffer) throw new Error('データが空です');
       const data = new Uint8Array(arrayBuffer);
       workbook = XLSX.read(data, { type: 'array', cellStyles: true, cellFormula: true });
+
+      if (!workbook || !Array.isArray(workbook.SheetNames) || workbook.SheetNames.length === 0) {
+        throw new Error('有効なシートが見つかりません');
+      }
+
       allSheetsData = {};
-      sheetSelector.innerHTML = '';
+      if (sheetSelector) sheetSelector.innerHTML = '';
+
       workbook.SheetNames.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sheetSelector.appendChild(opt);
-        const ws = workbook.Sheets[name];
-        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        allSheetsData[name] = json.map(r => r.map(c => (c === null || c === undefined) ? '' : String(c)));
+        try {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          if (sheetSelector) sheetSelector.appendChild(opt);
+
+          const ws = workbook.Sheets[name];
+          const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          allSheetsData[name] = json.map(r =>
+            Array.isArray(r) ? r.map(c => (c === null || c === undefined) ? '' : String(c)) : []
+          );
+        } catch(e) {
+          console.warn('[bukken load] sheet "' + name + '" の読み込みに失敗:', e);
+        }
       });
+
       currentSheetName = workbook.SheetNames[0];
-      sheetSelector.value = currentSheetName;
-      currentFilename = filename;
+      if (sheetSelector) sheetSelector.value = currentSheetName;
+      currentFilename = filename || '';
       loadSheet(currentSheetName);
     } catch(err) {
-      alert('ファイル読み込みエラー: ' + err.message);
+      console.error('[bukken] loadWorkbookData error:', err);
+      alert('ファイル読み込みエラー: ' + (err.message || err));
     }
   }
 
@@ -931,25 +1031,44 @@
     '2026年度物件表①②③（20260509更新）.xlsx',
     '令和8年度収集カレンダー.xlsx'
   ];
-  const gitFileSelector = document.getElementById('gitFileSelector');
+  const gitFileSelector = safeEl('gitFileSelector') || document.getElementById('gitFileSelector');
   const initialFileParam = new URLSearchParams(location.search).get('file');
   let gitListLoading = false;
   let gitListLoadedAt = 0;
 
   function uniqueXlsxNames(names) {
-    return [...new Set(names.map(name => String(name || '').replace(/^\//, '')))]
-      .filter(name => /\.xlsx$/i.test(name));
+    try {
+      if (!Array.isArray(names)) return [];
+      const cleaned = names
+        .map(name => String(name || '').replace(/^\//, '').trim())
+        .filter(name => name.length > 0);
+      return [...new Set(cleaned)].filter(name => /\.xlsx$/i.test(name));
+    } catch(e) {
+      return [];
+    }
   }
 
   function getGitHubXlsxNames() {
     return fetch(GITHUB_API_URL + '?t=' + Date.now(), { cache: 'no-store' })
-      .then(res => { if (!res.ok) throw new Error('GitHub API HTTP ' + res.status); return res.json(); })
-      .then(files => uniqueXlsxNames(files.filter(f => f.type === 'file').map(f => f.name)))
+      .then(res => {
+        if (!res.ok) throw new Error('GitHub API HTTP ' + res.status);
+        return res.json();
+      })
+      .then(files => {
+        const names = (files || []).filter(f => f && f.type === 'file').map(f => f.name);
+        return uniqueXlsxNames(names);
+      })
       .catch(apiErr => {
-        console.warn('GitHub API一覧取得エラー。予備取得に切替:', apiErr);
+        console.warn('GitHub API一覧取得エラー。jsDelivrに切替:', apiErr);
         return fetch(GITHUB_JSDELIVR_API + '?t=' + Date.now(), { cache: 'no-store' })
-          .then(res => { if (!res.ok) throw new Error('jsDelivr HTTP ' + res.status); return res.json(); })
-          .then(data => uniqueXlsxNames((data.files || []).map(f => f.name)))
+          .then(res => {
+            if (!res.ok) throw new Error('jsDelivr HTTP ' + res.status);
+            return res.json();
+          })
+          .then(data => {
+            const names = (data && data.files) ? data.files.map(f => f.name) : [];
+            return uniqueXlsxNames(names);
+          })
           .catch(fallbackErr => {
             console.warn('予備一覧取得エラー。固定候補を表示:', fallbackErr);
             return uniqueXlsxNames(FALLBACK_XLSX_FILES);
@@ -960,43 +1079,67 @@
   function fetchGitHubFileList() {
     if (gitListLoading) return;
     gitListLoading = true;
-    const previousValue = gitFileSelector.value;
+
+    const selector = gitFileSelector || safeEl('gitFileSelector');
+    if (!selector) {
+      gitListLoading = false;
+      return;
+    }
+
+    const previousValue = selector.value;
+
     getGitHubXlsxNames()
       .then(xlsxNames => {
-        gitFileSelector.innerHTML = '';
-        if (xlsxNames.length === 0) {
-          gitFileSelector.innerHTML = '<option value="">Excelファイルなし</option>';
-          return;
-        }
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = '📂 GitHubファイル選択…';
-        gitFileSelector.appendChild(placeholder);
-        xlsxNames.forEach(name => {
-          const opt = document.createElement('option');
-          opt.value = encodeURIComponent(name);
-          opt.textContent = name;
-          gitFileSelector.appendChild(opt);
-        });
-        const requested = initialFileParam
-          ? xlsxNames.find(name => name === initialFileParam)
-          : null;
-        const encodedRequested = requested ? encodeURIComponent(requested) : '';
-        const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
-        if (existsPrevious) gitFileSelector.value = previousValue;
-        else if (encodedRequested) gitFileSelector.value = encodedRequested;
-        else gitFileSelector.value = '';
-        gitListLoadedAt = Date.now();
-        const target = requested || xlsxNames[0];
-        if (target) {
-          gitFileSelector.value = encodeURIComponent(target);
-          loadFromGitHub(target);
-        } else {
-          updateStatus('GitHubのExcel候補を更新しました。候補を選ぶと読み込みます。');
+        try {
+          selector.innerHTML = '';
+          if (xlsxNames.length === 0) {
+            selector.innerHTML = '<option value="">Excelファイルなし</option>';
+            return;
+          }
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = '📂 GitHubファイル選択…';
+          selector.appendChild(placeholder);
+
+          xlsxNames.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = encodeURIComponent(name);
+            opt.textContent = name;
+            selector.appendChild(opt);
+          });
+
+          const requested = initialFileParam
+            ? xlsxNames.find(name => name === initialFileParam)
+            : null;
+          const encodedRequested = requested ? encodeURIComponent(requested) : '';
+          const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
+
+          if (existsPrevious) {
+            selector.value = previousValue;
+          } else if (encodedRequested) {
+            selector.value = encodedRequested;
+          } else {
+            selector.value = '';
+          }
+
+          gitListLoadedAt = Date.now();
+
+          const target = requested || xlsxNames[0];
+          if (target) {
+            selector.value = encodeURIComponent(target);
+            loadFromGitHub(target);
+          } else {
+            updateStatus('GitHubのExcel候補を更新しました。候補を選ぶと読み込みます。');
+          }
+        } catch (e) {
+          console.warn('[bukken] GitHubファイルリストDOM操作エラー:', e);
+          try { selector.innerHTML = '<option value="">⚠️ 表示エラー</option>'; } catch(e2) {}
         }
       })
       .catch(err => {
-        gitFileSelector.innerHTML = '<option value="">⚠️ 候補更新失敗</option>';
+        try {
+          selector.innerHTML = '<option value="">⚠️ 候補更新失敗</option>';
+        } catch(e) {}
         updateStatus('⚠️ GitHubファイル候補の更新に失敗しました');
         console.warn('GitHub一覧取得エラー:', err);
       })
@@ -1007,75 +1150,115 @@
 
   // ===== GitHubからExcelを取得 =====
   function loadFromGitHub(filename) {
-    if (!filename) {
-      const sel = gitFileSelector.value;
-      if (!sel) return;
-      filename = decodeURIComponent(sel);
+    try {
+      if (!filename) {
+        const sel = gitFileSelector ? gitFileSelector.value : '';
+        if (!sel) return;
+        filename = decodeURIComponent(sel);
+      }
+      const btn = safeEl('btnReload') || document.getElementById('btnReload');
+      if (btn) { btn.textContent = '⏳ 読込中…'; btn.disabled = true; }
+      updateStatus('GitHubから物件表を読み込み中…');
+
+      const url = GITHUB_RAW_BASE + encodeURIComponent(filename) + '?t=' + Date.now();
+
+      fetch(url, { cache: 'no-store' })
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.arrayBuffer();
+        })
+        .catch(err => {
+          console.warn('raw.githubusercontent.com 読み込みエラー。jsDelivrに切替:', err);
+          return fetch(GITHUB_JSDELIVR_RAW + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(res => {
+              if (!res.ok) throw new Error('jsDelivr HTTP ' + res.status);
+              return res.arrayBuffer();
+            });
+        })
+        .then(buf => {
+          loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.3');
+          showToast('✅ GitHubから「' + filename + '」を読み込みました');
+          if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
+            setTimeout(() => {
+              try {
+                window._histPendingRestore.applyFn();
+                delete window._histPendingRestore;
+              } catch(e) {}
+            }, 100);
+          }
+        })
+        .catch(err => {
+          updateStatus('⚠️ 読み込み失敗 — 手動でファイルを開いてください');
+          console.warn('GitHub読み込みエラー:', err);
+          alert('GitHubからの読み込みに失敗しました。\n手動でExcelファイルを開いてください。');
+        })
+        .finally(() => {
+          if (btn) {
+            btn.textContent = '🔄 最新を取得';
+            btn.disabled = false;
+          }
+        });
+    } catch (e) {
+      console.error('[bukken] loadFromGitHub 同期エラー:', e);
+      const btn = safeEl('btnReload') || document.getElementById('btnReload');
+      if (btn) { btn.textContent = '🔄 最新を取得'; btn.disabled = false; }
     }
-    const btn = document.getElementById('btnReload');
-    if (btn) { btn.textContent = '⏳ 読込中…'; btn.disabled = true; }
-    updateStatus('GitHubから物件表を読み込み中…');
-    const url = GITHUB_RAW_BASE + encodeURIComponent(filename) + '?t=' + Date.now();
-    fetch(url, { cache: 'no-store' })
-      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.arrayBuffer(); })
-      .catch(err => {
-        console.warn('raw.githubusercontent.com 読み込みエラー。予備取得に切替:', err);
-        return fetch(GITHUB_JSDELIVR_RAW + encodeURIComponent(filename) + '?t=' + Date.now(), { cache: 'no-store' })
-          .then(res => { if (!res.ok) throw new Error('jsDelivr HTTP ' + res.status); return res.arrayBuffer(); });
-      })
-      .then(buf => {
-        loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.3');
-        showToast('✅ GitHubから「' + filename + '」を読み込みました');
-        // 履歴からの復元が待機中なら適用
-        if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
-          setTimeout(function() {
-            window._histPendingRestore.applyFn();
-            delete window._histPendingRestore;
-          }, 100);
-        }
-      })
-      .catch(err => {
-        updateStatus('⚠️ 読み込み失敗 — 手動でファイルを開いてください');
-        console.warn('GitHub読み込みエラー:', err);
-      })
-      .finally(() => {
-        if (btn) { btn.textContent = '🔄 最新を取得'; btn.disabled = false; }
-      });
   }
 
-  // GitHubファイル選択時
-  gitFileSelector.addEventListener('change', function() {
-    if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
-  });
-  gitFileSelector.addEventListener('pointerdown', function() {
-    if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
-  });
-  gitFileSelector.addEventListener('focus', function() {
-    if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
-  });
+  // GitHubファイル選択時（安全化）
+  if (gitFileSelector) {
+    gitFileSelector.addEventListener('change', function() {
+      if (this.value && this.value !== '__local__') {
+        try { loadFromGitHub(decodeURIComponent(this.value)); } catch(e) {}
+      }
+    });
+    gitFileSelector.addEventListener('pointerdown', function() {
+      if (Date.now() - gitListLoadedAt > 3000) {
+        try { fetchGitHubFileList(); } catch(e) {}
+      }
+    });
+    gitFileSelector.addEventListener('focus', function() {
+      if (Date.now() - gitListLoadedAt > 3000) {
+        try { fetchGitHubFileList(); } catch(e) {}
+      }
+    });
+  }
 
   window.addEventListener('message', function(event) {
     const msg = event.data || {};
     if (msg.type !== 'ueno21-open-local-excel' || !msg.buffer || !msg.filename) return;
+
     loadWorkbookData(msg.buffer, msg.filename, 'Tab追加ローカルファイル');
-    let localOpt = gitFileSelector.querySelector('option[value="__local__"]');
+
+    const sel = gitFileSelector;
+    if (!sel) return;
+
+    let localOpt = sel.querySelector('option[value="__local__"]');
     if (!localOpt) {
       localOpt = document.createElement('option');
       localOpt.value = '__local__';
-      gitFileSelector.insertBefore(localOpt, gitFileSelector.firstChild);
+      sel.insertBefore(localOpt, sel.firstChild);
     }
     localOpt.textContent = '📱 ' + msg.filename;
-    gitFileSelector.value = '__local__';
+    sel.value = '__local__';
   });
 
-  // 🔄ボタン：現在選択中ファイルを再取得
-  document.getElementById('btnReload').addEventListener('click', function() {
-    if (gitFileSelector.value && gitFileSelector.value !== '__local__') loadFromGitHub();
-    else fetchGitHubFileList();
-  });
+  // 🔄ボタン：現在選択中ファイルを再取得（安全化）
+  const reloadBtn2 = safeEl('btnReload') || document.getElementById('btnReload');
+  if (reloadBtn2) {
+    reloadBtn2.addEventListener('click', function() {
+      const sel = gitFileSelector || safeEl('gitFileSelector');
+      if (sel && sel.value && sel.value !== '__local__') {
+        loadFromGitHub();
+      } else {
+        fetchGitHubFileList();
+      }
+    });
+  }
 
   // ===== File load（手動）=====
-  fileInput.addEventListener('change', function(e) {
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
     // ドロップダウンにローカルファイル名を表示
@@ -1105,66 +1288,105 @@
   });
 
   function saveCurrentSheetEdits() {
-    if (!currentSheetName) return;
-    // Collect current DOM table data
-    const rows = tableBody.querySelectorAll('tr');
-    const saved = [];
-    if (headers.length > 0) saved.push([...headers]);
-    rows.forEach(tr => {
-      const cells = tr.querySelectorAll('td[contenteditable]');
-      const row = [];
-      cells.forEach(td => row.push(td.textContent));
-      saved.push(row);
-    });
-    allSheetsData[currentSheetName] = saved;
+    if (!currentSheetName || !tableBody) return;
+    try {
+      const rows = tableBody.querySelectorAll('tr');
+      const saved = [];
+      if (Array.isArray(headers) && headers.length > 0) saved.push([...headers]);
+
+      rows.forEach(tr => {
+        try {
+          const cells = tr.querySelectorAll('td[contenteditable]');
+          const row = [];
+          cells.forEach(td => {
+            row.push(td ? (td.textContent || '') : '');
+          });
+          // Pad row to match header length for safety
+          while (Array.isArray(headers) && row.length < headers.length) row.push('');
+          saved.push(row);
+        } catch(e) {}
+      });
+      allSheetsData[currentSheetName] = saved;
+    } catch(e) {
+      console.warn('[bukken] saveCurrentSheetEdits failed:', e);
+    }
   }
 
   function loadSheet(sheetName) {
-    const raw = allSheetsData[sheetName];
-    if (!raw || raw.length === 0) {
-      headers = [];
-      dataArray = [];
-      originalData = [];
-      renderTable();
-      return;
-    }
-    // ヘッダー行自動検出：空セルが多い行をスキップして最初の充実した行をヘッダーに使う
-    let headerRowIdx = 0;
-    const nonEmpty = (row) => (row || []).filter(c => String(c).trim() !== '').length;
-    for (let i = 0; i < Math.min(5, raw.length - 1); i++) {
-      if (nonEmpty(raw[i]) < nonEmpty(raw[i + 1]) && nonEmpty(raw[i]) <= 1) {
-        headerRowIdx = i + 1;
-      } else {
-        break;
+    try {
+      const raw = allSheetsData[sheetName];
+      if (!raw || !Array.isArray(raw) || raw.length === 0) {
+        headers = [];
+        dataArray = [];
+        originalData = [];
+        if (typeof renderTable === 'function') renderTable();
+        return;
       }
+
+      // ヘッダー行自動検出
+      let headerRowIdx = 0;
+      const nonEmpty = (row) => (row || []).filter(c => String(c).trim() !== '').length;
+      for (let i = 0; i < Math.min(5, raw.length - 1); i++) {
+        if (nonEmpty(raw[i]) < nonEmpty(raw[i + 1]) && nonEmpty(raw[i]) <= 1) {
+          headerRowIdx = i + 1;
+        } else {
+          break;
+        }
+      }
+
+      headers = (raw[headerRowIdx] && Array.isArray(raw[headerRowIdx])) ? [...raw[headerRowIdx]] : [];
+      originalData = raw.slice(headerRowIdx + 1).map(r => {
+        const row = Array.isArray(r) ? [...r] : [];
+        while (row.length < headers.length) row.push('');
+        return row;
+      });
+      dataArray = [...originalData];
+      sortState = { col: -1, dir: 0 };
+
+      if (searchInput) searchInput.value = '';
+      filteredIndices = null;
+
+      // シート切り替え時は曜日フィルターと整理番号選択をリセット（状態不整合防止）
+      try {
+        if (typeof youbiFilterState !== 'undefined') {
+          youbiFilterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
+        }
+        if (typeof youbiFilterColIdx !== 'undefined') youbiFilterColIdx = null;
+
+        if (typeof clearSeiriBangoSelection === 'function') {
+          clearSeiriBangoSelection();
+        } else {
+          selectedSeiriBangoIdx = null;
+          selectedSeiriBangoValue = null;
+        }
+      } catch(e) {}
+
+      const _saved = loadSavedState();
+      if (_saved) applyRestoredState(_saved);
+
+      if (typeof renderTable === 'function') renderTable();
+      if (typeof saveState === 'function') saveState();
+    } catch(e) {
+      console.error('[bukken] loadSheet error:', e);
+      alert('シートの読み込みに失敗しました');
     }
-    headers = raw[headerRowIdx] ? [...raw[headerRowIdx]] : [];
-    originalData = raw.slice(headerRowIdx + 1).map(r => {
-      // Pad to headers length
-      const row = [...r];
-      while (row.length < headers.length) row.push('');
-      return row;
-    });
-    dataArray = [...originalData];
-    sortState = { col: -1, dir: 0 };
-    searchInput.value = '';
-    filteredIndices = null;
-    // 保存済み状態を復元（同じファイル・同じシートの場合のみ）
-    const _saved = loadSavedState();
-    if (_saved) applyRestoredState(_saved);
-    renderTable();
-    saveState();
   }
 
   // ===== Render =====
   function renderTable() {
-    if (headers.length === 0 && dataArray.length === 0) {
-      dataTable.style.display = 'none';
-      emptyMsg.style.display = 'block';
-      statusBar.textContent = '— データなし —';
-      return;
-    }
-    dataTable.style.display = '';
+    try {
+      if (!dataTable || !emptyMsg || !tableBody) {
+        console.warn('[bukken] renderTable: 必要なDOM要素が見つかりません');
+        return;
+      }
+      if (!Array.isArray(headers) || !Array.isArray(dataArray) ||
+          (headers.length === 0 && dataArray.length === 0)) {
+        dataTable.style.display = 'none';
+        emptyMsg.style.display = 'block';
+        if (statusBar) statusBar.textContent = '— データなし —';
+        return;
+      }
+      dataTable.style.display = '';
     emptyMsg.style.display = 'none';
 
     // HEAD
@@ -1222,38 +1444,63 @@
   }
 
   function getDisplayRows() {
-    let indices = filteredIndices !== null
-      ? filteredIndices
-      : dataArray.map((_, i) => i);
+    try {
+      if (!Array.isArray(dataArray)) return [];
 
-    // 曜日フィルターが有効なら選択された値の行だけ表示
-    if (youbiFilterState.colIdx !== null && youbiFilterState.selectedValues.size > 0) {
-      indices = indices.filter(i => {
-        const v = String(dataArray[i][youbiFilterState.colIdx] || '').trim();
-        if (youbiFilterState.filterType === 'prefix') {
-          // プレフィックスマッチ（"N-…" など）
-          for (const sel of youbiFilterState.selectedValues) {
-            if (sel.startsWith('\x00exact:')) {
-              // プレフィックスなし値の完全一致
-              if (v === sel.slice(7)) return true;
-            } else {
-              // プレフィックス前方一致
-              if (v.startsWith(sel)) return true;
+      let indices = Array.isArray(filteredIndices)
+        ? filteredIndices.filter(i => i >= 0 && i < dataArray.length)
+        : dataArray.map((_, i) => i);
+
+      // 曜日フィルターが有効なら選択された値の行だけ表示
+      if (youbiFilterState &&
+          youbiFilterState.colIdx !== null &&
+          youbiFilterState.selectedValues &&
+          youbiFilterState.selectedValues.size > 0) {
+
+        const col = youbiFilterState.colIdx;
+        const filterType = youbiFilterState.filterType || 'exact';
+        const selected = youbiFilterState.selectedValues;
+
+        indices = indices.filter(i => {
+          try {
+            if (i < 0 || i >= dataArray.length || !Array.isArray(dataArray[i])) return false;
+            const v = String(dataArray[i][col] || '').trim();
+            if (filterType === 'prefix') {
+              for (const sel of selected) {
+                if (sel.startsWith('\x00exact:')) {
+                  if (v === sel.slice(7)) return true;
+                } else {
+                  if (v.startsWith(sel)) return true;
+                }
+              }
+              return false;
             }
-          }
-          return false;
-        }
-        return youbiFilterState.selectedValues.has(v);
-      });
+            return selected.has(v);
+          } catch(e) { return false; }
+        });
+      }
+      return indices.map(i => ({ idx: i, row: dataArray[i] }));
+    } catch(e) {
+      console.warn('[bukken] getDisplayRows failed:', e);
+      return [];
     }
-    return indices.map(i => ({ idx: i, row: dataArray[i] }));
   }
 
   function renderBody() {
+    if (!tableBody) {
+      console.warn('[bukken] renderBody: tableBody が見つかりません');
+      return;
+    }
     tableBody.innerHTML = '';
-    const displayRows = getDisplayRows();
+    let displayRows = [];
+    try {
+      displayRows = (typeof getDisplayRows === 'function') ? getDisplayRows() : [];
+    } catch(e) {
+      console.warn('[bukken] getDisplayRows failed in renderBody:', e);
+    }
 
     displayRows.forEach(({ idx, row }, displayPos) => {
+      if (!Array.isArray(row)) return; // skip bad data
       const tr = document.createElement('tr');
       tr.dataset.dataIdx = idx;
       tr.draggable = true;
@@ -1292,10 +1539,15 @@
         } else {
           td.contentEditable = 'true';
           td.textContent = cell;
-          td.addEventListener('input', () => {
-            dataArray[idx][ci] = td.textContent;
+          safeAddListener(td, 'input', () => {
+            try {
+              if (Array.isArray(dataArray[idx])) {
+                dataArray[idx][ci] = td.textContent;
+                if (typeof markDirty === 'function') markDirty();
+              }
+            } catch(e) {}
           });
-          td.addEventListener('keydown', e => {
+          safeAddListener(td, 'keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               td.blur();
@@ -1306,32 +1558,33 @@
         // 整理番号列：クリックで選択
         if (ci === seiriBangoColIdx) {
           td.classList.add('seiri-cell');
-          td.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const n = parseInt(this.textContent.trim(), 10);
-            if (isNaN(n)) return;
-            // 同じセルを再クリックで解除
-            if (selectedSeiriBangoIdx === idx && selectedSeiriBangoValue === n) {
+          safeAddListener(td, 'click', function(e) {
+            try {
+              e.stopPropagation();
+              const n = parseInt(this.textContent.trim(), 10);
+              if (isNaN(n)) return;
+              if (selectedSeiriBangoIdx === idx && selectedSeiriBangoValue === n) {
+                clearSeiriBangoSelection();
+                updateStatus();
+                return;
+              }
               clearSeiriBangoSelection();
+              selectedSeiriBangoIdx   = idx;
+              selectedSeiriBangoValue = n;
+              this.classList.add('selected-seiri');
               updateStatus();
-              return;
-            }
-            clearSeiriBangoSelection();
-            selectedSeiriBangoIdx   = idx;
-            selectedSeiriBangoValue = n;
-            this.classList.add('selected-seiri');
-            updateStatus();
+            } catch(e) {}
           });
         }
         tr.appendChild(td);
       });
 
-      // Drag events
-      tr.addEventListener('dragstart', onDragStart);
-      tr.addEventListener('dragover',  onDragOver);
-      tr.addEventListener('dragleave', onDragLeave);
-      tr.addEventListener('drop',      onDrop);
-      tr.addEventListener('dragend',   onDragEnd);
+      // Drag events (safe attachment)
+      safeAddListener(tr, 'dragstart', onDragStart);
+      safeAddListener(tr, 'dragover',  onDragOver);
+      safeAddListener(tr, 'dragleave', onDragLeave);
+      safeAddListener(tr, 'drop',      onDrop);
+      safeAddListener(tr, 'dragend',   onDragEnd);
 
       tableBody.appendChild(tr);
     });
@@ -1363,16 +1616,21 @@
   }
 
   // ===== 曜日フィルター =====
-  const youbiPopup      = document.getElementById('youbiPopup');
-  const youbiPopupTitle = document.getElementById('youbiPopupTitle');
-  const youbiValueList  = document.getElementById('youbiValueList');
-  const youbiApplyBtn   = document.getElementById('youbiApplyBtn');
-  const youbiSelectAll  = document.getElementById('youbiSelectAll');
-  const youbiSelectNone = document.getElementById('youbiSelectNone');
-  const youbiPopupClose = document.getElementById('youbiPopupClose');
-  const popupSortAsc    = document.getElementById('popupSortAsc');
-  const popupSortDesc   = document.getElementById('popupSortDesc');
-  const popupSortClear  = document.getElementById('popupSortClear');
+  const youbiPopup      = safeEl('youbiPopup')      || document.getElementById('youbiPopup');
+  const youbiPopupTitle = safeEl('youbiPopupTitle') || document.getElementById('youbiPopupTitle');
+  const youbiValueList  = safeEl('youbiValueList')  || document.getElementById('youbiValueList');
+  const youbiApplyBtn   = safeEl('youbiApplyBtn')   || document.getElementById('youbiApplyBtn');
+  const youbiSelectAll  = safeEl('youbiSelectAll')  || document.getElementById('youbiSelectAll');
+  const youbiSelectNone = safeEl('youbiSelectNone') || document.getElementById('youbiSelectNone');
+  const youbiPopupClose = safeEl('youbiPopupClose') || document.getElementById('youbiPopupClose');
+  const popupSortAsc    = safeEl('popupSortAsc')    || document.getElementById('popupSortAsc');
+  const popupSortDesc   = safeEl('popupSortDesc')   || document.getElementById('popupSortDesc');
+  const popupSortClear  = safeEl('popupSortClear')  || document.getElementById('popupSortClear');
+
+  // Youbi popup 関連要素の存在チェック
+  if (!youbiPopup || !youbiApplyBtn) {
+    console.warn('[bukken] 曜日フィルターポップアップの主要要素が見つかりません。');
+  }
 
   function applySortDir(colIdx, dir) {
     sortState = { col: colIdx, dir: dir };
@@ -1411,28 +1669,47 @@
 
   // 保存済みyoubiフィルターを復元（applyRestoredStateより後に実行される）
   if (window._pendingYoubiFilter) {
-    const pf = window._pendingYoubiFilter;
-    youbiFilterState = {
-      colIdx:         pf.colIdx,
-      selectedValues: new Set(pf.selectedValues),
-      filterType:     pf.filterType || 'exact'
-    };
-    youbiFilterColIdx = pf.colIdx;
-    delete window._pendingYoubiFilter;
-    renderTable();
-    updateStatus();
+    try {
+      const pf = window._pendingYoubiFilter;
+      if (pf && typeof pf.colIdx === 'number') {
+        const vals = Array.isArray(pf.selectedValues) ? pf.selectedValues : [];
+        youbiFilterState = {
+          colIdx:         pf.colIdx,
+          selectedValues: new Set(vals),
+          filterType:     pf.filterType || 'exact'
+        };
+        youbiFilterColIdx = pf.colIdx;
+      }
+    } catch(e) {
+      console.warn('[bukken] pending youbi filter restore failed:', e);
+    } finally {
+      delete window._pendingYoubiFilter;
+      if (typeof renderTable === 'function') renderTable();
+      if (typeof updateStatus === 'function') updateStatus();
+    }
   }
 
   // 値からプレフィックスを抽出する（例: "N-1" → "N-", "K-30" → "K-"）
   // プレフィックスとみなす条件: "文字列-" の形で、残りに数字が続く
   function extractPrefix(v) {
-    const m = v.match(/^([^\d\s\-]{1,10}[-－ー])(\d)/);
-    return m ? m[1] : null;
+    try {
+      if (typeof v !== 'string' || !v) return null;
+      const m = v.match(/^([^\d\s\-]{1,10}[-－ー])(\d)/);
+      return m ? m[1] : null;
+    } catch(e) {
+      return null;
+    }
   }
 
   function showYoubiFilterPopup(colIdx, thEl) {
-    youbiPopupTitle.textContent = headers[colIdx] || `列${colIdx+1}`;
-    youbiApplyBtn.dataset.colIdx = colIdx;
+    if (!youbiPopup || !youbiPopupTitle || !youbiApplyBtn || !youbiValueList) {
+      console.warn('[bukken] youbi popup 要素が不足しています');
+      return;
+    }
+    try {
+      youbiPopupTitle.textContent = headers[colIdx] || `列${colIdx+1}`;
+      youbiApplyBtn.dataset.colIdx = colIdx;
+    } catch(e) {}
 
     // この列のユニーク値と件数を集計
     const valCount = new Map();
@@ -1583,81 +1860,108 @@
 
   // 他の場所クリックでポップアップを閉じる
   document.addEventListener('click', function(e) {
-    if (youbiPopup.style.display === 'none') return;
-    if (!youbiPopup.contains(e.target) && !e.target.closest('th[data-col]')) {
-      youbiPopup.style.display = 'none';
-    }
+    try {
+      if (!youbiPopup || youbiPopup.style.display === 'none') return;
+      if (!youbiPopup.contains(e.target) && !e.target.closest('th[data-col]')) {
+        youbiPopup.style.display = 'none';
+      }
+    } catch(e) {}
   });
 
   // ===== 自然順比較（N-1, N-2, ..., N-10 を正しく並べる）=====
   // 文字列を「テキスト部」と「数字部」に分割して比較する
   function naturalCompare(a, b) {
-    const re = /(\d+)/g;
-    const splitNatural = s => {
-      const parts = [];
-      let last = 0, m;
-      re.lastIndex = 0;
-      while ((m = re.exec(s)) !== null) {
-        if (m.index > last) parts.push({ type: 'text', val: s.slice(last, m.index) });
-        parts.push({ type: 'num', val: parseInt(m[0], 10) });
-        last = m.index + m[0].length;
+    try {
+      const sa = String(a ?? '');
+      const sb = String(b ?? '');
+      const re = /(\d+)/g;
+
+      const splitNatural = (s) => {
+        const parts = [];
+        let last = 0, m;
+        re.lastIndex = 0;
+        while ((m = re.exec(s)) !== null) {
+          if (m.index > last) parts.push({ type: 'text', val: s.slice(last, m.index) });
+          parts.push({ type: 'num', val: parseInt(m[0], 10) || 0 });
+          last = m.index + m[0].length;
+        }
+        if (last < s.length) parts.push({ type: 'text', val: s.slice(last) });
+        return parts;
+      };
+
+      const pa = splitNatural(sa);
+      const pb = splitNatural(sb);
+      const len = Math.max(pa.length, pb.length);
+
+      for (let i = 0; i < len; i++) {
+        const xa = pa[i], xb = pb[i];
+        if (!xa) return -1;
+        if (!xb) return 1;
+        if (xa.type === 'num' && xb.type === 'num') {
+          if (xa.val !== xb.val) return xa.val - xb.val;
+        } else {
+          const cmp = String(xa.val ?? '').localeCompare(String(xb.val ?? ''), 'ja');
+          if (cmp !== 0) return cmp;
+        }
       }
-      if (last < s.length) parts.push({ type: 'text', val: s.slice(last) });
-      return parts;
-    };
-    const pa = splitNatural(a);
-    const pb = splitNatural(b);
-    const len = Math.max(pa.length, pb.length);
-    for (let i = 0; i < len; i++) {
-      const xa = pa[i], xb = pb[i];
-      if (!xa) return -1;
-      if (!xb) return 1;
-      if (xa.type === 'num' && xb.type === 'num') {
-        if (xa.val !== xb.val) return xa.val - xb.val;
-      } else {
-        const cmp = String(xa.val).localeCompare(String(xb.val), 'ja');
-        if (cmp !== 0) return cmp;
-      }
+      return 0;
+    } catch (e) {
+      // フォールバック：単純比較
+      return String(a ?? '').localeCompare(String(b ?? ''), 'ja');
     }
-    return 0;
   }
 
   // ===== Sort =====
   function handleSort(colIdx) {
-    if (sortState.col === colIdx) {
-      sortState.dir = (sortState.dir === 1) ? -1 : (sortState.dir === -1) ? 0 : 1;
-    } else {
-      sortState.col = colIdx;
-      sortState.dir = 1;
+    try {
+      if (!Array.isArray(dataArray) || !Array.isArray(originalData)) {
+        console.warn('[bukken] handleSort: dataArray/originalData が不正です');
+        return;
+      }
+      if (colIdx < 0 || colIdx >= (headers.length || 0)) {
+        console.warn('[bukken] handleSort: 無効な colIdx');
+        return;
+      }
+
+      if (sortState.col === colIdx) {
+        sortState.dir = (sortState.dir === 1) ? -1 : (sortState.dir === -1) ? 0 : 1;
+      } else {
+        sortState.col = colIdx;
+        sortState.dir = 1;
+      }
+
+      if (sortState.dir === 0) {
+        sortState.col = -1;
+        dataArray = [...originalData];
+      } else {
+        dataArray.sort((a, b) => {
+          try {
+            if (!Array.isArray(a) || !Array.isArray(b)) return 0;
+            const va = String(a[colIdx] || '').trim();
+            const vb = String(b[colIdx] || '').trim();
+
+            if (va === '' && vb === '') return 0;
+            if (va === '') return 1;
+            if (vb === '') return -1;
+
+            return sortState.dir * naturalCompare(va, vb);
+          } catch(e) { return 0; }
+        });
+      }
+
+      // Rebuild filteredIndices after sort
+      const q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
+      if (q) {
+        applyFilter(q, false);
+      } else {
+        filteredIndices = null;
+      }
+
+      if (typeof renderTable === 'function') renderTable();
+      if (typeof saveState === 'function') saveState();
+    } catch(e) {
+      console.warn('[bukken] handleSort failed:', e);
     }
-
-    if (sortState.dir === 0) {
-      sortState.col = -1;  // 矢印表示をリセット
-      dataArray = [...originalData];
-    } else {
-      dataArray.sort((a, b) => {
-        const va = String(a[colIdx] || '').trim();
-        const vb = String(b[colIdx] || '').trim();
-
-        // 空白セルは昇順・降順に関わらず常に一番下へ
-        if (va === '' && vb === '') return 0;
-        if (va === '') return 1;
-        if (vb === '') return -1;
-
-        return sortState.dir * naturalCompare(va, vb);
-      });
-    }
-
-    // Rebuild filteredIndices after sort
-    const q = searchInput.value.trim().toLowerCase();
-    if (q) {
-      applyFilter(q, false);
-    } else {
-      filteredIndices = null;
-    }
-
-    renderTable();
-    saveState();
   }
 
   // ===== Search / Filter =====
@@ -1668,17 +1972,25 @@
   });
 
   function applyFilter(q, doRender) {
-    if (!q) {
+    try {
+      if (!q || !Array.isArray(dataArray)) {
+        filteredIndices = null;
+      } else {
+        const lowerQ = q.toLowerCase();
+        filteredIndices = dataArray.reduce((acc, row, i) => {
+          if (Array.isArray(row) && row.some(cell => String(cell || '').toLowerCase().includes(lowerQ))) {
+            acc.push(i);
+          }
+          return acc;
+        }, []);
+      }
+      if (doRender) {
+        if (typeof renderBody === 'function') renderBody();
+        if (typeof updateStatus === 'function') updateStatus();
+      }
+    } catch(e) {
+      console.warn('[bukken] applyFilter failed:', e);
       filteredIndices = null;
-    } else {
-      filteredIndices = dataArray.reduce((acc, row, i) => {
-        if (row.some(cell => cell.toLowerCase().includes(q))) acc.push(i);
-        return acc;
-      }, []);
-    }
-    if (doRender) {
-      renderBody();
-      updateStatus();
     }
   }
 
@@ -1689,13 +2001,18 @@
       e.preventDefault();
       return;
     }
+    const idx = parseInt(this && this.dataset ? this.dataset.dataIdx : '', 10);
+    if (isNaN(idx) || idx < 0 || idx >= dataArray.length) {
+      e.preventDefault();
+      return;
+    }
     // Check if drag started on the handle or body (not on input)
     dragSrcRowEl = this;
-    dragSrcIndex = parseInt(this.dataset.dataIdx, 10);
+    dragSrcIndex = idx;
     this.classList.add('dragging');
     document.body.classList.add('is-dragging');
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', dragSrcIndex);
+    try { e.dataTransfer.setData('text/plain', String(dragSrcIndex)); } catch(e) {}
   }
 
   function onDragOver(e) {
@@ -1714,40 +2031,60 @@
   }
 
   function onDragLeave(e) {
-    this.classList.remove('drag-over-top', 'drag-over-bottom');
+    try { this.classList.remove('drag-over-top', 'drag-over-bottom'); } catch(e) {}
   }
 
   function onDrop(e) {
     e.preventDefault();
-    if (!dragSrcRowEl || this === dragSrcRowEl) return;
-    clearDragClasses();
+    try {
+      if (!dragSrcRowEl || this === dragSrcRowEl) return;
+      clearDragClasses();
 
-    const targetIdx = parseInt(this.dataset.dataIdx, 10);
-    const rect = this.getBoundingClientRect();
-    const mid = rect.top + rect.height / 2;
-    const insertAfter = e.clientY >= mid;
+      const targetIdx = parseInt(this && this.dataset ? this.dataset.dataIdx : '', 10);
+      if (isNaN(dragSrcIndex) || isNaN(targetIdx) ||
+          dragSrcIndex < 0 || dragSrcIndex >= dataArray.length ||
+          targetIdx < 0 || targetIdx >= dataArray.length) {
+        return;
+      }
 
-    // Move in dataArray
-    const srcRow = dataArray.splice(dragSrcIndex, 1)[0];
+      const rect = this.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      const insertAfter = e.clientY >= mid;
 
-    // Recalculate target position
-    let newTargetIdx = targetIdx;
-    if (dragSrcIndex < targetIdx) newTargetIdx--;
-    const insertAt = insertAfter ? newTargetIdx + 1 : newTargetIdx;
-    dataArray.splice(Math.max(0, insertAt), 0, srcRow);
+      // Move in dataArray
+      const srcRow = dataArray.splice(dragSrcIndex, 1)[0];
 
-    // Also update originalData to reflect user reorder
-    originalData = [...dataArray];
-    sortState = { col: -1, dir: 0 };
+      // Recalculate target position
+      let newTargetIdx = targetIdx;
+      if (dragSrcIndex < targetIdx) newTargetIdx--;
+      const insertAt = insertAfter ? newTargetIdx + 1 : newTargetIdx;
+      dataArray.splice(Math.max(0, Math.min(insertAt, dataArray.length)), 0, srcRow);
 
-    renderBody();
-    updateStatus();
+      // Also update originalData to reflect user reorder
+      originalData = [...dataArray];
+      sortState = { col: -1, dir: 0 };
+
+      // Re-apply current filter if active
+      const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      if (q) {
+        applyFilter(q, false);
+      } else {
+        filteredIndices = null;
+      }
+
+      renderBody();
+      updateStatus();
+    } catch (err) {
+      console.warn('[bukken] onDrop failed:', err);
+    }
   }
 
   function onDragEnd(e) {
-    clearDragClasses();
-    if (dragSrcRowEl) dragSrcRowEl.classList.remove('dragging');
-    document.body.classList.remove('is-dragging');
+    try {
+      clearDragClasses();
+      if (dragSrcRowEl) dragSrcRowEl.classList.remove('dragging');
+      document.body.classList.remove('is-dragging');
+    } catch(e) {}
     dragSrcRowEl = null;
     dragSrcIndex = null;
   }
@@ -1760,45 +2097,60 @@
 
   // ===== Row number move =====
   function handleRowNumMove(tr, targetIdx) {
-    if (filteredIndices !== null) {
-      showWarn('フィルタ中は番号移動できません。検索をクリアしてください。');
-      return;
-    }
-    const srcIdx = parseInt(tr.dataset.dataIdx, 10);
-    if (isNaN(targetIdx) || targetIdx < 0 || targetIdx >= dataArray.length) {
-      showWarn('有効な行番号を入力してください（1〜' + dataArray.length + '）');
-      return;
-    }
-    if (srcIdx === targetIdx) return;
+    try {
+      if (filteredIndices !== null) {
+        showWarn('フィルタ中は番号移動できません。検索をクリアしてください。');
+        return;
+      }
+      const srcIdx = parseInt(tr && tr.dataset ? tr.dataset.dataIdx : '', 10);
+      const len = dataArray.length;
+      if (isNaN(srcIdx) || isNaN(targetIdx) || targetIdx < 0 || targetIdx >= len) {
+        showWarn('有効な行番号を入力してください（1〜' + len + '）');
+        return;
+      }
+      if (srcIdx === targetIdx) return;
 
-    const row = dataArray.splice(srcIdx, 1)[0];
-    let dest = targetIdx;
-    if (srcIdx < targetIdx) dest--;
-    dataArray.splice(dest, 0, row);
-    originalData = [...dataArray];
-    sortState = { col: -1, dir: 0 };
+      const row = dataArray.splice(srcIdx, 1)[0];
+      let dest = targetIdx;
+      if (srcIdx < targetIdx) dest--;
+      dataArray.splice(Math.max(0, Math.min(dest, dataArray.length)), 0, row);
+      originalData = [...dataArray];
+      sortState = { col: -1, dir: 0 };
 
-    renderBody();
-    updateStatus();
+      if (typeof renderBody === 'function') renderBody();
+      if (typeof updateStatus === 'function') updateStatus();
+    } catch(e) {
+      console.warn('[bukken] handleRowNumMove failed:', e);
+    }
   }
 
   // ===== Add Row =====
   btnAddRow.addEventListener('click', function() {
-    if (!workbook && headers.length === 0) return;
-    const empty = new Array(Math.max(headers.length, 1)).fill('');
-    dataArray.push(empty);
-    originalData.push(empty);
+    try {
+      if (!workbook && headers.length === 0) return;
+      const empty = new Array(Math.max(headers.length || 1, 1)).fill('');
+      dataArray.push(empty);
+      originalData.push(empty);
 
-    // Re-apply filter if active
-    const q = searchInput.value.trim().toLowerCase();
-    if (q) applyFilter(q, false);
+      // Re-apply filter if active
+      const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      if (q) {
+        applyFilter(q, false);
+      } else {
+        filteredIndices = null;
+      }
 
-    renderBody();
-    updateStatus();
+      if (typeof renderBody === 'function') renderBody();
+      if (typeof updateStatus === 'function') updateStatus();
 
-    // Scroll to bottom
-    const wrapper = document.getElementById('tableWrapper');
-    wrapper.scrollTop = wrapper.scrollHeight;
+      // Scroll to bottom
+      const wrapper = safeEl('tableWrapper') || document.getElementById('tableWrapper');
+      if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+
+      if (typeof markDirty === 'function') markDirty();
+    } catch(e) {
+      console.warn('[bukken] add row failed:', e);
+    }
   });
 
   // ===== 整理番号 チェック（重複 + 欠番） =====
@@ -1809,22 +2161,33 @@
   // 欠番リストを返す（例: [196, 203, ...]）
   // rowIndices: 対象行インデックスの配列（省略時は全行）
   function findSeiriBangoGaps(colIdx, rowIndices) {
-    const rows = rowIndices ? rowIndices.map(i => dataArray[i]) : dataArray;
-    const nums = [];
-    rows.forEach(row => {
-      const v = String(row[colIdx] || '').trim();
-      const n = parseInt(v, 10);
-      if (!isNaN(n) && v !== '') nums.push(n);
-    });
-    if (nums.length === 0) return [];
-    const numSet = new Set(nums);
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    const gaps = [];
-    for (let i = min; i <= max; i++) {
-      if (!numSet.has(i)) gaps.push(i);
+    try {
+      if (colIdx < 0 || !Array.isArray(dataArray)) return [];
+      const rows = rowIndices && Array.isArray(rowIndices)
+        ? rowIndices.map(i => (i >= 0 && i < dataArray.length ? dataArray[i] : null)).filter(Boolean)
+        : dataArray;
+
+      const nums = [];
+      rows.forEach(row => {
+        if (!Array.isArray(row)) return;
+        const v = String(row[colIdx] || '').trim();
+        const n = parseInt(v, 10);
+        if (!isNaN(n) && v !== '') nums.push(n);
+      });
+      if (nums.length === 0) return [];
+
+      const numSet = new Set(nums);
+      const min = Math.min(...nums);
+      const max = Math.max(...nums);
+      const gaps = [];
+      for (let i = min; i <= max; i++) {
+        if (!numSet.has(i)) gaps.push(i);
+      }
+      return gaps;
+    } catch (e) {
+      console.warn('[bukken] findSeiriBangoGaps failed:', e);
+      return [];
     }
-    return gaps;
   }
 
   // 曜日フィルターのラベル文字列を返す（例: "N-"）
@@ -1838,20 +2201,31 @@
 
   // autoSaveAfter: true = 確認後に保存まで進む, false = チェックのみ
   function checkSeiriBango(autoSaveAfter) {
-    const colIdx = getSeiriBangoColIdx();
-    if (colIdx === -1) {
-      if (autoSaveAfter) doSave();
-      else showToast('⚠️ 整理番号 列が見つかりません');
-      return;
-    }
+    try {
+      const colIdx = getSeiriBangoColIdx();
+      if (colIdx === -1) {
+        if (autoSaveAfter) doSave();
+        else showToast('⚠️ 整理番号 列が見つかりません');
+        return;
+      }
+      if (!Array.isArray(dataArray) || dataArray.length === 0) {
+        if (autoSaveAfter) doSave();
+        else showToast('データがありません');
+        return;
+      }
 
     const nameColIdx = headers.indexOf('物件名') !== -1 ? headers.indexOf('物件名') :
                        headers.indexOf('名称')   !== -1 ? headers.indexOf('名称')   : -1;
 
     // 曜日フィルター中なら表示行のみ対象、それ以外は全行
-    const isFiltered = youbiFilterState.colIdx !== null && youbiFilterState.selectedValues.size > 0;
-    const visibleIndices = isFiltered ? getDisplayRows().map(({idx}) => idx) : null;
-    const targetIndices = visibleIndices !== null ? visibleIndices : dataArray.map((_,i) => i);
+    const isFiltered = youbiFilterState && youbiFilterState.colIdx !== null && youbiFilterState.selectedValues && youbiFilterState.selectedValues.size > 0;
+    let visibleIndices = null;
+    try {
+      if (isFiltered && typeof getDisplayRows === 'function') {
+        visibleIndices = getDisplayRows().map(({idx}) => idx).filter(i => i >= 0 && i < dataArray.length);
+      }
+    } catch(e) {}
+    const targetIndices = (visibleIndices && visibleIndices.length > 0) ? visibleIndices : dataArray.map((_,i) => i);
 
     // フィルター中の注記HTML
     const filterNote = isFiltered
@@ -1868,9 +2242,12 @@
       // 対象行を収集（フィルター中なら表示行のみ、選択値以上）
       const affected = [];
       targetIndices.forEach(i => {
-        const v = String(dataArray[i][colIdx] || '').trim();
-        const n = parseInt(v, 10);
-        if (!isNaN(n) && n >= firstNum) affected.push({ idx: i, oldNum: n });
+        try {
+          if (i < 0 || i >= dataArray.length || !Array.isArray(dataArray[i])) return;
+          const v = String(dataArray[i][colIdx] || '').trim();
+          const n = parseInt(v, 10);
+          if (!isNaN(n) && n >= firstNum) affected.push({ idx: i, oldNum: n });
+        } catch(e) {}
       });
       affected.sort((a, b) => a.oldNum !== b.oldNum ? a.oldNum - b.oldNum : a.idx - b.idx);
 
@@ -1925,9 +2302,12 @@
     // 重複検出（フィルター中なら表示行のみ）
     const countMap = new Map();
     targetIndices.forEach(i => {
-      const v = String(dataArray[i][colIdx] || '').trim();
-      const n = parseInt(v, 10);
-      if (!isNaN(n) && v !== '') countMap.set(n, (countMap.get(n) || 0) + 1);
+      try {
+        if (i < 0 || i >= dataArray.length || !Array.isArray(dataArray[i])) return;
+        const v = String(dataArray[i][colIdx] || '').trim();
+        const n = parseInt(v, 10);
+        if (!isNaN(n) && v !== '') countMap.set(n, (countMap.get(n) || 0) + 1);
+      } catch(e) {}
     });
     let firstDup = null;
     countMap.forEach((cnt, n) => {
@@ -2074,8 +2454,9 @@
 
   // 重複確認パネル：閉じる（下ボタン・右上×ボタン共通）
   function closeCheckPanel() { dupPanel.style.display = 'none'; }
-  dupCancel.addEventListener('click', closeCheckPanel);
-  document.getElementById('panelCloseX').addEventListener('click', closeCheckPanel);
+  if (dupCancel) dupCancel.addEventListener('click', closeCheckPanel);
+  const panelCloseX = safeEl('panelCloseX') || document.getElementById('panelCloseX');
+  if (panelCloseX) panelCloseX.addEventListener('click', closeCheckPanel);
 
   // ===== 番号チェックボタン =====
   btnCheckBango.addEventListener('click', function() {
@@ -2085,9 +2466,9 @@
   });
 
   // ===== Save Excel =====
-  const saveDialog   = document.getElementById('saveDialog');
-  const sdlgFilename = document.getElementById('saveDialogFilename');
-  const sdlgNewName  = document.getElementById('sdlgNewName');
+  const saveDialog   = safeEl('saveDialog')   || document.getElementById('saveDialog');
+  const sdlgFilename = safeEl('saveDialogFilename') || document.getElementById('saveDialogFilename');
+  const sdlgNewName  = safeEl('sdlgNewName')  || document.getElementById('sdlgNewName');
 
   function getTimestamp() {
     const d = new Date(), p = n => String(n).padStart(2,'0');
@@ -2104,19 +2485,23 @@
     saveDialog.classList.add('active');
   });
 
-  document.getElementById('sdlgOverwrite').addEventListener('click', () => {
-    saveDialog.classList.remove('active');
+  const sdlgOverwrite = safeEl('sdlgOverwrite') || document.getElementById('sdlgOverwrite');
+  const sdlgSaveAs    = safeEl('sdlgSaveAs')    || document.getElementById('sdlgSaveAs');
+  const sdlgCancel    = safeEl('sdlgCancel')    || document.getElementById('sdlgCancel');
+
+  if (sdlgOverwrite) sdlgOverwrite.addEventListener('click', () => {
+    if (saveDialog) saveDialog.classList.remove('active');
     const fn = currentFilename || '物件表.xlsx';
     doSaveWithName(fn);
   });
-  document.getElementById('sdlgSaveAs').addEventListener('click', () => {
-    saveDialog.classList.remove('active');
+  if (sdlgSaveAs) sdlgSaveAs.addEventListener('click', () => {
+    if (saveDialog) saveDialog.classList.remove('active');
     const fn = currentFilename || '物件表.xlsx';
     const tsName = fn.replace(/\.xlsx$/i,'') + '_' + getTimestamp() + '.xlsx';
     doSaveWithName(tsName);
   });
-  document.getElementById('sdlgCancel').addEventListener('click', () => {
-    saveDialog.classList.remove('active');
+  if (sdlgCancel) sdlgCancel.addEventListener('click', () => {
+    if (saveDialog) saveDialog.classList.remove('active');
   });
 
   function doSave() { doSaveWithName(); }  // 後方互換
@@ -2132,15 +2517,25 @@
     saveCurrentSheetEdits();
 
     try {
+      if (!workbook || !workbook.SheetNames) {
+        alert('保存できません（ワークブックが読み込まれていません）');
+        return;
+      }
       const newWB = XLSX.utils.book_new();
       workbook.SheetNames.forEach(name => {
-        let sheetData = allSheetsData[name];
-        if (!sheetData) {
-          XLSX.utils.book_append_sheet(newWB, workbook.Sheets[name], name);
-          return;
+        try {
+          let sheetData = allSheetsData[name];
+          if (!sheetData || !Array.isArray(sheetData)) {
+            if (workbook.Sheets[name]) {
+              XLSX.utils.book_append_sheet(newWB, workbook.Sheets[name], name);
+            }
+            return;
+          }
+          const ws = XLSX.utils.aoa_to_sheet(sheetData);
+          XLSX.utils.book_append_sheet(newWB, ws, name);
+        } catch(e) {
+          console.warn('[bukken save] sheet "' + name + '" の処理に失敗:', e);
         }
-        const ws = XLSX.utils.aoa_to_sheet(sheetData);
-        XLSX.utils.book_append_sheet(newWB, ws, name);
       });
 
       const buf = XLSX.write(newWB, { bookType: 'xlsx', type: 'array' });
@@ -2160,7 +2555,11 @@
         });
       } else {
         XLSX.writeFile(newWB, fname);
-        showToast('💾 ダウンロードしました：' + fname + '\n（Downloadsフォルダを確認してください）');
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const msg = isIOS
+          ? '💾 ダウンロードしました：' + fname + '\n「ファイル」アプリの「ダウンロード」フォルダを確認してください'
+          : '💾 ダウンロードしました：' + fname + '\n（Downloadsフォルダを確認してください）';
+        showToast(msg);
         updateStatus('保存済み: ' + fname);
       }
     } catch(err) {
@@ -2170,6 +2569,37 @@
 
   // ===== Initial state =====
   sheetSelector.innerHTML = '<option value="">— シート未選択 —</option>';
+
+  // ===== ページ離脱時の未保存警告（堅牢化） =====
+  let hasUnsavedChanges = false;
+  function markDirty() { hasUnsavedChanges = true; }
+  function clearDirty() { hasUnsavedChanges = false; }
+
+  // 主要な編集操作でdirtyフラグを立てる（簡易版）
+  const origSaveCurrent = saveCurrentSheetEdits;
+  saveCurrentSheetEdits = function() {
+    if (typeof origSaveCurrent === 'function') origSaveCurrent.apply(this, arguments);
+    // 編集があった可能性が高いのでマーク
+    if (workbook) hasUnsavedChanges = true;
+  };
+
+  window.addEventListener('beforeunload', function(e) {
+    if (workbook && hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '変更が保存されていません。ページを離れますか？';
+      return e.returnValue;
+    }
+  });
+
+  // 保存成功時にdirtyフラグをクリア
+  const origDoSaveWithName = doSaveWithName;
+  if (typeof doSaveWithName === 'function') {
+    doSaveWithName = function() {
+      const result = origDoSaveWithName.apply(this, arguments);
+      clearDirty();
+      return result;
+    };
+  }
 
   // ===== 履歴機能用：内部変数・関数を公開 =====
   window._bukkenCtx = {
@@ -2201,35 +2631,50 @@
   const RESUME_KEY = 'ueno_seisou_resume_v1';
   const PAGE = 'index_2-3_bukken.html';
   let timer = null;
+
+  function getTableWrapperSafe() {
+    return document.getElementById('tableWrapper') || null;
+  }
+
   function saveResume(){
     try {
-      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, tableTop: document.getElementById('tableWrapper')?.scrollTop || 0, updatedAt: Date.now()}));
+      const w = getTableWrapperSafe();
+      localStorage.setItem(RESUME_KEY, JSON.stringify({
+        page: PAGE,
+        scrollY: window.scrollY || 0,
+        tableTop: w ? w.scrollTop || 0 : 0,
+        updatedAt: Date.now()
+      }));
     } catch(e) {}
   }
+
   window.addEventListener('load', () => {
     try {
       const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
-      if(r && r.page === PAGE) setTimeout(() => {
+      if (r && r.page === PAGE) setTimeout(() => {
         window.scrollTo(0, r.scrollY || 0);
-        const w = document.getElementById('tableWrapper');
-        if(w && typeof r.tableTop === 'number') w.scrollTop = r.tableTop;
+        const w = getTableWrapperSafe();
+        if (w && typeof r.tableTop === 'number') w.scrollTop = r.tableTop;
       }, 250);
     } catch(e) {}
     saveResume();
   });
+
   window.addEventListener('scroll', () => {
     clearTimeout(timer);
     timer = setTimeout(saveResume, 250);
   }, {passive:true});
-  const wrapper = document.getElementById('tableWrapper');
-  if(wrapper) wrapper.addEventListener('scroll', () => {
+
+  const wrapper = getTableWrapperSafe();
+  if (wrapper) wrapper.addEventListener('scroll', () => {
     clearTimeout(timer);
     timer = setTimeout(saveResume, 250);
   }, {passive:true});
+
   window.addEventListener('pagehide', saveResume);
 })();
 </script>
-<script src="app-tabs.js?v=20260518shadowlabel"></script>
+<!-- app-tabs.js は存在しないため削除（ueno-tabbar.js がグローバルタブバーを提供） -->
 <script>
 // ===== ツールバー折りたたみ =====
 (function() {
@@ -2238,17 +2683,33 @@
   const wrapper   = document.getElementById('tableWrapper');
   const header    = document.getElementById('app-header');
 
+  if (!toolbar || !toggleBtn || !wrapper) {
+    console.warn('[bukken] ツールバー折りたたみ初期化をスキップ（必須要素が見つかりません）');
+    return;
+  }
+
+  // さらに安全に参照をラップ（後続コード用）
+  const safeToolbar = toolbar;
+  const safeToggle  = toggleBtn;
+  const safeWrapper = wrapper;
+
   function adjustTableHeight() {
-    const tbH = toolbar.offsetHeight;
-    const hdH = header ? header.offsetHeight : 40;
-    wrapper.style.maxHeight = 'calc(100vh - ' + (hdH + tbH + 8) + 'px)';
+    try {
+      if (!safeToolbar || !safeWrapper) return;
+      const tbH = safeToolbar.offsetHeight || 0;
+      const hdH = header ? (header.offsetHeight || 40) : 40;
+      safeWrapper.style.maxHeight = 'calc(100vh - ' + (hdH + tbH + 8) + 'px)';
+    } catch(e) {}
   }
 
   window.toggleToolbar = function() {
-    const collapsed = toolbar.classList.toggle('collapsed');
-    toggleBtn.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
-    setTimeout(adjustTableHeight, 230);
-    try { localStorage.setItem('toolbar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+    try {
+      if (!safeToolbar || !safeToggle) return;
+      const collapsed = safeToolbar.classList.toggle('collapsed');
+      safeToggle.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
+      setTimeout(adjustTableHeight, 230);
+      localStorage.setItem('toolbar_collapsed', collapsed ? '1' : '0');
+    } catch(e) {}
   };
 
   // 初期化：前回の状態を復元
@@ -2262,7 +2723,7 @@
   // リサイズ時も高さを再計算
   window.addEventListener('resize', adjustTableHeight);
   // DOMが安定してから計算
-  setTimeout(adjustTableHeight, 100);
+  setTimeout(adjustTableHeight, 120);
 })();
 </script>
 
@@ -2282,6 +2743,14 @@
 (function() {
   const HIST_KEY = 'bukken_history';
   const MAX_HIST = 30;
+
+  // ローカル版 safeEl（このIIFEは独立スコープのため）
+  function safeElLocal(id) {
+    try {
+      const el = document.getElementById(id);
+      return el || null;
+    } catch(e) { return null; }
+  }
 
   function ctx() {
     if (!window._bukkenCtx) console.warn('[bukken hist] _bukkenCtx is not yet set');
@@ -2341,7 +2810,7 @@
 
   function renderHist() {
     const items = getHist();
-    const el = document.getElementById('hist-list');
+    const el = safeElLocal('hist-list');
     if (!el) return;
     if (items.length === 0) {
       el.innerHTML = '<div id="hist-empty">保存した履歴はありません<br><small>「今の状態を保存」で現在の<br>フィルター・ソートを記録できます</small></div>';
@@ -2363,10 +2832,12 @@
     const item = snapshot();
     // ファイル名が取れなかった場合はセレクタから補完
     if (item && !item.filename) {
-      const sel = document.getElementById('gitFileSelector');
+      const sel = safeElLocal('gitFileSelector');
       if (sel && sel.value && sel.value !== '__local__' && sel.value !== '') {
-        item.filename = decodeURIComponent(sel.value);
-        item.sheetName = item.sheetName || '';
+        try {
+          item.filename = decodeURIComponent(sel.value);
+          item.sheetName = item.sheetName || '';
+        } catch(e) {}
       }
     }
     if (!item || !item.filename) { alert('先にファイルを読み込んでください。'); return; }
@@ -2375,10 +2846,17 @@
     if (h.length > MAX_HIST) h.length = MAX_HIST;
     setHist(h);
     renderHist();
-    const btn = document.getElementById('hist-save-btn');
-    btn.textContent = '✅ 保存しました';
-    btn.classList.add('saved');
-    setTimeout(() => { btn.textContent = '💾 今の状態を保存'; btn.classList.remove('saved'); }, 1800);
+    const btn = safeElLocal('hist-save-btn');
+    if (btn) {
+      btn.textContent = '✅ 保存しました';
+      btn.classList.add('saved');
+      setTimeout(() => {
+        if (btn) {
+          btn.textContent = '💾 今の状態を保存';
+          btn.classList.remove('saved');
+        }
+      }, 1800);
+    }
   };
 
   window.deleteHist = function(id) {
@@ -2387,70 +2865,92 @@
   };
 
   window.restoreHist = function(id) {
-    const item = getHist().find(x => x.id === id);
-    if (!item) return;
-    closeHistPanel();
+    try {
+      const item = getHist().find(x => x.id === id);
+      if (!item) return;
+      closeHistPanel();
 
-    function applyState() {
-      const c = ctx(); if (!c) return;
-      // ソート
-      if (item.sortState && item.sortState.col >= 0) {
-        c.setSortState({ ...item.sortState });
-        const ci = item.sortState.col, dir = item.sortState.dir;
-        if (dir !== 0) {
-          c.getDataArray().sort((a, b) => {
-            const va = String(a[ci]||'').trim(), vb = String(b[ci]||'').trim();
-            if (va===vb) return 0; if (va==='') return 1; if (vb==='') return -1;
-            const na=parseFloat(va), nb=parseFloat(vb);
-            if (!isNaN(na)&&!isNaN(nb)) return dir*(na-nb);
-            return dir * c.naturalCompare(va, vb);
-          });
+      function applyState() {
+        const c = ctx(); if (!c) return;
+        try {
+          // ソート
+          if (item.sortState && item.sortState.col >= 0) {
+            c.setSortState({ ...item.sortState });
+            const ci = item.sortState.col, dir = item.sortState.dir;
+            if (dir !== 0) {
+              const arr = c.getDataArray();
+              if (Array.isArray(arr)) {
+                arr.sort((a, b) => {
+                  const va = String(a[ci]||'').trim(), vb = String(b[ci]||'').trim();
+                  if (va===vb) return 0; if (va==='') return 1; if (vb==='') return -1;
+                  const na=parseFloat(va), nb=parseFloat(vb);
+                  if (!isNaN(na)&&!isNaN(nb)) return dir*(na-nb);
+                  return dir * (c.naturalCompare ? c.naturalCompare(va, vb) : (va > vb ? 1 : -1));
+                });
+              }
+            }
+          }
+          // 検索
+          c.setSearchQuery(item.searchQuery || '');
+          c.applyFilter(item.searchQuery || '', false);
+          // youbiフィルター
+          if (item.youbiFilter && item.youbiFilter.colIdx !== null) {
+            c.setYoubiFilter({
+              colIdx:         item.youbiFilter.colIdx,
+              selectedValues: new Set(item.youbiFilter.selectedValues),
+              filterType:     item.youbiFilter.filterType || 'exact'
+            });
+          } else {
+            c.setYoubiFilter({ colIdx: null, selectedValues: new Set(), filterType: 'exact' });
+          }
+          if (typeof c.renderTable === 'function') c.renderTable();
+          if (typeof c.updateStatus === 'function') c.updateStatus();
+        } catch(e) {
+          console.warn('[bukken hist] applyState failed:', e);
+          alert('履歴の復元中にエラーが発生しました');
         }
       }
-      // 検索
-      c.setSearchQuery(item.searchQuery || '');
-      c.applyFilter(item.searchQuery || '', false);
-      // youbiフィルター
-      if (item.youbiFilter && item.youbiFilter.colIdx !== null) {
-        c.setYoubiFilter({
-          colIdx:         item.youbiFilter.colIdx,
-          selectedValues: new Set(item.youbiFilter.selectedValues),
-          filterType:     item.youbiFilter.filterType || 'exact'
-        });
+
+      const currentFile = ctx() ? ctx().getFilename() : '';
+      if (item.filename && item.filename !== currentFile) {
+        window._histPendingRestore = { applyFn: applyState, filename: item.filename };
+        const sel = safeElLocal('gitFileSelector');
+        if (sel) {
+          for (const opt of sel.options) {
+            try {
+              if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
+            } catch(e) {}
+          }
+        }
+        if (ctx() && typeof ctx().loadFromGitHub === 'function') {
+          ctx().loadFromGitHub(item.filename);
+        }
       } else {
-        c.setYoubiFilter({ colIdx: null, selectedValues: new Set(), filterType: 'exact' });
+        applyState();
       }
-      c.renderTable();
-      c.updateStatus();
-    }
-
-    const currentFile = ctx() ? ctx().getFilename() : '';
-    if (item.filename && item.filename !== currentFile) {
-      window._histPendingRestore = { applyFn: applyState, filename: item.filename };
-      const sel = document.getElementById('gitFileSelector');
-      if (sel) {
-        for (const opt of sel.options) {
-          if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
-        }
-      }
-      ctx().loadFromGitHub(item.filename);
-    } else {
-      applyState();
+    } catch(e) {
+      console.warn('[bukken hist] restoreHist failed:', e);
     }
   };
 
   window.toggleHistPanel = function() {
-    const panel = document.getElementById('hist-panel');
-    const overlay = document.getElementById('hist-overlay');
+    const panel = safeElLocal('hist-panel');
+    const overlay = safeElLocal('hist-overlay');
+    if (!panel || !overlay) return;
     if (panel.classList.contains('open')) {
-      panel.classList.remove('open'); overlay.classList.remove('show');
+      panel.classList.remove('open');
+      overlay.classList.remove('show');
     } else {
-      renderHist(); panel.classList.add('open'); overlay.classList.add('show');
+      renderHist();
+      panel.classList.add('open');
+      overlay.classList.add('show');
     }
   };
   window.closeHistPanel = function() {
-    document.getElementById('hist-panel').classList.remove('open');
-    document.getElementById('hist-overlay').classList.remove('show');
+    const panel = safeElLocal('hist-panel');
+    const overlay = safeElLocal('hist-overlay');
+    if (panel) panel.classList.remove('open');
+    if (overlay) overlay.classList.remove('show');
   };
 })();
 </script>
