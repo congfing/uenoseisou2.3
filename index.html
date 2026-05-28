@@ -568,6 +568,10 @@
   </header>
   <section class="theme-panel" id="themePanel" aria-label="配色設定" hidden>
     <div class="theme-section">
+      <span class="theme-section-name">標準</span>
+      <label class="theme-group"><span class="theme-label">DefaultTheme</span><input class="theme-check" id="defaultThemeCheck" type="checkbox" checked></label>
+    </div>
+    <div class="theme-section">
       <span class="theme-section-name">タイトル</span>
       <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="titleBg"></label>
       <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="titleText"></label>
@@ -644,6 +648,7 @@
   const expandBtn = document.getElementById("expandBtn");
   const themePanel = document.getElementById("themePanel");
   const themeToggle = document.getElementById("themeToggle");
+  const defaultThemeCheck = document.getElementById("defaultThemeCheck");
   const textLift = document.getElementById("textLift");
   const textGradient = document.getElementById("textGradient");
   const frames = new Map();
@@ -651,6 +656,7 @@
   const savedZoom = new Map();
   const zoomLevels = [50, 75, 100, 125, 150, 175, 200];
   const themeStorageKey = "uenoseisou23_theme";
+  const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
   const defaultTheme = {
     titleBg: "#ffffff",
     titleText: "#000000",
@@ -673,9 +679,13 @@
     textLift: false,
     textGradient: false,
     textGradientStart: "#ffffff",
-    textGradientEnd: "#d9d9d9"
+    textGradientEnd: "#d9d9d9",
+    buttonOpacity: 100,
+    softwareButtonOpacity: 100,
+    softwareOpacity: 100
   };
   let theme = loadTheme();
+  let defaultThemeEnabled = loadDefaultThemeEnabled();
   let activeApp = null;
   let currentZoom = 100;
 
@@ -693,6 +703,47 @@
     } catch (error) {
       // 配色変更は保存不可の環境でも現在の画面へ反映する。
     }
+  }
+
+  function loadDefaultThemeEnabled() {
+    try {
+      const value = localStorage.getItem(defaultThemeEnabledKey);
+      return value === null ? true : value === "1";
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function saveDefaultThemeEnabled(enabled) {
+    defaultThemeEnabled = enabled;
+    try {
+      localStorage.setItem(defaultThemeEnabledKey, enabled ? "1" : "0");
+    } catch (error) {
+      // 設定保存不可の環境でも現在の画面へは反映する。
+    }
+    defaultThemeCheck.checked = enabled;
+  }
+
+  async function loadDefaultThemeFile() {
+    try {
+      const response = await fetch("theme.json?ts=" + Date.now(), { cache: "no-store" });
+      if (!response.ok) throw new Error("theme.json " + response.status);
+      return { ...defaultTheme, ...(await response.json()) };
+    } catch (error) {
+      return { ...defaultTheme };
+    }
+  }
+
+  async function enableDefaultTheme() {
+    saveDefaultThemeEnabled(true);
+    theme = await loadDefaultThemeFile();
+    applyTheme();
+  }
+
+  function disableDefaultTheme() {
+    saveDefaultThemeEnabled(false);
+    theme = loadTheme();
+    applyTheme();
   }
 
   function applyTheme() {
@@ -713,6 +764,7 @@
     root.setProperty("--software-border", theme.softwareBorder);
     root.setProperty("--text-lift-shadow", theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none");
     root.setProperty("--text-gradient-bg", theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : "transparent");
+    defaultThemeCheck.checked = defaultThemeEnabled;
     textLift.checked = theme.textLift;
     textGradient.checked = theme.textGradient;
     document.querySelectorAll("[data-theme]").forEach((input) => {
@@ -722,6 +774,7 @@
   }
 
   function changeThemeValue(key, value) {
+    if (defaultThemeEnabled) saveDefaultThemeEnabled(false);
     theme[key] = value;
     saveTheme();
     applyTheme();
@@ -942,7 +995,8 @@
     if (!style.parentNode) documentInFrame.head.appendChild(style);
   }
 
-  applyTheme();
+  if (defaultThemeEnabled) enableDefaultTheme();
+  else applyTheme();
   software.forEach((app, index) => grid.appendChild(createCard(app, index)));
 
   function renderZoomMenu() {
@@ -979,7 +1033,12 @@
   });
   textLift.addEventListener("change", () => changeThemeValue("textLift", textLift.checked));
   textGradient.addEventListener("change", () => changeThemeValue("textGradient", textGradient.checked));
+  defaultThemeCheck.addEventListener("change", () => {
+    if (defaultThemeCheck.checked) enableDefaultTheme();
+    else disableDefaultTheme();
+  });
   document.getElementById("themeReset").addEventListener("click", () => {
+    saveDefaultThemeEnabled(false);
     theme = { ...defaultTheme };
     saveTheme();
     applyTheme();

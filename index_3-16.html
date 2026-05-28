@@ -709,6 +709,7 @@ function renderPropertyList(){
   } else {
     hint.textContent='番号順で表示中';
   }
+  renderDaySaveSingle();
 
   // Update entry count badge
   const enteredCount = Object.keys(state.entryData).length;

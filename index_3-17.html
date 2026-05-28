@@ -180,7 +180,6 @@
     <button class="nav-tab" id="navConvert" onclick="navTo(8)">🔄 変換</button>
   </div>
 </div>
-
 <!-- Screen 1: Date -->
 <div class="screen active" id="screen1">
   <div style="padding-top:16px">
@@ -376,7 +375,6 @@ const LS_STAFF         = 'keiryo_staff';
 const LS_ORDER_PREFIX  = 'keiryo_order_';
 const LS_LASTDATA_PREFIX = 'keiryo_last_';
 const LS_HISTORY_PREFIX  = 'keiryo_hist_'; // + date_staffName
-
 const DEFAULT_PROPERTIES = [
   // ── ほっともっと ──
   { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'紙屑',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'段ボール',unit:'kg'}] },
@@ -720,6 +718,7 @@ function renderPropertyList(){
   } else {
     hint.textContent='番号順で表示中';
   }
+  renderDaySaveSingle();
 
   // Update entry count badge
   const enteredCount = Object.keys(state.entryData).length;
