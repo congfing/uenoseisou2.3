@@ -18,7 +18,7 @@
   .nav-tab { flex-shrink: 0; padding: 7px 10px; font-size: 12px; font-weight: bold;
     border: none; border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .nav-tab.active { }
-  .nav-tab.disabled { opacity: 0.4; cursor: default; }
+  .nav-tab.disabled { cursor: default; }
 
   /* ===== SCREENS ===== */
   .screen { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
@@ -603,6 +603,15 @@ function showScreen(n){
   updateNav(n);
   saveSession();
   window.scrollTo(0,0);
+
+  // メール設定画面が表示されたらアドレス一覧を必ず描画（復旧用）
+  if (n === 7) {
+    setTimeout(() => {
+      if (typeof loadMailSettings === 'function') {
+        loadMailSettings();
+      }
+    }, 50);
+  }
 }
 
 function goBack(){
@@ -1781,6 +1790,45 @@ function addNewProperty(){
 </script>
 <div id="drag-ghost"></div>
 <!-- app-tabs.js 参照を削除（ファイルが存在しないため）。タブバー機能は ueno-tabbar.js がグローバルで提供。 -->
+
+<script>
+// メール登録機能 復旧スクリプト（カスタムタブ対応）
+(function(){
+  function tryRenderMailList() {
+    const list = document.getElementById('mailAddressList');
+    if (!list) return;
+
+    // すでに内容があれば何もしない
+    if (list.children.length > 0) return;
+
+    // メール画面が表示されている場合のみ描画
+    const mailScreen = document.getElementById('screen7');
+    const isVisible = mailScreen && 
+      (mailScreen.classList.contains('active') || 
+       mailScreen.offsetParent !== null);
+
+    if (isVisible && typeof loadMailSettings === 'function') {
+      loadMailSettings();
+    }
+  }
+
+  // 初回
+  setTimeout(tryRenderMailList, 150);
+  setTimeout(tryRenderMailList, 600);
+
+  // タブ切り替え検知（クリック時）
+  document.addEventListener('click', function(e){
+    const target = e.target;
+    if (target && (target.textContent || '').includes('メール')) {
+      setTimeout(tryRenderMailList, 120);
+      setTimeout(tryRenderMailList, 400);
+    }
+  }, true);
+
+  // 定期チェック（保険）
+  setInterval(tryRenderMailList, 1200);
+})();
+</script>
 
 </body>
 </html>
