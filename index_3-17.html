@@ -476,6 +476,13 @@ function getSavedOrder(staff,day){ return loadJSON(LS_ORDER_PREFIX+staff+'_'+day
 function setSavedOrder(staff,day,arr){ saveJSON(LS_ORDER_PREFIX+staff+'_'+day,arr); }
 function getLastData(name){ return loadJSON(LS_LASTDATA_PREFIX+name,null); }
 function setLastData(name,data,staff,date){ saveJSON(LS_LASTDATA_PREFIX+name,{data,staffName:staff,date}); }
+function fieldKey(field){ return `${field.label}__${field.unit}`; }
+function getFieldValue(data,field){
+  if(!data) return '';
+  const key=fieldKey(field);
+  if(data[key]!==undefined) return data[key];
+  return data[field.label]!==undefined ? data[field.label] : '';
+}
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {date,staffName:staff,entryData});
   // keep index of all history keys
@@ -878,22 +885,26 @@ function openEntry(idx,event){
   const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
   const lastSaved=getLastData(prop.name);
   const c=document.getElementById('inputFields'); c.innerHTML='';
-  prop.fields.forEach(field=>{
+  prop.fields.forEach((field,fieldIdx)=>{
+    const key=fieldKey(field);
+    const inputId=`ef_${fieldIdx}`;
     const div=document.createElement('div');
     div.className='field-group card';
     let hint='';
-    if(lastSaved&&lastSaved.data&&lastSaved.data[field.label]!==undefined&&lastSaved.data[field.label]!==''){
-      hint=`<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastSaved.data[field.label]} ${field.unit}</span></div>`;
+    const lastValue=lastSaved&&lastSaved.data ? getFieldValue(lastSaved.data,field) : '';
+    if(lastValue!==''){
+      hint=`<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastValue} ${field.unit}</span></div>`;
     }
+    const currentValue=existing[key]!==undefined ? existing[key] : getFieldValue(existing,field);
     div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span></div>
       ${hint}
       <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-        id="ef_${field.label}" placeholder="0" value="${existing[field.label]!==undefined?existing[field.label]:''}">`;
+        id="${inputId}" data-field-key="${key}" placeholder="0" value="${currentValue}">`;
     c.appendChild(div);
     const input = div.querySelector('input.num-input');
     input.addEventListener('input', () => {
       if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
-      state.entryDraft[prop.name][field.label] = input.value;
+      state.entryDraft[prop.name][key] = input.value;
       saveSession();
     });
   });
@@ -903,9 +914,9 @@ function openEntry(idx,event){
 function savePropertyData(){
   const prop=allProperties[state.currentPropertyIndex];
   const data={}; let hasVal=false;
-  prop.fields.forEach(f=>{
-    const v=document.getElementById(`ef_${f.label}`).value;
-    data[f.label]=v!==''?parseFloat(v):'';
+  prop.fields.forEach((f,fi)=>{
+    const v=document.getElementById(`ef_${fi}`).value;
+    data[fieldKey(f)]=v!==''?parseFloat(v):'';
     if(v!=='')hasVal=true;
   });
   if(!hasVal&&!confirm('値が入力されていません。空のまま保存しますか？'))return;
@@ -987,7 +998,7 @@ function goToScreen5(){
     const data=state.entryData[prop.name];if(!data)return;
     let nameShown=false;
     prop.fields.forEach((f,fi)=>{
-      const val=data[f.label];
+      const val=getFieldValue(data,f);
       const display=val!==''&&val!==undefined?val:'-';
       const nameCell=nameShown?'':`<b>${prop.name}</b>`;
       nameShown=true;
@@ -1015,7 +1026,8 @@ function exportText(){
     const data = state.entryData[prop.name];
     lines.push((idx+1) + '．' + prop.name);
     prop.fields.forEach(f => {
-      const val = (data[f.label] !== undefined && data[f.label] !== '') ? data[f.label] : '－';
+      const fieldValue=getFieldValue(data,f);
+      const val = fieldValue !== '' ? fieldValue : '－';
       lines.push('　　' + f.label + '：' + val + ' ' + f.unit);
     });
     lines.push('');
@@ -1039,7 +1051,7 @@ function exportXlsx(){
   const rows=[['物件名','項目','値','単位','日付','担当者']];
   getSortedProps().forEach(prop=>{
     const data=state.entryData[prop.name];if(!data)return;
-    prop.fields.forEach(f=>rows.push([prop.name,f.label,data[f.label]!==''?data[f.label]:'',f.unit,state.date||'',state.selectedStaff||'']));
+    prop.fields.forEach(f=>rows.push([prop.name,f.label,getFieldValue(data,f)!==''?getFieldValue(data,f):'',f.unit,state.date||'',state.selectedStaff||'']));
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
@@ -1102,7 +1114,8 @@ function showConvertPreview(idx){
     const prop=allProperties.find(p=>p.name===name);
     if(!prop) return;
     prop.fields.forEach((f,fi)=>{
-      const val=data[f.label]!==undefined&&data[f.label]!==''?data[f.label]:'－';
+      const fieldValue=getFieldValue(data,f);
+      const val=fieldValue!==''?fieldValue:'－';
       html+=`<tr style="background:${fi%2===0?'#fff':'#f8fafc'}">`;
       if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${name}</td>`;
       html+=`<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.label}</td><td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:right">${val}</td><td style="padding:5px 8px;border:1px solid #e2e8f0">${f.unit}</td></tr>`;
@@ -1122,7 +1135,7 @@ function convertHistToXlsx(idx){
     const data=rec.entryData[name];
     const prop=allProperties.find(p=>p.name===name);
     if(!prop) return;
-    prop.fields.forEach(f=>rows.push([name,f.label,data[f.label]!==''?data[f.label]:'',f.unit,rec.date,rec.staffName]));
+    prop.fields.forEach(f=>rows.push([name,f.label,getFieldValue(data,f)!==''?getFieldValue(data,f):'',f.unit,rec.date,rec.staffName]));
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
@@ -1301,7 +1314,7 @@ function renderHistory(filterDate){
       const data=record.entryData[prop.name]; if(!data)return;
       let nameShown=false;
       prop.fields.forEach((f,fi)=>{
-        const val=data[f.label];
+        const val=getFieldValue(data,f);
         if(val===''||val===undefined)return;
         const nameCell=nameShown?'':`<b>${prop.name}</b>`;
         nameShown=true;
@@ -1586,7 +1599,7 @@ function shareHistoryAsExcel(ri, event){
     const data = record.entryData[prop.name];
     if(!data) return;
     prop.fields.forEach(f => {
-      const val = data[f.label];
+      const val = getFieldValue(data,f);
       if(val === '' || val === undefined) return;
       rows.push([record.date, dayName+'曜日', record.staffName, prop.name, f.label, val, f.unit]);
     });
@@ -1630,12 +1643,12 @@ function sendHistoryByMail(ri, event){
     if(!data) return;
     let hasVal = false;
     prop.fields.forEach(f => {
-      if(data[f.label] !== '' && data[f.label] !== undefined) hasVal = true;
+      if(getFieldValue(data,f) !== '') hasVal = true;
     });
     if(!hasVal) return;
     body += `\n【${prop.name}】\n`;
     prop.fields.forEach(f => {
-      const val = data[f.label];
+      const val = getFieldValue(data,f);
       if(val === '' || val === undefined) return;
       body += `  ${f.label}：${val} ${f.unit}\n`;
     });
