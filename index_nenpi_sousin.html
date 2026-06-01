@@ -504,7 +504,7 @@
               <input id="fuelDate" type="date" required>
             </label>
             <label>車番
-              <input id="vehicleNo" type="text" inputmode="numeric" placeholder="例：12-34" required>
+              <input id="vehicleNo" type="text" inputmode="numeric" placeholder="例：1234" required>
             </label>
             <label>車種
               <input id="vehicleType" type="text" placeholder="例：軽トラック">
@@ -594,6 +594,11 @@
     document.getElementById("clearFormButton").addEventListener("click", () => {
       resetFuelForm();
       setMessage(messages.entry, "入力を消しました。");
+    });
+
+    fields.vehicleNo.addEventListener("input", () => {
+      fields.vehicleNo.value = normalizeVehicleNo(fields.vehicleNo.value);
+      fillVehicleTypeFromHistory();
     });
 
     document.getElementById("topRecipientList").addEventListener("input", (event) => {
@@ -691,7 +696,7 @@
       return {
         id: crypto.randomUUID(),
         fuelDate: fields.fuelDate.value,
-        vehicleNo: fields.vehicleNo.value.trim(),
+        vehicleNo: normalizeVehicleNo(fields.vehicleNo.value),
         vehicleType: fields.vehicleType.value.trim(),
         driver: fields.driver.value.trim(),
         odometer: numberOrBlank(fields.odometer.value),
@@ -718,6 +723,21 @@
       if (value === "" || value === null || value === undefined) return "";
       const number = Number(value);
       return Number.isFinite(number) ? number : "";
+    }
+
+    function normalizeVehicleNo(value) {
+      return String(value ?? "").replace(/-/g, "").trim();
+    }
+
+    function fillVehicleTypeFromHistory() {
+      const vehicleNo = normalizeVehicleNo(fields.vehicleNo.value);
+      if (!vehicleNo || fields.vehicleType.value.trim()) return;
+      const record = [...state.records].reverse().find((item) => {
+        return normalizeVehicleNo(item.vehicleNo) === vehicleNo && item.vehicleType;
+      });
+      if (record) {
+        fields.vehicleType.value = record.vehicleType;
+      }
     }
 
     function render() {
