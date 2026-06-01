@@ -1652,21 +1652,37 @@ function openMailComposer(mailtoUrl){
 // ===== MAIL SETTINGS =====
 const LS_MAIL_LIST = 'keiryo_mail_list';
 const MAIL_COUNT = 4;
+const REQUIRED_MAIL_ADDR = 'yo.91863391@gmail.com';
 
 function defaultMailList(){
   return [
     {addr:'annsyuu38@gmail.com', enabled:true},
-    {addr:'', enabled:false},
+    {addr:REQUIRED_MAIL_ADDR, enabled:true},
     {addr:'', enabled:false},
     {addr:'', enabled:false}
   ];
 }
 
+function ensureRequiredMail(list){
+  const normalized = Array.from({length:MAIL_COUNT}, (_,i) => {
+    const item = Array.isArray(list) ? list[i] : null;
+    return {addr:(item&&item.addr)||'', enabled:!!(item&&item.enabled)};
+  });
+  const hit = normalized.find(item => item.addr.trim().toLowerCase() === REQUIRED_MAIL_ADDR);
+  if(hit){ hit.enabled = true; return normalized; }
+  let idx = normalized.findIndex(item => !item.addr);
+  if(idx < 0) idx = normalized.findIndex(item => !item.enabled);
+  if(idx < 0) idx = MAIL_COUNT - 1;
+  normalized[idx] = {addr:REQUIRED_MAIL_ADDR, enabled:true};
+  try{ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(normalized)); }catch(e){}
+  return normalized;
+}
+
 function loadMailList(){
   try{
     const v = localStorage.getItem(LS_MAIL_LIST);
-    return v ? JSON.parse(v) : defaultMailList();
-  }catch(e){ return defaultMailList(); }
+    return ensureRequiredMail(v ? JSON.parse(v) : defaultMailList());
+  }catch(e){ return ensureRequiredMail(defaultMailList()); }
 }
 
 function saveMailList(list){ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(list)); }
