@@ -265,6 +265,15 @@
       white-space: nowrap;
     }
 
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr.selected-record td {
+      background: #f2f2f2;
+      font-weight: 700;
+    }
+
     th {
       color: var(--text);
       background: #f2f2f2;
@@ -585,9 +594,10 @@
       const record = readFuelForm();
       if (!record) return;
       state.records.push(record);
+      state.selectedRecordId = "";
       saveState();
       resetFuelForm();
-      setMessage(messages.entry, "履歴に保存しました。");
+      setMessage(messages.entry, "履歴に保存しました。履歴をクリックするとプレビューに表示します。");
       render();
     });
 
@@ -641,6 +651,7 @@
     document.getElementById("clearHistoryButton").addEventListener("click", () => {
       if (!confirm("保存履歴を削除します。よろしいですか？")) return;
       state.records = [];
+      state.selectedRecordId = "";
       saveState();
       setMessage(messages.send, "履歴を削除しました。");
       render();
@@ -655,10 +666,11 @@
         return {
           records: Array.isArray(saved?.records) ? saved.records : [],
           recipients: Array.isArray(saved?.recipients) ? saved.recipients : [],
-          topRecipients: normalizeTopRecipients(saved?.topRecipients)
+          topRecipients: normalizeTopRecipients(saved?.topRecipients),
+          selectedRecordId: saved?.selectedRecordId || ""
         };
       } catch {
-        return { records: [], recipients: [], topRecipients: createTopRecipients() };
+        return { records: [], recipients: [], topRecipients: createTopRecipients(), selectedRecordId: "" };
       }
     }
 
@@ -802,7 +814,7 @@
       }
 
       const rows = state.records.map((record, index) => `
-        <tr>
+          <tr class="${state.selectedRecordId === record.id ? "selected-record" : ""}" data-preview-record="${record.id}">
           <td>${index + 1}</td>
           <td>${escapeHtml(record.fuelDate)}</td>
           <td>${escapeHtml(record.vehicleNo)}</td>
@@ -834,8 +846,20 @@
       `;
 
       area.querySelectorAll("[data-delete-record]").forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (state.selectedRecordId === button.dataset.deleteRecord) {
+            state.selectedRecordId = "";
+          }
           state.records = state.records.filter((record) => record.id !== button.dataset.deleteRecord);
+          saveState();
+          render();
+        });
+      });
+
+      area.querySelectorAll("[data-preview-record]").forEach((row) => {
+        row.addEventListener("click", () => {
+          state.selectedRecordId = row.dataset.previewRecord;
           saveState();
           render();
         });
@@ -880,8 +904,8 @@
     }
 
     function validateBeforeSend() {
-      if (state.records.length === 0) {
-        setMessage(messages.send, "燃費データを登録してください。", true);
+      if (!selectedRecord()) {
+        setMessage(messages.send, "送信する履歴を1件クリックしてください。", true);
         return false;
       }
       if (selectedEmails().length === 0) {
@@ -896,34 +920,36 @@
       const params = new URLSearchParams({
         view: "cm",
         fs: "1",
+        tf: "1",
         to: selectedEmails().join(","),
         su: subject,
         body: buildMailBody()
       });
-      window.open(`https://mail.google.com/mail/?${params.toString()}`, "_blank", "noopener");
-      setMessage(messages.send, "Gmailの作成画面を開きました。");
+      window.location.href = `https://mail.google.com/mail/?${params.toString()}`;
     }
 
     function buildMailBody() {
-      if (state.records.length === 0) {
-        return "登録データはまだありません。";
+      const record = selectedRecord();
+      if (!record) {
+        return "履歴をクリックすると、ここに1件だけ表示します。";
       }
 
       const lines = ["【燃費報告】"];
-      state.records.forEach((record, index) => {
-        lines.push("");
-        lines.push(`No：${index + 1}`);
-        lines.push(`給油日：${record.fuelDate || ""}`);
-        lines.push(`車番：${record.vehicleNo || ""}`);
-        lines.push(`車種：${record.vehicleType || ""}`);
-        lines.push(`運転者：${record.driver || ""}`);
-        lines.push(`オドメーター：${formatValue(record.odometer)}`);
-        lines.push(`走行距離(km)：${formatValue(record.distance)}`);
-        lines.push(`給油燃料量(L)：${formatValue(record.fuelVolume)}`);
-        lines.push(`燃費(km/L)：${formatValue(record.fuelEconomy)}`);
-        lines.push(`備考：${record.note || ""}`);
-      });
+      lines.push("");
+      lines.push(`給油日：${record.fuelDate || ""}`);
+      lines.push(`車番：${record.vehicleNo || ""}`);
+      lines.push(`車種：${record.vehicleType || ""}`);
+      lines.push(`運転者：${record.driver || ""}`);
+      lines.push(`オドメーター：${formatValue(record.odometer)}`);
+      lines.push(`走行距離(km)：${formatValue(record.distance)}`);
+      lines.push(`給油燃料量(L)：${formatValue(record.fuelVolume)}`);
+      lines.push(`燃費(km/L)：${formatValue(record.fuelEconomy)}`);
+      lines.push(`備考：${record.note || ""}`);
       return lines.join("\n");
+    }
+
+    function selectedRecord() {
+      return state.records.find((record) => record.id === state.selectedRecordId) || null;
     }
 
     function formatValue(value) {
