@@ -636,7 +636,7 @@
     { name: "カレンダー編集", detail: "日程編集", file: "index_2-2_gcal.html" },
     { name: "縦通しカレンダー", detail: "年間表示", file: "令和8年度収集カレンダー（縦通し）.html" },
     { name: "月別カレンダー", detail: "月間表示", file: "令和8年度収集カレンダー（月別）.html" },
-    { name: "燃費報告", detail: "Gmail送信", file: "index_nenpi_sousin.html" }
+    { name: "燃費報告", detail: "Gmail送信", file: "index_nenpi_sousin.html", direct: true }
   ];
 
   const softwareRoot = "./";
@@ -877,6 +877,10 @@
   }
 
   function openSoftware(app) {
+    if (app.direct) {
+      location.href = softwareRoot + encodeURI(app.file);
+      return;
+    }
     if (activeApp && activeApp.file !== app.file) minimizeSoftware(activeApp);
     activeApp = app;
     currentZoom = savedZoom.get(app.file) || 100;
