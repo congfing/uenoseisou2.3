@@ -920,26 +920,20 @@
       const to = selectedEmails().join(",");
       const subjectEncoded = encodeURIComponent(subject);
       const bodyEncoded = encodeURIComponent(buildMailBody());
-      const gmailAppUrl = `googlegmail://co?to=${encodeURIComponent(to)}&subject=${subjectEncoded}&body=${bodyEncoded}`;
-      const mailtoUrl = `mailto:${to}?subject=${subjectEncoded}&body=${bodyEncoded}`;
-      openMailComposer(gmailAppUrl, mailtoUrl);
+      openMailComposer(`mailto:${to}?subject=${subjectEncoded}&body=${bodyEncoded}`);
     }
 
-    function openMailComposer(primaryUrl, fallbackUrl) {
+    function openMailComposer(mailtoUrl) {
       const a = document.createElement("a");
-      a.href = primaryUrl;
+      a.href = mailtoUrl;
       a.target = "_top";
       a.rel = "noopener";
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
-      window.top.location.href = primaryUrl;
       setTimeout(() => {
-        if (document.visibilityState !== "hidden" && fallbackUrl) {
-          window.top.location.href = fallbackUrl;
-        }
         if (a.parentNode) a.parentNode.removeChild(a);
-      }, 1200);
+      }, 1000);
     }
 
     function buildMailBody() {
