@@ -243,9 +243,59 @@
       margin-top: 18px;
     }
 
+    .history-wrap {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 18px;
+      overflow: hidden;
+    }
+
     .history-title {
       border-bottom: 1px solid var(--line);
       padding: 10px;
+    }
+
+    .day-history {
+      padding: 10px;
+    }
+
+    .history-date-row {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .history-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-item {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .history-item.selected-record {
+      background: #f2f2f2;
+      font-weight: 800;
+    }
+
+    .history-item-main {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 800;
+    }
+
+    .history-item-sub {
+      color: var(--muted);
+      font-size: 12px;
     }
 
     table {
@@ -594,10 +644,11 @@
       const record = readFuelForm();
       if (!record) return;
       state.records.push(record);
-      state.selectedRecordId = "";
+      state.selectedHistoryDate = record.fuelDate;
+      state.selectedRecordId = record.id;
       saveState();
       resetFuelForm();
-      setMessage(messages.entry, "履歴に保存しました。履歴をクリックするとプレビューに表示します。");
+      setMessage(messages.entry, "履歴に保存しました。");
       render();
     });
 
@@ -609,6 +660,13 @@
     fields.vehicleNo.addEventListener("input", () => {
       fields.vehicleNo.value = normalizeVehicleNo(fields.vehicleNo.value);
       fillVehicleTypeFromHistory();
+    });
+
+    fields.fuelDate.addEventListener("change", () => {
+      state.selectedHistoryDate = fields.fuelDate.value || todayLocalDate();
+      state.selectedRecordId = "";
+      saveState();
+      render();
     });
 
     document.getElementById("topRecipientList").addEventListener("input", (event) => {
@@ -652,6 +710,7 @@
       if (!confirm("保存履歴を削除します。よろしいですか？")) return;
       state.records = [];
       state.selectedRecordId = "";
+      state.selectedHistoryDate = "";
       saveState();
       setMessage(messages.send, "履歴を削除しました。");
       render();
@@ -667,10 +726,17 @@
           records: Array.isArray(saved?.records) ? saved.records : [],
           recipients: Array.isArray(saved?.recipients) ? saved.recipients : [],
           topRecipients: normalizeTopRecipients(saved?.topRecipients),
-          selectedRecordId: saved?.selectedRecordId || ""
+          selectedRecordId: saved?.selectedRecordId || "",
+          selectedHistoryDate: saved?.selectedHistoryDate || todayLocalDate()
         };
       } catch {
-        return { records: [], recipients: [], topRecipients: createTopRecipients(), selectedRecordId: "" };
+        return {
+          records: [],
+          recipients: [],
+          topRecipients: createTopRecipients(),
+          selectedRecordId: "",
+          selectedHistoryDate: todayLocalDate()
+        };
       }
     }
 
@@ -752,6 +818,10 @@
       }
     }
 
+    function recordsForDate(dateText) {
+      return state.records.filter((record) => record.fuelDate === dateText);
+    }
+
     function render() {
       renderTopRecipients();
       renderRecords();
@@ -808,40 +878,15 @@
 
     function renderRecords() {
       const area = document.getElementById("recordsArea");
-      if (state.records.length === 0) {
-        area.innerHTML = `<div class="empty">保存履歴はまだありません。</div>`;
-        return;
-      }
-
-      const rows = state.records.map((record, index) => `
-          <tr class="${state.selectedRecordId === record.id ? "selected-record" : ""}" data-preview-record="${record.id}">
-          <td>${index + 1}</td>
-          <td>${escapeHtml(record.fuelDate)}</td>
-          <td>${escapeHtml(record.vehicleNo)}</td>
-          <td>${escapeHtml(record.vehicleType)}</td>
-          <td>${escapeHtml(record.driver)}</td>
-          <td>${formatValue(record.odometer)}</td>
-          <td>${formatValue(record.distance)}</td>
-          <td>${formatValue(record.fuelVolume)}</td>
-          <td>${formatValue(record.fuelEconomy)}</td>
-          <td>${escapeHtml(record.note)}</td>
-          <td><button class="small-button" type="button" data-delete-record="${record.id}">削除</button></td>
-        </tr>
-      `).join("");
-
       area.innerHTML = `
-        <div class="table-wrap">
+        <div class="history-wrap">
           <h2 class="history-title">保存履歴</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>No</th><th>給油日</th><th>車番</th><th>車種</th><th>運転者</th>
-                <th>オドメーター</th><th>走行距離(km)</th><th>給油燃料量(L)</th>
-                <th>燃費(km/L)</th><th>備考</th><th></th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+          <div class="history-date-row">
+            <label>履歴日
+              <input id="historyDate" type="date" value="${escapeHtml(state.selectedHistoryDate || fields.fuelDate.value || todayLocalDate())}">
+            </label>
+          </div>
+          ${buildSelectedDateHistoryHtml()}
         </div>
       `;
 
@@ -864,6 +909,46 @@
           render();
         });
       });
+
+      const historyDate = document.getElementById("historyDate");
+      historyDate.addEventListener("change", () => {
+        state.selectedHistoryDate = historyDate.value || todayLocalDate();
+        state.selectedRecordId = "";
+        saveState();
+        render();
+      });
+
+    }
+
+    function buildSelectedDateHistoryHtml() {
+      if (state.records.length === 0) {
+        return `<div class="day-history"><div class="empty">保存履歴はまだありません。</div></div>`;
+      }
+
+      const selectedDate = state.selectedHistoryDate || fields.fuelDate.value || todayLocalDate();
+      const dayRecords = recordsForDate(selectedDate);
+      if (dayRecords.length === 0) {
+        return `<div class="day-history"><div class="small-note">${escapeHtml(selectedDate)} の履歴はありません。</div></div>`;
+      }
+
+      return `
+        <div class="day-history">
+          <div class="small-note">${escapeHtml(selectedDate)} の履歴</div>
+          <div class="history-list">
+            ${dayRecords.map((record) => `
+              <button class="history-item ${state.selectedRecordId === record.id ? "selected-record" : ""}" type="button" data-preview-record="${record.id}">
+                <span class="history-item-main">
+                  <span>${escapeHtml(record.vehicleNo || "車番なし")} ${escapeHtml(record.vehicleType || "")}</span>
+                  <span>${formatValue(record.fuelVolume)}L</span>
+                </span>
+                <span class="history-item-sub">運転者：${escapeHtml(record.driver || "")} / オドメーター：${formatValue(record.odometer)}</span>
+                <span class="history-item-sub">走行距離：${formatValue(record.distance)} / 燃費：${formatValue(record.fuelEconomy)} / 備考：${escapeHtml(record.note || "")}</span>
+                <span><span class="small-button" data-delete-record="${record.id}">削除</span></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
     }
 
     function renderSendRecipients() {
