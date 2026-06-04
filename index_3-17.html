@@ -812,12 +812,26 @@ function renderPropertyList(){
   });
 }
 
+function focusPropCard(idx){
+  // フォーカス機能：指定した物件カードを開いた状態で、表示領域の上部に来るようにスクロール
+  const card = document.getElementById(`propcard_${idx}`);
+  if(!card) return;
+  const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
+  const top = card.getBoundingClientRect().top + window.scrollY - headerH - 8;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
 function togglePropCard(idx){
   const body=document.getElementById(`pbody_${idx}`);
   const arrow=document.getElementById(`ptoggle_${idx}`);
   const open=body.classList.contains('open');
   body.classList.toggle('open',!open);
   arrow.textContent=open?'▼':'▲';
+
+  if(!open){
+    // 開いたらフォーカス（表示領域上部へスクロール）
+    setTimeout(() => focusPropCard(idx), 60);
+  }
 }
 
 function updatePropOrder(idx,val){
@@ -857,6 +871,7 @@ function removeFieldInline(propIdx,fieldIdx,event){
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
   document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
+  setTimeout(() => focusPropCard(propIdx), 80);
 }
 
 function addFieldInline(propIdx,event){
@@ -866,6 +881,7 @@ function addFieldInline(propIdx,event){
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
   document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
+  setTimeout(() => focusPropCard(propIdx), 80);
 }
 
 function deleteProp(idx,event){
