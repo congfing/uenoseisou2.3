@@ -242,6 +242,11 @@
       background: #f2f2f2;
     }
 
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
     .button.secondary {
       background: #fff;
       border-color: var(--line);
@@ -315,6 +320,13 @@
     .history-list {
       display: grid;
       gap: 8px;
+    }
+
+    .history-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 10px;
     }
 
     .history-item {
@@ -778,6 +790,12 @@
       render();
     });
 
+    document.getElementById("recordsArea").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-restore-record]");
+      if (!button) return;
+      restoreSelectedRecord();
+    });
+
     resetFuelForm();
     render();
 
@@ -1008,8 +1026,39 @@
               </button>
             `).join("")}
           </div>
+          <div class="history-actions">
+            <button class="button secondary" type="button" data-restore-record ${state.selectedRecordId ? "" : "disabled"}>
+              選択履歴を入力欄に戻す
+            </button>
+          </div>
         </div>
       `;
+    }
+
+    function restoreSelectedRecord() {
+      const record = selectedRecord();
+      if (!record) {
+        setMessage(messages.entry, "復元する履歴をクリックしてください。", true);
+        return;
+      }
+
+      fields.fuelDate.value = record.fuelDate || todayLocalDate();
+      fields.vehicleNo.value = record.vehicleNo || "";
+      fields.vehicleType.value = record.vehicleType || "";
+      fields.driver.value = record.driver || "";
+      fields.odometer.value = formatValue(record.odometer);
+      fields.distance.value = formatValue(record.distance);
+      fields.fuelVolume.value = formatValue(record.fuelVolume);
+      fields.fuelEconomy.value = formatValue(record.fuelEconomy);
+      fields.note.value = record.note || "";
+
+      state.records = state.records.filter((item) => item.id !== record.id);
+      state.selectedHistoryDate = fields.fuelDate.value || todayLocalDate();
+      state.selectedRecordId = "";
+      saveState();
+      setMessage(messages.entry, "履歴を入力欄に戻しました。訂正後に履歴に保存してください。");
+      render();
+      fields.vehicleNo.focus();
     }
 
     function selectedEmails() {
