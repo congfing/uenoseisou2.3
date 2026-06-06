@@ -35,6 +35,8 @@
     textarea,
     select {
       font: inherit;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .app {
@@ -73,6 +75,7 @@
       grid-template-columns: 42px minmax(180px, 1fr) 110px;
       gap: 10px;
       align-items: center;
+      min-width: 0;
     }
 
     .top-recipient-check {
@@ -98,6 +101,7 @@
 
     .top-save-button {
       white-space: nowrap;
+      width: 100%;
     }
 
     main {
@@ -141,6 +145,7 @@
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
+      min-width: 0;
     }
 
     label {
@@ -149,11 +154,15 @@
       color: var(--muted);
       font-size: 13px;
       font-weight: 700;
+      min-width: 0;
     }
 
     input,
     textarea {
+      display: block;
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       min-height: 44px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -161,6 +170,33 @@
       color: var(--text);
       background: #fff;
       outline: none;
+    }
+
+    input[type="date"],
+    input[type="number"],
+    input[type="email"],
+    input[type="text"] {
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="date"] {
+      font-size: 16px;
+      padding-left: 9px;
+      padding-right: 4px;
+    }
+
+    input::-webkit-date-and-time-value {
+      display: block;
+      min-height: 1.2em;
+      text-align: left;
+      width: 100%;
+    }
+
+    input::-webkit-calendar-picker-indicator {
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 0;
     }
 
     input:focus,
@@ -193,6 +229,7 @@
     .button {
       border: 1px solid var(--line);
       border-radius: 8px;
+      max-width: 100%;
       min-height: 44px;
       padding: 9px 15px;
       cursor: pointer;
@@ -273,8 +310,6 @@
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      -webkit-appearance: none;
-      appearance: none;
     }
 
     .history-list {
@@ -284,6 +319,8 @@
 
     .history-item {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
@@ -304,11 +341,14 @@
       justify-content: space-between;
       gap: 10px;
       font-weight: 800;
+      min-width: 0;
     }
 
     .history-item-sub {
       color: var(--muted);
       font-size: 12px;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
 
     table {
@@ -476,8 +516,13 @@
       }
 
       .top-recipient-row {
-        grid-template-columns: 34px minmax(0, 1fr) 78px;
+        grid-template-columns: 34px minmax(0, 1fr);
         gap: 6px;
+      }
+
+      .top-save-button {
+        grid-column: 2;
+        justify-self: stretch;
       }
 
       .top-recipient-check,
@@ -490,8 +535,13 @@
       input,
       textarea {
         border-radius: 7px;
-        padding: 9px 10px;
+        padding: 9px 8px;
         font-size: 16px;
+      }
+
+      input[type="date"] {
+        padding-left: 6px;
+        padding-right: 2px;
       }
 
       .top-save-button {
