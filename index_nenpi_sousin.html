@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>燃費報告を送信</title>
+  <script>
+    if (window.self !== window.top || new URLSearchParams(location.search).get("embedded") === "1") {
+      document.documentElement.classList.add("embedded");
+    }
+  </script>
   <style>
     :root {
       --bg: #ffffff;
@@ -28,6 +33,81 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
       line-height: 1.55;
+    }
+
+    .standalone-titlebar {
+      display: grid;
+      grid-template-columns: 78px 1fr minmax(138px, 248px);
+      align-items: center;
+      height: 22px;
+      min-height: 22px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      color: #000000;
+      line-height: 1;
+    }
+
+    .embedded .standalone-titlebar {
+      display: none;
+    }
+
+    .standalone-window-controls {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 7px;
+      border-right: 1px solid var(--line);
+    }
+
+    .standalone-window-control {
+      width: 12px;
+      height: 12px;
+      min-height: 12px;
+      padding: 0;
+      border: 1px solid #000;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .standalone-window-control.close {
+      background: #ff5f57;
+      border-color: #e0443e;
+    }
+
+    .standalone-window-control.home {
+      background: #febc2e;
+      border-color: #d89e24;
+    }
+
+    .standalone-window-control.expand {
+      background: #28c840;
+      border-color: #1eab33;
+    }
+
+    .standalone-app-title {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .standalone-file {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      overflow: hidden;
+      padding: 0 8px;
+      font-size: 11px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     button,
@@ -606,6 +686,15 @@
   </style>
 </head>
 <body>
+  <header class="standalone-titlebar">
+    <div class="standalone-window-controls" aria-label="画面操作">
+      <button class="standalone-window-control close" type="button" data-title-action="home" aria-label="起動画面へ戻る" title="起動画面へ戻る"></button>
+      <button class="standalone-window-control home" type="button" data-title-action="home" aria-label="起動画面へ戻る" title="起動画面へ戻る"></button>
+      <button class="standalone-window-control expand" type="button" data-title-action="reload" aria-label="再読み込み" title="再読み込み"></button>
+    </div>
+    <div class="standalone-app-title">上野清掃2.3 v2-3</div>
+    <div class="standalone-file">index_nenpi_sousin.html</div>
+  </header>
   <div class="app">
     <header>
       <div>
@@ -712,6 +801,16 @@
       send: document.getElementById("sendMessage"),
       topRecipient: document.getElementById("topRecipientMessage")
     };
+
+    document.querySelectorAll("[data-title-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.titleAction === "reload") {
+          location.reload();
+          return;
+        }
+        location.href = "index.html";
+      });
+    });
 
     document.getElementById("fuelForm").addEventListener("submit", (event) => {
       event.preventDefault();
