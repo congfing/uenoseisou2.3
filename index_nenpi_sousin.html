@@ -524,6 +524,61 @@
       background: #fff;
     }
 
+    .analytics-panel {
+      border-top: 1px solid var(--line);
+    }
+
+    .analytics-controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .mode-button.active {
+      background: #f2f2f2;
+      border-width: 2px;
+    }
+
+    .analytics-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .analytics-table {
+      min-width: 760px;
+    }
+
+    .chart-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .fuel-chart {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 220px;
+    }
+
+    .chart-label {
+      fill: var(--text);
+      font-size: 12px;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
     .row-actions {
       display: flex;
       gap: 8px;
@@ -550,7 +605,8 @@
       }
 
       .form-grid,
-      .check-list {
+      .check-list,
+      .analytics-controls {
         grid-template-columns: 1fr;
       }
 
@@ -776,6 +832,35 @@
           <span class="message" id="sendMessage"></span>
         </div>
       </section>
+
+      <section class="tab-panel analytics-panel" id="analyticsPanel">
+        <div class="section-title">
+          <h2>燃費確認</h2>
+          <div class="hint">確認用です。メール送信には入りません。</div>
+        </div>
+        <div class="analytics-controls">
+          <label>年
+            <select id="analyticsYear"></select>
+          </label>
+          <label>月
+            <select id="analyticsMonth"></select>
+          </label>
+          <label>車番・車種
+            <select id="analyticsVehicle"></select>
+          </label>
+          <label>表示
+            <select id="analyticsMode">
+              <option value="list">燃費リスト</option>
+              <option value="graph">燃費グラフ</option>
+            </select>
+          </label>
+        </div>
+        <div class="mode-buttons" aria-label="燃費表示切替">
+          <button class="button mode-button active" type="button" data-analytics-mode="list">燃費リスト</button>
+          <button class="button mode-button secondary" type="button" data-analytics-mode="graph">燃費グラフ</button>
+        </div>
+        <div id="analyticsOutput"></div>
+      </section>
     </main>
   </div>
 
@@ -800,6 +885,13 @@
       entry: document.getElementById("entryMessage"),
       send: document.getElementById("sendMessage"),
       topRecipient: document.getElementById("topRecipientMessage")
+    };
+    const analytics = {
+      year: document.getElementById("analyticsYear"),
+      month: document.getElementById("analyticsMonth"),
+      vehicle: document.getElementById("analyticsVehicle"),
+      mode: document.getElementById("analyticsMode"),
+      output: document.getElementById("analyticsOutput")
     };
 
     document.querySelectorAll("[data-title-action]").forEach((button) => {
@@ -893,6 +985,17 @@
       const button = event.target.closest("[data-restore-record]");
       if (!button) return;
       restoreSelectedRecord();
+    });
+
+    [analytics.year, analytics.month, analytics.vehicle, analytics.mode].forEach((input) => {
+      input.addEventListener("change", () => renderAnalytics());
+    });
+
+    document.querySelectorAll("[data-analytics-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        analytics.mode.value = button.dataset.analyticsMode;
+        renderAnalytics();
+      });
     });
 
     resetFuelForm();
@@ -1004,6 +1107,7 @@
     function render() {
       renderTopRecipients();
       renderRecords();
+      renderAnalytics();
       document.getElementById("mailPreview").value = buildMailBody();
     }
 
@@ -1160,6 +1264,162 @@
       fields.vehicleNo.focus();
     }
 
+    function renderAnalytics() {
+      const selected = {
+        year: analytics.year.value,
+        month: analytics.month.value,
+        vehicle: analytics.vehicle.value,
+        mode: analytics.mode.value || "list"
+      };
+      const rows = calculatedFuelRows();
+      renderAnalyticsOptions(rows, selected);
+      const filtered = filterFuelRows(rows);
+      document.querySelectorAll("[data-analytics-mode]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.analyticsMode === analytics.mode.value);
+        button.classList.toggle("secondary", button.dataset.analyticsMode !== analytics.mode.value);
+      });
+      analytics.output.innerHTML = analytics.mode.value === "graph"
+        ? fuelGraphHtml(filtered)
+        : fuelListHtml(filtered);
+    }
+
+    function renderAnalyticsOptions(rows, selected) {
+      const years = [...new Set(rows.map((row) => dateParts(row.fuelDate).year).filter(Boolean))].sort();
+      const vehicles = new Map();
+      rows.forEach((row) => {
+        if (!row.vehicleNo || vehicles.has(row.vehicleNo)) return;
+        vehicles.set(row.vehicleNo, [row.vehicleNo, row.vehicleType].filter(Boolean).join(" / "));
+      });
+
+      analytics.year.innerHTML = `<option value="">すべて</option>${years.map((year) => (
+        `<option value="${escapeHtml(year)}">${escapeHtml(year)}年</option>`
+      )).join("")}`;
+      analytics.month.innerHTML = `<option value="">すべて</option>${Array.from({ length: 12 }, (_, index) => {
+        const month = String(index + 1);
+        return `<option value="${month}">${month}月</option>`;
+      }).join("")}`;
+      analytics.vehicle.innerHTML = `<option value="">すべて</option>${[...vehicles].map(([vehicle, label]) => (
+        `<option value="${escapeHtml(vehicle)}">${escapeHtml(label)}</option>`
+      )).join("")}`;
+      analytics.year.value = years.includes(selected.year) ? selected.year : "";
+      analytics.month.value = selected.month || "";
+      analytics.vehicle.value = vehicles.has(selected.vehicle) ? selected.vehicle : "";
+      analytics.mode.value = selected.mode === "graph" ? "graph" : "list";
+    }
+
+    function calculatedFuelRows() {
+      const previousByVehicle = new Map();
+      return [...state.records]
+        .map((record, index) => ({ record, index }))
+        .sort((a, b) => {
+          const dateCompare = String(a.record.fuelDate || "").localeCompare(String(b.record.fuelDate || ""));
+          return dateCompare || a.index - b.index;
+        })
+        .map(({ record }) => {
+          const vehicleNo = normalizeVehicleNo(record.vehicleNo);
+          const odometer = numberOrBlank(record.odometer);
+          const fuelVolume = numberOrBlank(record.fuelVolume);
+          let distance = numberOrBlank(record.distance);
+          let fuelEconomy = numberOrBlank(record.fuelEconomy);
+          const previousOdometer = previousByVehicle.get(vehicleNo);
+
+          if (distance === "" && odometer !== "" && previousOdometer !== undefined) {
+            distance = round1(odometer - previousOdometer);
+          }
+          if (fuelEconomy === "" && distance !== "" && fuelVolume) {
+            fuelEconomy = round1(distance / fuelVolume);
+          }
+          if (vehicleNo && odometer !== "") {
+            previousByVehicle.set(vehicleNo, odometer);
+          }
+          return { ...record, vehicleNo, distance, fuelVolume, fuelEconomy };
+        });
+    }
+
+    function filterFuelRows(rows) {
+      return rows.filter((row) => {
+        const parts = dateParts(row.fuelDate);
+        return (!analytics.year.value || parts.year === analytics.year.value)
+          && (!analytics.month.value || parts.month === analytics.month.value)
+          && (!analytics.vehicle.value || row.vehicleNo === analytics.vehicle.value);
+      });
+    }
+
+    function fuelListHtml(rows) {
+      if (rows.length === 0) {
+        return `<div class="empty">指定期間の燃費履歴はありません。</div>`;
+      }
+      return `
+        <div class="analytics-table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>給油日</th>
+                <th>車番</th>
+                <th>車種</th>
+                <th>オドメーター</th>
+                <th>走行距離</th>
+                <th>給油量</th>
+                <th>燃費</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>
+                  <td>${escapeHtml(row.fuelDate)}</td>
+                  <td>${escapeHtml(row.vehicleNo)}</td>
+                  <td>${escapeHtml(row.vehicleType)}</td>
+                  <td>${escapeHtml(formatValue(row.odometer))}</td>
+                  <td>${escapeHtml(formatValue(row.distance))}</td>
+                  <td>${escapeHtml(formatValue(row.fuelVolume))}</td>
+                  <td>${escapeHtml(formatValue(row.fuelEconomy))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function fuelGraphHtml(rows) {
+      const points = rows.filter((row) => numberOrBlank(row.fuelEconomy) !== "");
+      if (points.length === 0) {
+        return `<div class="empty">グラフにできる燃費履歴はありません。</div>`;
+      }
+
+      const width = 720;
+      const height = 260;
+      const pad = { left: 46, right: 16, top: 18, bottom: 42 };
+      const values = points.map((row) => Number(row.fuelEconomy));
+      const min = Math.max(0, Math.min(...values) - 1);
+      const max = Math.max(...values) + 1;
+      const xStep = points.length === 1 ? 0 : (width - pad.left - pad.right) / (points.length - 1);
+      const yFor = (value) => pad.top + (max - value) / (max - min || 1) * (height - pad.top - pad.bottom);
+      const coords = points.map((row, index) => ({
+        x: pad.left + xStep * index,
+        y: yFor(Number(row.fuelEconomy)),
+        row
+      }));
+      const polyline = coords.map((point) => `${point.x},${point.y}`).join(" ");
+
+      return `
+        <div class="chart-box">
+          <svg class="fuel-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="燃費グラフ">
+            <line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#000" stroke-width="1"></line>
+            <line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#000" stroke-width="1"></line>
+            <text class="chart-label" x="8" y="${pad.top + 8}">${escapeHtml(max.toFixed(1))}</text>
+            <text class="chart-label" x="8" y="${height - pad.bottom}">${escapeHtml(min.toFixed(1))}</text>
+            ${coords.length > 1 ? `<polyline points="${polyline}" fill="none" stroke="#000" stroke-width="3"></polyline>` : ""}
+            ${coords.map((point, index) => `
+              <circle cx="${point.x}" cy="${point.y}" r="5" fill="#fff" stroke="#000" stroke-width="2"></circle>
+              <text class="chart-label" x="${point.x - 14}" y="${point.y - 10}">${escapeHtml(formatValue(point.row.fuelEconomy))}</text>
+              <text class="chart-label" x="${Math.max(4, point.x - 34)}" y="${height - 16}">${escapeHtml(shortDate(point.row.fuelDate))}</text>
+            `).join("")}
+          </svg>
+        </div>
+      `;
+    }
+
     function selectedEmails() {
       const topEmails = state.topRecipients
         .filter((recipient) => recipient.saved && recipient.selected && recipient.email)
@@ -1226,6 +1486,23 @@
 
     function formatValue(value) {
       return value === "" || value === null || value === undefined ? "" : String(value);
+    }
+
+    function dateParts(value) {
+      const match = String(value || "").match(/^(\d{4})-(\d{1,2})-/);
+      return {
+        year: match ? match[1] : "",
+        month: match ? String(Number(match[2])) : ""
+      };
+    }
+
+    function shortDate(value) {
+      const match = String(value || "").match(/^\d{4}-(\d{1,2})-(\d{1,2})/);
+      return match ? `${Number(match[1])}/${Number(match[2])}` : String(value || "");
+    }
+
+    function round1(value) {
+      return Math.round(Number(value) * 10) / 10;
     }
 
     function escapeHtml(value) {
