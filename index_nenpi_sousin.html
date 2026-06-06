@@ -528,6 +528,22 @@
       border-top: 1px solid var(--line);
     }
 
+    .analytics-title {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      justify-content: stretch;
+    }
+
+    .analytics-title .hint {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      padding: 0;
+      background: transparent;
+      overflow-wrap: anywhere;
+    }
+
     .analytics-controls {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -555,7 +571,7 @@
     }
 
     .analytics-table {
-      min-width: 760px;
+      min-width: 680px;
     }
 
     .chart-box {
@@ -834,7 +850,7 @@
       </section>
 
       <section class="tab-panel analytics-panel" id="analyticsPanel">
-        <div class="section-title">
+        <div class="section-title analytics-title">
           <h2>燃費確認</h2>
           <div class="hint">確認用です。メール送信には入りません。</div>
         </div>
