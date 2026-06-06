@@ -457,6 +457,8 @@
     border-radius: 16px;
     background: transparent;
     cursor: pointer;
+    overflow: hidden;
+    padding: 0;
   }
 
   .running-preview[hidden] {
@@ -507,6 +509,17 @@
     z-index: 2;
   }
 
+  .running-preview .software-frame {
+    position: absolute;
+    inset: 0;
+    width: var(--preview-width, 100%);
+    height: var(--preview-height, 100%);
+    border: 0;
+    border-radius: 0;
+    visibility: visible;
+    z-index: 1;
+  }
+
   .software-frame.active {
     position: absolute;
     inset: 0;
@@ -547,6 +560,25 @@
 
     .running-preview {
       height: 214px;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .phone-grid {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 100%;
+    }
+
+    .phone-card.running {
+      min-height: 292px;
+    }
+
+    .phone-card.running .launch-btn {
+      margin-top: 238px;
+    }
+
+    .running-preview {
+      height: 232px;
     }
   }
 </style>
@@ -785,7 +817,7 @@
     const card = document.createElement("article");
     card.className = "phone-card";
     card.innerHTML = `
-      <button class="running-preview" type="button" hidden aria-label="${app.name} の縮小画面を再開する"></button>
+      <div class="running-preview" role="button" tabindex="0" hidden aria-label="${app.name} の縮小画面を再開する"></div>
       <button class="running-close" type="button" hidden aria-label="${app.name} を閉じる">×</button>
       <button class="launch-btn" type="button">
         <span class="launch-title">${app.name}</span>
@@ -793,6 +825,11 @@
     `;
     card.querySelector(".launch-btn").addEventListener("click", () => openSoftware(app));
     card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app));
+    card.querySelector(".running-preview").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openSoftware(app);
+    });
     card.querySelector(".running-close").addEventListener("click", (event) => {
       event.stopPropagation();
       closeSoftwareApp(app);
@@ -861,17 +898,19 @@
     const card = cards.get(app.file);
     if (!frame || !card) return;
     setCardRunning(app, true);
+    const previewButton = card.querySelector(".running-preview");
     const workspace = document.querySelector(".workspace").getBoundingClientRect();
-    const preview = card.querySelector(".running-preview").getBoundingClientRect();
+    const preview = previewButton.getBoundingClientRect();
     const fullWidth = workspace.width;
     const fullHeight = workspace.height;
-    frame.style.left = preview.left - workspace.left + "px";
-    frame.style.top = preview.top - workspace.top + "px";
+    frame.style.removeProperty("left");
+    frame.style.removeProperty("top");
     frame.style.setProperty("--preview-width", fullWidth + "px");
     frame.style.setProperty("--preview-height", fullHeight + "px");
     frame.style.setProperty("--preview-scale", Math.min(preview.width / fullWidth, preview.height / fullHeight));
     frame.classList.remove("active");
     frame.style.visibility = "visible";
+    previewButton.appendChild(frame);
     card.classList.remove("active");
     activeApp = null;
   }
@@ -885,6 +924,7 @@
     activeApp = app;
     currentZoom = savedZoom.get(app.file) || 100;
     const frame = frames.get(app.file) || createFrame(app);
+    frameLayer.appendChild(frame);
     frame.style.removeProperty("left");
     frame.style.removeProperty("top");
     frame.style.removeProperty("visibility");
