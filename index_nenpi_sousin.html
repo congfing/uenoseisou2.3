@@ -1,109 +1,1047 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>燃費報告</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>燃費報告を送信</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --text: #000000;
+      --muted: #333333;
+      --line: #000000;
+      --accent: #000000;
+      --accent-strong: #000000;
+      --accent-soft: #f2f2f2;
+      --danger: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      line-height: 1.55;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    header {
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      letter-spacing: 0;
+    }
+
+    .top-recipients {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: none;
+      margin-bottom: 14px;
+      padding: 14px;
+    }
+
+    .top-recipient-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .top-recipient-row {
+      display: grid;
+      grid-template-columns: 42px minmax(180px, 1fr) 110px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .top-recipient-check {
+      display: grid;
+      place-items: center;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .top-recipient-check input {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .top-save-button.saved {
+      background: #f2f2f2;
+      border-color: var(--line);
+      color: var(--text);
+    }
+
+    .top-save-button {
+      white-space: nowrap;
+    }
+
+    main {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: none;
+      overflow: hidden;
+    }
+
+    .tab-panel {
+      padding: 22px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -6px 0 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .span-2 {
+      grid-column: span 2;
+    }
+
+    .span-4 {
+      grid-column: span 4;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 44px;
+      padding: 9px 15px;
+      cursor: pointer;
+      font-weight: 800;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .button:hover {
+      background: #f2f2f2;
+    }
+
+    .button.secondary {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--text);
+    }
+
+    .button.secondary:hover {
+      background: #f2f2f2;
+    }
+
+    .button.danger {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--danger);
+    }
+
+    .button.danger:hover {
+      background: #f2f2f2;
+    }
+
+    .message {
+      min-height: 24px;
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 18px;
+    }
+
+    .history-wrap {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 18px;
+      overflow: hidden;
+    }
+
+    .history-title {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+    }
+
+    .day-history {
+      padding: 10px;
+    }
+
+    .history-date-row {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .history-date-row label {
+      min-width: 0;
+    }
+
+    .history-date-row input[type="date"] {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-item {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .history-item.selected-record {
+      background: #f2f2f2;
+      font-weight: 800;
+    }
+
+    .history-item-main {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 800;
+    }
+
+    .history-item-sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr.selected-record td {
+      background: #f2f2f2;
+      font-weight: 700;
+    }
+
+    th {
+      color: var(--text);
+      background: #f2f2f2;
+      font-size: 13px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .empty {
+      padding: 26px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .check-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .check-item input {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .preview {
+      width: 100%;
+      min-height: 220px;
+      margin-top: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .small-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      min-height: 34px;
+      padding: 5px 9px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .small-button:hover {
+      background: #f2f2f2;
+    }
+
+    @media (max-width: 820px) {
+      header {
+        gap: 12px;
+      }
+
+      .form-grid,
+      .check-list {
+        grid-template-columns: 1fr;
+      }
+
+      .top-recipient-row {
+        grid-template-columns: 38px minmax(0, 1fr) 96px;
+        gap: 8px;
+      }
+
+      .span-2,
+      .span-4 {
+        grid-column: span 1;
+      }
+
+      .tab-panel {
+        padding: 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        width: calc(100% - 16px);
+        padding: 12px 0 28px;
+      }
+
+      header {
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      .hint {
+        font-size: 12px;
+      }
+
+      .top-recipients {
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      .section-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+
+      .top-recipient-list {
+        gap: 7px;
+      }
+
+      .top-recipient-row {
+        grid-template-columns: 34px minmax(0, 1fr) 78px;
+        gap: 6px;
+      }
+
+      .top-recipient-check,
+      input,
+      textarea,
+      .button {
+        min-height: 46px;
+      }
+
+      input,
+      textarea {
+        border-radius: 7px;
+        padding: 9px 10px;
+        font-size: 16px;
+      }
+
+      .top-save-button {
+        min-height: 46px;
+        padding: 8px 6px;
+        font-size: 13px;
+      }
+
+      .tab-panel {
+        padding: 12px;
+      }
+
+      .form-grid {
+        gap: 10px;
+      }
+
+      label {
+        font-size: 12px;
+      }
+
+      .actions {
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .actions .button {
+        flex: 1 1 100%;
+      }
+
+      .message {
+        width: 100%;
+        font-size: 13px;
+      }
+
+      .table-wrap {
+        margin-top: 12px;
+      }
+
+      th,
+      td {
+        padding: 8px;
+        font-size: 13px;
+      }
+
+      .preview {
+        min-height: 180px;
+        font-size: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="app-header">
-    <div>
-      <h1>燃費報告</h1>
-      <p id="workbookPath">Excelを読み込み中</p>
-    </div>
-    <button class="menu-button" id="reloadButton" type="button">再読込</button>
-  </header>
+  <div class="app">
+    <header>
+      <div>
+        <h1>燃費報告を送信</h1>
+        <div class="hint">入力内容を登録し、送付先を選択してGmail作成画面を開きます。</div>
+      </div>
+    </header>
 
-  <main class="app-main">
-    <input id="metaDriver" type="hidden">
-    <input id="metaDriver1" type="hidden">
-    <input id="metaDriver2" type="hidden">
-    <input id="metaDriver3" type="hidden">
-    <input id="metaDriver4" type="hidden">
-    <input id="metaDriver5" type="hidden">
-
-    <details class="register-drawer">
-      <summary><span>^ 登録</span></summary>
-      <section class="register-panel">
-        <div class="register-group vehicle-register">
-          <div class="group-title">車両登録</div>
-          <label>
-            <span>車番</span>
-            <input id="registerVehicle" type="text">
-          </label>
-          <label>
-            <span>車種</span>
-            <input id="registerVehicleType" type="text">
-          </label>
-          <button class="register-button" id="registerVehicleButton" type="button">車両保存</button>
-          <span class="register-info" id="vehicleSlotInfo"></span>
-        </div>
-
-        <div class="register-group driver-register">
-          <div class="group-title">運転者登録</div>
-          <label>
-            <span>運転者</span>
-            <input id="registerDriver" type="text">
-          </label>
-          <button class="register-button" id="registerDriverButton" type="button">運転者保存</button>
-          <span class="register-info" id="driverSlotInfo"></span>
-        </div>
-        <div class="register-group workbook-register">
-          <div class="group-title">Excel選択</div>
-          <label>
-            <span>Excel</span>
-            <select id="fileSelect"></select>
-          </label>
-          <label>
-            <span>Sheet</span>
-            <select id="sheetSelect"></select>
-          </label>
-        </div>
-      </section>
-    </details>
-
-    <section class="select-panel">
-      <label>
-        <span>登録車番</span>
-        <select id="metaSelectedVehicle"></select>
-      </label>
-      <label>
-        <span>車種</span>
-        <input id="metaActiveVehicleType" type="text" readonly>
-      </label>
-      <label>
-        <span>登録運転者</span>
-        <select id="metaSelectedDriver"></select>
-      </label>
-      <label>
-        <span>年</span>
-        <select id="yearFilter"></select>
-      </label>
-      <label>
-        <span>月</span>
-        <select id="monthFilter"></select>
-      </label>
-      <select id="startupVehicleSelect" hidden></select>
-      <select id="vehicleFilter" hidden></select>
-    </section>
-
-    <section class="summary-strip">
-      <span id="recordCount">0件</span>
-      <span id="selectedInfo">未選択</span>
-      <button class="save-button" id="saveSheet" type="button" hidden>保存</button>
-    </section>
-
-    <section class="table-panel">
-      <div class="table-wrap">
-        <table id="dataTable">
-          <thead id="tableHead"></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
+    <section class="top-recipients" aria-label="上部送付先リスト">
+      <div class="section-title">
+        <h2>送付先アドレス</h2>
+        <div class="hint">チェックした保存済みアドレスへ送信します。</div>
+      </div>
+      <div class="top-recipient-list" id="topRecipientList"></div>
+      <div class="actions">
+        <span class="message" id="topRecipientMessage"></span>
       </div>
     </section>
-  </main>
 
-  <script src="js/app.js"></script>
+    <main>
+      <section class="tab-panel" id="entryPanel">
+        <div class="section-title">
+          <h2>燃費データ</h2>
+        </div>
+        <div class="small-note">保存ボタンで履歴に保存します。</div>
+
+        <form id="fuelForm" autocomplete="on">
+          <div class="form-grid">
+            <label>給油日
+              <input id="fuelDate" type="date" required>
+            </label>
+            <label>車番
+              <input id="vehicleNo" type="text" inputmode="numeric" placeholder="例：1234" required>
+            </label>
+            <label>車種
+              <input id="vehicleType" type="text" placeholder="例：軽トラック">
+            </label>
+            <label>運転者
+              <input id="driver" type="text" placeholder="例：西山" required>
+            </label>
+            <label>オドメーター
+              <input id="odometer" type="number" min="0" step="1" placeholder="例：123456">
+            </label>
+            <label>走行距離(km)
+              <input id="distance" type="number" min="0" step="0.1" placeholder="空白でOKです">
+            </label>
+            <label>給油燃料量(L)
+              <input id="fuelVolume" type="number" min="0" step="0.01" placeholder="例：23.4" required>
+            </label>
+            <label>燃費(km/L)
+              <input id="fuelEconomy" type="number" min="0" step="0.01" placeholder="空白でOKです">
+            </label>
+            <label class="span-4">備考
+              <textarea id="note" placeholder="必要があれば入力"></textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="button" type="submit" id="addFuelButton">履歴に保存</button>
+            <button class="button secondary" type="button" id="clearFormButton">入力を消す</button>
+            <span class="message" id="entryMessage"></span>
+          </div>
+        </form>
+
+        <div id="recordsArea"></div>
+      </section>
+
+      <section class="tab-panel" id="sendPanel">
+        <div class="section-title">
+          <h2>送信</h2>
+        </div>
+
+        <label>送信本文プレビュー
+          <textarea id="mailPreview" class="preview" readonly></textarea>
+        </label>
+
+        <div class="actions">
+          <button class="button" type="button" id="sendButton">Gmailで送信</button>
+          <button class="button danger" type="button" id="clearHistoryButton">履歴削除</button>
+          <span class="message" id="sendMessage"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "fuel-report-mailer-v1";
+    const subject = "[燃費報告]";
+
+    const state = loadState();
+    const fields = {
+      fuelDate: document.getElementById("fuelDate"),
+      vehicleNo: document.getElementById("vehicleNo"),
+      vehicleType: document.getElementById("vehicleType"),
+      driver: document.getElementById("driver"),
+      odometer: document.getElementById("odometer"),
+      distance: document.getElementById("distance"),
+      fuelVolume: document.getElementById("fuelVolume"),
+      fuelEconomy: document.getElementById("fuelEconomy"),
+      note: document.getElementById("note")
+    };
+
+    const messages = {
+      entry: document.getElementById("entryMessage"),
+      send: document.getElementById("sendMessage"),
+      topRecipient: document.getElementById("topRecipientMessage")
+    };
+
+    document.getElementById("fuelForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = readFuelForm();
+      if (!record) return;
+      state.records.push(record);
+      state.selectedHistoryDate = record.fuelDate;
+      state.selectedRecordId = record.id;
+      saveState();
+      resetFuelForm();
+      setMessage(messages.entry, "履歴に保存しました。");
+      render();
+    });
+
+    document.getElementById("clearFormButton").addEventListener("click", () => {
+      resetFuelForm();
+      setMessage(messages.entry, "入力を消しました。");
+    });
+
+    fields.vehicleNo.addEventListener("input", () => {
+      fields.vehicleNo.value = normalizeVehicleNo(fields.vehicleNo.value);
+      fillVehicleTypeFromHistory();
+    });
+
+    fields.fuelDate.addEventListener("change", () => {
+      state.selectedHistoryDate = fields.fuelDate.value || todayLocalDate();
+      state.selectedRecordId = "";
+      saveState();
+      render();
+    });
+
+    document.getElementById("topRecipientList").addEventListener("input", (event) => {
+      const input = event.target.closest("[data-top-email]");
+      if (!input) return;
+      const item = findTopRecipient(input.dataset.topEmail);
+      item.email = input.value.trim();
+      item.saved = false;
+      saveState();
+      const row = input.closest(".top-recipient-row");
+      const button = row.querySelector("[data-save-top-recipient]");
+      button.textContent = "保存";
+      button.classList.remove("saved");
+    });
+
+    document.getElementById("topRecipientList").addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-top-selected]");
+      if (!checkbox) return;
+      const item = findTopRecipient(checkbox.dataset.topSelected);
+      item.selected = checkbox.checked;
+      saveState();
+    });
+
+    document.getElementById("topRecipientList").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-save-top-recipient]");
+      if (!button) return;
+      const item = findTopRecipient(button.dataset.saveTopRecipient);
+      if (!isValidEmail(item.email)) {
+        setMessage(messages.topRecipient, "送付先アドレスを正しく入力してください。", true);
+        return;
+      }
+      item.saved = true;
+      item.selected = true;
+      saveState();
+      setMessage(messages.topRecipient, "保存しました。");
+      render();
+    });
+
+    document.getElementById("sendButton").addEventListener("click", () => openGmailCompose());
+    document.getElementById("clearHistoryButton").addEventListener("click", () => {
+      if (!confirm("保存履歴を削除します。よろしいですか？")) return;
+      state.records = [];
+      state.selectedRecordId = "";
+      state.selectedHistoryDate = "";
+      saveState();
+      setMessage(messages.send, "履歴を削除しました。");
+      render();
+    });
+
+    resetFuelForm();
+    render();
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return {
+          records: Array.isArray(saved?.records) ? saved.records : [],
+          recipients: Array.isArray(saved?.recipients) ? saved.recipients : [],
+          topRecipients: normalizeTopRecipients(saved?.topRecipients),
+          selectedRecordId: saved?.selectedRecordId || "",
+          selectedHistoryDate: saved?.selectedHistoryDate || todayLocalDate()
+        };
+      } catch {
+        return {
+          records: [],
+          recipients: [],
+          topRecipients: createTopRecipients(),
+          selectedRecordId: "",
+          selectedHistoryDate: todayLocalDate()
+        };
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function clearMessages() {
+      Object.values(messages).forEach((message) => {
+        message.textContent = "";
+        message.classList.remove("error");
+      });
+    }
+
+    function setMessage(element, text, isError = false) {
+      element.textContent = text;
+      element.classList.toggle("error", isError);
+    }
+
+    function readFuelForm() {
+      const distance = numberOrBlank(fields.distance.value);
+      const fuelVolume = numberOrBlank(fields.fuelVolume.value);
+      const economy = numberOrBlank(fields.fuelEconomy.value);
+
+      if (!fields.fuelDate.value || !fields.vehicleNo.value.trim() || !fields.driver.value.trim()) {
+        setMessage(messages.entry, "給油日、車番、運転者を入力してください。", true);
+        return null;
+      }
+
+      if (fuelVolume === "") {
+        setMessage(messages.entry, "給油燃料量を入力してください。", true);
+        return null;
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        fuelDate: fields.fuelDate.value,
+        vehicleNo: normalizeVehicleNo(fields.vehicleNo.value),
+        vehicleType: fields.vehicleType.value.trim(),
+        driver: fields.driver.value.trim(),
+        odometer: numberOrBlank(fields.odometer.value),
+        distance,
+        fuelVolume,
+        fuelEconomy: economy,
+        note: fields.note.value.trim()
+      };
+    }
+
+    function resetFuelForm() {
+      document.getElementById("fuelForm").reset();
+      fields.fuelDate.value = todayLocalDate();
+      fields.fuelEconomy.value = "";
+    }
+
+    function todayLocalDate() {
+      const date = new Date();
+      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+      return date.toISOString().slice(0, 10);
+    }
+
+    function numberOrBlank(value) {
+      if (value === "" || value === null || value === undefined) return "";
+      const number = Number(value);
+      return Number.isFinite(number) ? number : "";
+    }
+
+    function normalizeVehicleNo(value) {
+      return String(value ?? "").replace(/-/g, "").trim();
+    }
+
+    function fillVehicleTypeFromHistory() {
+      const vehicleNo = normalizeVehicleNo(fields.vehicleNo.value);
+      if (!vehicleNo || fields.vehicleType.value.trim()) return;
+      const record = [...state.records].reverse().find((item) => {
+        return normalizeVehicleNo(item.vehicleNo) === vehicleNo && item.vehicleType;
+      });
+      if (record) {
+        fields.vehicleType.value = record.vehicleType;
+      }
+    }
+
+    function recordsForDate(dateText) {
+      return state.records.filter((record) => record.fuelDate === dateText);
+    }
+
+    function render() {
+      renderTopRecipients();
+      renderRecords();
+      document.getElementById("mailPreview").value = buildMailBody();
+    }
+
+    function createTopRecipients() {
+      return Array.from({ length: 5 }, (_, index) => ({
+        id: `top-${index + 1}`,
+        email: "",
+        selected: false,
+        saved: false
+      }));
+    }
+
+    function normalizeTopRecipients(items) {
+      const base = createTopRecipients();
+      if (!Array.isArray(items)) return base;
+      items.slice(0, 5).forEach((item, index) => {
+        base[index] = {
+          id: base[index].id,
+          email: item?.email || "",
+          selected: Boolean(item?.selected),
+          saved: Boolean(item?.saved)
+        };
+      });
+      return base;
+    }
+
+    function findTopRecipient(id) {
+      let item = state.topRecipients.find((recipient) => recipient.id === id);
+      if (!item) {
+        item = createTopRecipients()[0];
+        state.topRecipients.push(item);
+      }
+      return item;
+    }
+
+    function renderTopRecipients() {
+      const area = document.getElementById("topRecipientList");
+      area.innerHTML = state.topRecipients.map((recipient, index) => `
+        <div class="top-recipient-row">
+          <label class="top-recipient-check" aria-label="送付先${index + 1}を選択">
+            <input type="checkbox" data-top-selected="${recipient.id}" ${recipient.selected ? "checked" : ""}>
+          </label>
+          <input type="email" data-top-email="${recipient.id}" value="${escapeHtml(recipient.email)}" placeholder="送付先アドレス ${index + 1}">
+          <button class="button secondary top-save-button ${recipient.saved ? "saved" : ""}" type="button" data-save-top-recipient="${recipient.id}">
+            ${recipient.saved ? "保存済み" : "保存"}
+          </button>
+        </div>
+      `).join("");
+    }
+
+    function renderRecords() {
+      const area = document.getElementById("recordsArea");
+      area.innerHTML = `
+        <div class="history-wrap">
+          <h2 class="history-title">保存履歴</h2>
+          <div class="history-date-row">
+            <label>履歴日
+              <input id="historyDate" type="date" value="${escapeHtml(state.selectedHistoryDate || fields.fuelDate.value || todayLocalDate())}">
+            </label>
+          </div>
+          ${buildSelectedDateHistoryHtml()}
+        </div>
+      `;
+
+      area.querySelectorAll("[data-delete-record]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (state.selectedRecordId === button.dataset.deleteRecord) {
+            state.selectedRecordId = "";
+          }
+          state.records = state.records.filter((record) => record.id !== button.dataset.deleteRecord);
+          saveState();
+          render();
+        });
+      });
+
+      area.querySelectorAll("[data-preview-record]").forEach((row) => {
+        row.addEventListener("click", () => {
+          state.selectedRecordId = row.dataset.previewRecord;
+          saveState();
+          render();
+        });
+      });
+
+      const historyDate = document.getElementById("historyDate");
+      historyDate.addEventListener("change", () => {
+        state.selectedHistoryDate = historyDate.value || todayLocalDate();
+        state.selectedRecordId = "";
+        saveState();
+        render();
+      });
+
+    }
+
+    function buildSelectedDateHistoryHtml() {
+      if (state.records.length === 0) {
+        return `<div class="day-history"><div class="empty">保存履歴はまだありません。</div></div>`;
+      }
+
+      const selectedDate = state.selectedHistoryDate || fields.fuelDate.value || todayLocalDate();
+      const dayRecords = recordsForDate(selectedDate);
+      if (dayRecords.length === 0) {
+        return `<div class="day-history"><div class="small-note">${escapeHtml(selectedDate)} の履歴はありません。</div></div>`;
+      }
+
+      return `
+        <div class="day-history">
+          <div class="small-note">${escapeHtml(selectedDate)} の履歴</div>
+          <div class="history-list">
+            ${dayRecords.map((record) => `
+              <button class="history-item ${state.selectedRecordId === record.id ? "selected-record" : ""}" type="button" data-preview-record="${record.id}">
+                <span class="history-item-main">
+                  <span>${escapeHtml(record.vehicleNo || "車番なし")} ${escapeHtml(record.vehicleType || "")}</span>
+                  <span>${formatValue(record.fuelVolume)}L</span>
+                </span>
+                <span class="history-item-sub">運転者：${escapeHtml(record.driver || "")} / オドメーター：${formatValue(record.odometer)}</span>
+                <span class="history-item-sub">走行距離：${formatValue(record.distance)} / 燃費：${formatValue(record.fuelEconomy)} / 備考：${escapeHtml(record.note || "")}</span>
+                <span><span class="small-button" data-delete-record="${record.id}">削除</span></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function selectedEmails() {
+      const topEmails = state.topRecipients
+        .filter((recipient) => recipient.saved && recipient.selected && recipient.email)
+        .map((recipient) => recipient.email);
+      return [...new Set(topEmails)];
+    }
+
+    function validateBeforeSend() {
+      if (!selectedRecord()) {
+        setMessage(messages.send, "送信する履歴を1件クリックしてください。", true);
+        return false;
+      }
+      if (selectedEmails().length === 0) {
+        setMessage(messages.send, "送付先を選択してください。", true);
+        return false;
+      }
+      return true;
+    }
+
+    function openGmailCompose() {
+      if (!validateBeforeSend()) return;
+      const to = selectedEmails().join(",");
+      const subjectEncoded = encodeURIComponent(subject);
+      const bodyEncoded = encodeURIComponent(buildMailBody());
+      openMailComposer(`mailto:${to}?subject=${subjectEncoded}&body=${bodyEncoded}`);
+    }
+
+    function openMailComposer(mailtoUrl) {
+      const a = document.createElement("a");
+      a.href = mailtoUrl;
+      a.target = "_top";
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+      }, 1000);
+    }
+
+    function buildMailBody() {
+      const record = selectedRecord();
+      if (!record) {
+        return "履歴をクリックすると、ここに1件だけ表示します。";
+      }
+
+      const lines = ["【燃費報告】"];
+      lines.push("");
+      lines.push(`給油日：${record.fuelDate || ""}`);
+      lines.push(`車番：${record.vehicleNo || ""}`);
+      lines.push(`車種：${record.vehicleType || ""}`);
+      lines.push(`運転者：${record.driver || ""}`);
+      lines.push(`オドメーター：${formatValue(record.odometer)}`);
+      lines.push(`走行距離(km)：${formatValue(record.distance)}`);
+      lines.push(`給油燃料量(L)：${formatValue(record.fuelVolume)}`);
+      lines.push(`燃費(km/L)：${formatValue(record.fuelEconomy)}`);
+      lines.push(`備考：${record.note || ""}`);
+      return lines.join("\n");
+    }
+
+    function selectedRecord() {
+      return state.records.find((record) => record.id === state.selectedRecordId) || null;
+    }
+
+    function formatValue(value) {
+      return value === "" || value === null || value === undefined ? "" : String(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+  </script>
 </body>
 </html>
