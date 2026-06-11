@@ -4,7 +4,7 @@
   }
 
   const APPS = [
-    { label: 'Home', href: '上野清掃2.1.html' },
+    { label: 'Home', href: 'index.html' },
     { label: '計量', href: 'index_3-17.html' },
     { label: '物件表', href: 'index_2-3_bukken.html' },
     { label: '列選択', href: 'index_2-4_colview.html' },
@@ -15,7 +15,7 @@
 
   function currentFile() {
     const file = decodeURIComponent(location.pathname.split('/').pop() || '');
-    return file || '上野清掃2.1.html';
+    return file || 'index.html';
   }
 
   function loadExtraTabs() {
