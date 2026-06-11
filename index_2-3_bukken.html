@@ -921,10 +921,12 @@
   }
 
   // ===== GitHub ファイル一覧取得 =====
-  const GITHUB_API_URL = 'https://api.github.com/repos/congfing/uenoseisou2.1/contents/';
-  const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.1/main/';
-  const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.1@main/flat';
-  const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.1@main/';
+  const GITHUB_REPO_LABEL = 'github.com/congfing/uenoseisou2.3';
+  const DEFAULT_GITHUB_XLSX = '2026年度物件表_KMN置換.xlsx';
+  const GITHUB_API_URL = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+  const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+  const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.3@main/flat';
+  const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.3@main/';
   const FALLBACK_XLSX_FILES = [
     '2026年度物件表_KMN置換.xlsx',
     '2026年度物件表_KMN置換_列移動_20260513_計量リンク.xlsx',
@@ -987,7 +989,8 @@
         else if (encodedRequested) gitFileSelector.value = encodedRequested;
         else gitFileSelector.value = '';
         gitListLoadedAt = Date.now();
-        const target = requested || xlsxNames[0];
+        const defaultFile = xlsxNames.includes(DEFAULT_GITHUB_XLSX) ? DEFAULT_GITHUB_XLSX : null;
+        const target = requested || defaultFile || xlsxNames[0];
         if (target) {
           gitFileSelector.value = encodeURIComponent(target);
           loadFromGitHub(target);
@@ -1024,7 +1027,7 @@
           .then(res => { if (!res.ok) throw new Error('jsDelivr HTTP ' + res.status); return res.arrayBuffer(); });
       })
       .then(buf => {
-        loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.1');
+        loadWorkbookData(buf, filename, 'GitHub: ' + GITHUB_REPO_LABEL);
         showToast('✅ GitHubから「' + filename + '」を読み込みました');
         // 履歴からの復元が待機中なら適用
         if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
