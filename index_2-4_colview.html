@@ -328,10 +328,12 @@
 <div id="toast"></div>
 
 <script>
-const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.1/contents/';
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.1/main/';
-const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.1@main/flat';
-const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.1@main/';
+const GITHUB_REPO_LABEL = 'github.com/congfing/uenoseisou2.3';
+const DEFAULT_GITHUB_XLSX = '2026年度物件表_KMN置換.xlsx';
+const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+const GITHUB_JSDELIVR_API = 'https://data.jsdelivr.com/v1/package/gh/congfing/uenoseisou2.3@main/flat';
+const GITHUB_JSDELIVR_RAW = 'https://cdn.jsdelivr.net/gh/congfing/uenoseisou2.3@main/';
 const FALLBACK_XLSX_FILES = [
   '2026年度物件表_KMN置換.xlsx',
   '2026年度物件表_KMN置換_列移動_20260513_計量リンク.xlsx',
@@ -565,7 +567,8 @@ function fetchGitHubFileList() {
       const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
       gitFileSel.value = existsPrevious ? previousValue : '';
       gitListLoadedAt = Date.now();
-      const target = xlsxNames[0];
+      const defaultFile = xlsxNames.includes(DEFAULT_GITHUB_XLSX) ? DEFAULT_GITHUB_XLSX : null;
+      const target = defaultFile || xlsxNames[0];
       if (target) {
         gitFileSel.value = encodeURIComponent(target);
         loadFromGitHub(target);
@@ -593,7 +596,7 @@ function loadFromGitHub(filename) {
         .then(r => { if(!r.ok) throw new Error('jsDelivr HTTP '+r.status); return r.arrayBuffer(); });
     })
     .then(buf => {
-      loadWorkbookData(buf, filename, 'GitHub: github.com/congfing/uenoseisou2.1');
+      loadWorkbookData(buf, filename, 'GitHub: ' + GITHUB_REPO_LABEL);
       if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
         setTimeout(function() { window._histPendingRestore.applyFn(); delete window._histPendingRestore; }, 100);
       }

@@ -287,11 +287,12 @@ body.edit-mode .xl-table th:not(.rn-corner):not(.col-ltr):hover {
 
 <script>
 // ===== GitHub設定 =====
-const GH_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.2/main/';
+const GH_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+const DEFAULT_GITHUB_XLSX = '2026年度物件表_KMN置換.xlsx';
 const GITHUB_FILES = [
+  { name: '2026年度物件表_KMN置換.xlsx',          url: GH_BASE + encodeURIComponent('2026年度物件表_KMN置換.xlsx') },
   { name: '令和8年度収集カレンダー.xlsx',         url: GH_BASE + encodeURIComponent('令和8年度収集カレンダー.xlsx') },
   { name: '令和8年度収集カレンダー（縦通し）.xlsx', url: GH_BASE + encodeURIComponent('令和8年度収集カレンダー（縦通し）.xlsx') },
-  { name: '2026年度物件表_KMN置換.xlsx',          url: GH_BASE + encodeURIComponent('2026年度物件表_KMN置換.xlsx') },
 ];
 
 // ===== State =====
@@ -320,7 +321,7 @@ function closeToolPanel() {
 }
 
 // ===== GitHub モーダル =====
-const GH_API = 'https://api.github.com/repos/congfing/uenoseisou2.2/contents/';
+const GH_API = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
 let _ghFiles = [];
 
 async function openGhModal() {
@@ -338,6 +339,11 @@ async function openGhModal() {
         .map(f => ({ name: f.name, url: GH_BASE + encodeURIComponent(f.name) }));
       const existing = new Set(_ghFiles.map(f => f.name));
       found.forEach(f => { if (!existing.has(f.name)) _ghFiles.push(f); });
+      _ghFiles.sort((a, b) => {
+        if (a.name === DEFAULT_GITHUB_XLSX) return -1;
+        if (b.name === DEFAULT_GITHUB_XLSX) return 1;
+        return a.name.localeCompare(b.name, 'ja');
+      });
       renderGhFiles(document.getElementById('gh-search').value);
     }
   } catch(e) {}
