@@ -692,6 +692,9 @@
   const zoomLevels = [50, 75, 100, 125, 150, 175, 200];
   const themeStorageKey = "uenoseisou23_theme";
   const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
+  const softwareThemeExcludes = new Set([
+    "R8資源ごみ日程表_検索ツール.html"
+  ]);
   const defaultTheme = {
     titleBg: "#ffffff",
     titleText: "#000000",
@@ -885,6 +888,7 @@
     const frame = document.createElement("iframe");
     frame.className = "software-frame";
     frame.title = app.name;
+    frame.dataset.file = app.file;
     frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3";
     frame.addEventListener("load", () => {
       applySoftwareTheme(frame);
@@ -951,6 +955,11 @@
   function applySoftwareTheme(frame) {
     const documentInFrame = frame.contentDocument;
     if (!documentInFrame) return;
+
+    if (softwareThemeExcludes.has(frame.dataset.file)) {
+      documentInFrame.getElementById("ueno-v23-theme")?.remove();
+      return;
+    }
 
     const style = documentInFrame.getElementById("ueno-v23-theme") || documentInFrame.createElement("style");
     style.id = "ueno-v23-theme";
