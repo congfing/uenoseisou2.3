@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>令和8年度 資源ごみ・その他収集カレンダー</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #6366f1;
+            
+            /* Garbage category colors */
+            --color-metal: #ef4444;      /* 金属類: Red */
+            --color-paper: #3b82f6;      /* 紙布類・びん類: Blue */
+            --color-pet: #10b981;        /* ペットボトル・アルミ缶: Green */
+            --color-hardplat: #f59e0b;   /* 硬プラ・革製品: Orange */
+            --color-landfill: #8b5cf6;   /* 埋立ごみ: Purple */
+            --color-plastic: #ec4899;    /* 容器包装プラ: Pink */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', 'Noto Sans JP', 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #a5b4fc, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.05em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        main {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Glassmorphic Panel */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Month Selector */
+        .month-selector-wrapper {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .month-selector {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .month-nav-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+            background: rgba(15, 23, 42, 0.4);
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .month-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem 1.5rem;
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Calendar Grid */
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            min-height: 550px;
+        }
+
+        .calendar-day {
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid var(--panel-border);
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: 110px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-day:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            border: none;
+            pointer-events: none;
+        }
+
+        .day-num {
+            font-size: 1.05rem;
+            font-weight: 650;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+
+        .calendar-day.today .day-num {
+            color: var(--accent-color);
+            font-weight: 800;
+        }
+
+        .calendar-day.sunday .day-num {
+            color: #f87171;
+        }
+
+        .calendar-day.saturday .day-num {
+            color: #60a5fa;
+        }
+
+        /* Waste collection badges in vertical list */
+        .waste-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            width: 100%;
+            margin-top: 0.1rem;
+        }
+
+        .waste-badge {
+            font-size: 0.72rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 5px;
+            color: white;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.2;
+            cursor: default;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            display: block;
+            width: 100%;
+        }
+
+        /* Category Specific Colors */
+        .badge-metal { background: var(--color-metal); }
+        .badge-paper { background: var(--color-paper); }
+        .badge-pet { background: var(--color-pet); }
+        .badge-hardplat { background: var(--color-hardplat); }
+        .badge-landfill { background: var(--color-landfill); }
+        .badge-plastic { background: var(--color-plastic); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Mobile specific styling */
+        @media (max-width: 600px) {
+            .calendar-day {
+                min-height: 90px;
+                padding: 0.25rem;
+            }
+            .day-num {
+                font-size: 0.85rem;
+            }
+            .waste-badge {
+                font-size: 0.62rem;
+                padding: 0.15rem 0.25rem;
+            }
+            .legend {
+                gap: 0.5rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>令和8年度 資源ごみ・その他収集カレンダー</h1>
+        <p class="subtitle">全グループ（A〜F）の収集日程を重ねて表示したマスタカレンダーです。</p>
+    </header>
+
+    <main>
+        <!-- Legend at the top for quick reference -->
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-metal);"></div><span>金属類</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-paper);"></div><span>紙布類・びん類</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-pet);"></div><span>ペットボトル・アルミ缶</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-hardplat);"></div><span>硬プラ・革製品</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-landfill);"></div><span>埋立ごみ</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--color-plastic);"></div><span>容器包装プラ</span></div>
+        </div>
+
+        <!-- Main calendar panel -->
+        <div class="panel">
+            <div class="month-selector-wrapper">
+                <button class="month-nav-btn" id="prevMonth">◀</button>
+                <select class="month-selector" id="monthSelect">
+                    <option value="４月">2026年 4月</option>
+                    <option value="５月">2026年 5月</option>
+                    <option value="６月">2026年 6月</option>
+                    <option value="７月">2026年 7月</option>
+                    <option value="８月">2026年 8月</option>
+                    <option value="９月">2026年 9月</option>
+                    <option value="１０月">2026年 10月</option>
+                    <option value="１１月">2026年 11月</option>
+                    <option value="１２月">2026年 12月</option>
+                    <option value="１月">2027年 1月</option>
+                    <option value="２月">2027年 2月</option>
+                    <option value="３月">2027年 3月</option>
+                </select>
+                <button class="month-nav-btn" id="nextMonth">▶</button>
+            </div>
+
+            <div>
+                <div class="calendar-header">
+                    <div style="color: #f87171;">日</div>
+                    <div>月</div>
+                    <div>火</div>
+                    <div>水</div>
+                    <div>木</div>
+                    <div>金</div>
+                    <div style="color: #60a5fa;">土</div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Data injected from Python
+        const scheduleData = {"A": {"districts": ["小田町", "城北", "北平野", "上野丸之内", "上野赤坂町", "上野農人町", "上野玄番町", "上野西大手町", "上野片原町", "上野東・中町", "上野西町", "上野幸坂町", "上野下幸坂町", "上野向島町", "上野新町", "上野鍛冶町", "上野魚町", "上野小玉町", "上野福居町", "上野相生町", "上野紺屋町", "上野三之西町", "上野徳居町", "花垣地区"], "schedule": {"４月": {"金属類": [17], "紙布類・びん類": [1], "ペットボトルアルミ缶": [3], "硬プラ・革製品": [10], "埋立ごみ": [], "容器包装プラ": [8, 14, 21, 29]}, "５月": {"金属類": [20], "紙布類・びん類": [1], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [15], "埋立ごみ": [22], "容器包装プラ": [5, 12, 19, 27]}, "６月": {"金属類": [17], "紙布類・びん類": [3], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [12], "埋立ごみ": [], "容器包装プラ": [2, 9, 16, 24, 30]}, "７月": {"金属類": [17], "紙布類・びん類": [7], "ペットボトルアルミ缶": [1], "硬プラ・革製品": [10], "埋立ごみ": [31], "容器包装プラ": [8, 14, 21, 28]}, "８月": {"金属類": [14], "紙布類・びん類": [4], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [28], "埋立ごみ": [], "容器包装プラ": [5, 11, 18, 26]}, "９月": {"金属類": [30], "紙布類・びん類": [2], "ペットボトルアルミ缶": [4], "硬プラ・革製品": [11], "埋立ごみ": [29], "容器包装プラ": [1, 8, 15, 22]}, "１０月": {"金属類": [16], "紙布類・びん類": [7], "ペットボトルアルミ缶": [23], "硬プラ・革製品": [9], "埋立ごみ": [], "容器包装プラ": [2, 6, 13, 20, 27]}, "１１月": {"金属類": [18], "紙布類・びん類": [6], "ペットボトルアルミ缶": [17], "硬プラ・革製品": [13], "埋立ごみ": [10], "容器包装プラ": [3, 11, 20, 25]}, "１２月": {"金属類": [16], "紙布類・びん類": [2], "ペットボトルアルミ缶": [11], "硬プラ・革製品": [18], "埋立ごみ": [], "容器包装プラ": [4, 8, 15, 25]}, "１月": {"金属類": [20], "紙布類・びん類": [6], "ペットボトルアルミ缶": [15], "硬プラ・革製品": [8], "埋立ごみ": [19], "容器包装プラ": [5, 12, 22, 26]}, "２月": {"金属類": [9], "紙布類・びん類": [12], "ペットボトルアルミ缶": [19], "硬プラ・革製品": [5], "埋立ごみ": [], "容器包装プラ": [2, 10, 17, 23]}, "３月": {"金属類": [19], "紙布類・びん類": [3], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [17], "埋立ごみ": [10], "容器包装プラ": [2, 9, 16, 23, 30]}}}, "B": {"districts": ["三田地区", "諏訪地区", "猪田地区", "古山地区", "きじが台", "依那古地区", "比自岐地区"], "schedule": {"４月": {"金属類": [22], "紙布類・びん類": [15], "ペットボトルアルミ缶": [3], "硬プラ・革製品": [10], "埋立ごみ": [], "容器包装プラ": [8, 14, 21, 29]}, "５月": {"金属類": [26], "紙布類・びん類": [20], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [15], "埋立ごみ": [13], "容器包装プラ": [5, 12, 19, 27]}, "６月": {"金属類": [23], "紙布類・びん類": [17], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [12], "埋立ごみ": [], "容器包装プラ": [2, 9, 16, 24, 30]}, "７月": {"金属類": [29], "紙布類・びん類": [24], "ペットボトルアルミ缶": [1], "硬プラ・革製品": [10], "埋立ごみ": [15], "容器包装プラ": [8, 14, 21, 28]}, "８月": {"金属類": [25], "紙布類・びん類": [12], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [28], "埋立ごみ": [], "容器包装プラ": [5, 11, 18, 26]}, "９月": {"金属類": [25], "紙布類・びん類": [18], "ペットボトルアルミ缶": [4], "硬プラ・革製品": [11], "埋立ごみ": [9], "容器包装プラ": [1, 8, 15, 22]}, "１０月": {"金属類": [21], "紙布類・びん類": [14], "ペットボトルアルミ缶": [23], "硬プラ・革製品": [9], "埋立ごみ": [], "容器包装プラ": [2, 6, 13, 20, 27]}, "１１月": {"金属類": [24], "紙布類・びん類": [10], "ペットボトルアルミ缶": [17], "硬プラ・革製品": [13], "埋立ごみ": [6], "容器包装プラ": [3, 11, 20, 25]}, "１２月": {"金属類": [22], "紙布類・びん類": [16], "ペットボトルアルミ缶": [11], "硬プラ・革製品": [18], "埋立ごみ": [], "容器包装プラ": [4, 8, 15, 25]}, "１月": {"金属類": [22], "紙布類・びん類": [20], "ペットボトルアルミ缶": [15], "硬プラ・革製品": [8], "埋立ごみ": [27], "容器包装プラ": [5, 12, 19, 26]}, "２月": {"金属類": [24], "紙布類・びん類": [26], "ペットボトルアルミ缶": [19], "硬プラ・革製品": [5], "埋立ごみ": [], "容器包装プラ": [2, 10, 17, 23]}, "３月": {"金属類": [24], "紙布類・びん類": [26], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [17], "埋立ごみ": [12], "容器包装プラ": [2, 9, 16, 23, 30]}}}, "C": {"districts": ["中瀬地区", "（服部町1～3丁目）", "府中地区", "友生地区", "ゆめが丘"], "schedule": {"４月": {"金属類": [15], "紙布類・びん類": [8], "ペットボトルアルミ缶": [24], "硬プラ・革製品": [24], "埋立ごみ": [], "容器包装プラ": [7, 17, 22, 28]}, "５月": {"金属類": [1], "紙布類・びん類": [12], "ペットボトルアルミ缶": [29], "硬プラ・革製品": [29], "埋立ごみ": [19], "容器包装プラ": [6, 13, 22, 26]}, "６月": {"金属類": [2], "紙布類・びん類": [10], "ペットボトルアルミ缶": [19], "硬プラ・革製品": [19], "埋立ごみ": [], "容器包装プラ": [3, 9, 16, 23]}, "７月": {"金属類": [3], "紙布類・びん類": [8], "ペットボトルアルミ缶": [17], "硬プラ・革製品": [17], "埋立ごみ": [14], "容器包装プラ": [1, 7, 15, 22, 31]}, "８月": {"金属類": [5], "紙布類・びん類": [7], "ペットボトルアルミ缶": [19], "硬プラ・革製品": [19], "埋立ごみ": [], "容器包装プラ": [4, 12, 21, 25]}, "９月": {"金属類": [1], "紙布類・びん類": [9], "ペットボトルアルミ缶": [25], "硬プラ・革製品": [25], "埋立ごみ": [18], "容器包装プラ": [2, 8, 16, 23, 29]}, "１０月": {"金属類": [2], "紙布類・びん類": [16], "ペットボトルアルミ缶": [30], "硬プラ・革製品": [30], "埋立ごみ": [], "容器包装プラ": [7, 14, 21, 28]}, "１１月": {"金属類": [6], "紙布類・びん類": [20], "ペットボトルアルミ缶": [27], "硬プラ・革製品": [27], "埋立ごみ": [18], "容器包装プラ": [4, 10, 17, 24]}, "１２月": {"金属類": [1], "紙布類・びん類": [8], "ペットボトルアルミ缶": [23], "硬プラ・革製品": [23], "埋立ごみ": [], "容器包装プラ": [2, 9, 15, 22]}, "１月": {"金属類": [5], "紙布類・びん類": [15], "ペットボトルアルミ缶": [29], "硬プラ・革製品": [29], "埋立ごみ": [12], "容器包装プラ": [6, 13, 19, 26]}, "２月": {"金属類": [12], "紙布類・びん類": [19], "ペットボトルアルミ缶": [17], "硬プラ・革製品": [17], "埋立ごみ": [], "容器包装プラ": [3, 9, 16, 24]}, "３月": {"金属類": [12], "紙布類・びん類": [17], "ペットボトルアルミ缶": [26], "硬プラ・革製品": [26], "埋立ごみ": [19], "容器包装プラ": [3, 10, 16, 24, 30]}}}, "D": {"districts": ["上野桑町", "上野恵美須町", "上野池町", "上野鉄砲町", "上野愛宕町", "上野万町", "木興町", "八幡町", "久米町", "守田町", "陽光台", "四十九町", "問屋町"], "schedule": {"４月": {"金属類": [6], "紙布類・びん類": [16], "ペットボトルアルミ缶": [9], "硬プラ・革製品": [22], "埋立ごみ": [], "容器包装プラ": [8, 15, 20, 27]}, "５月": {"金属類": [18], "紙布類・びん類": [14], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [21], "埋立ごみ": [11], "容器包装プラ": [4, 13, 20, 25]}, "６月": {"金属類": [15], "紙布類・びん類": [18], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [25], "埋立ごみ": [], "容器包装プラ": [1, 10, 17, 22, 29]}, "７月": {"金属類": [30], "紙布類・びん類": [15], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [23], "埋立ごみ": [9], "容器包装プラ": [6, 13, 20, 29]}, "８月": {"金属類": [26], "紙布類・びん類": [19], "ペットボトルアルミ缶": [27], "硬プラ・革製品": [20], "埋立ごみ": [], "容器包装プラ": [3, 10, 17, 24, 31]}, "９月": {"金属類": [24], "紙布類・びん類": [16], "ペットボトルアルミ缶": [30], "硬プラ・革製品": [9], "埋立ごみ": [3], "容器包装プラ": [7, 14, 21, 28]}, "１０月": {"金属類": [28], "紙布類・びん類": [21], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [22], "埋立ごみ": [], "容器包装プラ": [5, 12, 19, 26]}, "１１月": {"金属類": [19], "紙布類・びん類": [26], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [16], "埋立ごみ": [4], "容器包装プラ": [2, 9, 18, 23, 30]}, "１２月": {"金属類": [14], "紙布類・びん類": [17], "ペットボトルアルミ缶": [2], "硬プラ・革製品": [10], "埋立ごみ": [], "容器包装プラ": [7, 16, 21]}, "１月": {"金属類": [21], "紙布類・びん類": [25], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [20], "埋立ごみ": [28], "容器包装プラ": [4, 11, 18, 27]}, "２月": {"金属類": [4], "紙布類・びん類": [18], "ペットボトルアルミ缶": [10], "硬プラ・革製品": [24], "埋立ごみ": [], "容器包装プラ": [1, 8, 15, 22]}, "３月": {"金属類": [3], "紙布類・びん類": [25], "ペットボトルアルミ缶": [4], "硬プラ・革製品": [31], "埋立ごみ": [11], "容器包装プラ": [1, 8, 17, 22, 29]}}}, "E": {"districts": ["上野車坂町", "上野田端町", "上野伊予町", "上野忍町", "上野東日南町", "上野西日南町", "上野寺町", "上野茅町", "緑ケ丘東町", "緑ケ丘中町", "緑ケ丘本町", "緑ケ丘西町", "緑ケ丘南町"], "schedule": {"４月": {"金属類": [13], "紙布類・びん類": [23], "ペットボトルアルミ缶": [9], "硬プラ・革製品": [22], "埋立ごみ": [], "容器包装プラ": [8, 15, 20, 27]}, "５月": {"金属類": [28], "紙布類・びん類": [27], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [21], "埋立ごみ": [14], "容器包装プラ": [4, 13, 20, 25]}, "６月": {"金属類": [18], "紙布類・びん類": [24], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [25], "埋立ごみ": [], "容器包装プラ": [1, 10, 17, 22, 29]}, "７月": {"金属類": [16], "紙布類・びん類": [22], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [23], "埋立ごみ": [9], "容器包装プラ": [6, 13, 20, 29]}, "８月": {"金属類": [6], "紙布類・びん類": [26], "ペットボトルアルミ缶": [27], "硬プラ・革製品": [20], "埋立ごみ": [], "容器包装プラ": [3, 10, 17, 24, 31]}, "９月": {"金属類": [17], "紙布類・びん類": [24], "ペットボトルアルミ缶": [30], "硬プラ・革製品": [9], "埋立ごみ": [2], "容器包装プラ": [7, 14, 21, 28]}, "１０月": {"金属類": [14], "紙布類・びん類": [29], "ペットボトルアルミ缶": [8], "硬プラ・革製品": [22], "埋立ごみ": [], "容器包装プラ": [5, 12, 19, 26]}, "１１月": {"金属類": [25], "紙布類・びん類": [19], "ペットボトルアルミ缶": [5], "硬プラ・革製品": [16], "埋立ごみ": [11], "容器包装プラ": [2, 9, 18, 23, 30]}, "１２月": {"金属類": [17], "紙布類・びん類": [24], "ペットボトルアルミ缶": [2], "硬プラ・革製品": [10], "埋立ごみ": [], "容器包装プラ": [7, 16, 21]}, "１月": {"金属類": [25], "紙布類・びん類": [13], "ペットボトルアルミ缶": [7], "硬プラ・革製品": [20], "埋立ごみ": [14], "容器包装プラ": [4, 11, 18, 27]}, "２月": {"金属類": [17], "紙布類・びん類": [3], "ペットボトルアルミ缶": [10], "硬プラ・革製品": [24], "埋立ごみ": [], "容器包装プラ": [1, 8, 15, 22]}, "３月": {"金属類": [18], "紙布類・びん類": [24], "ペットボトルアルミ缶": [4], "硬プラ・革製品": [31], "埋立ごみ": [25], "容器包装プラ": [1, 8, 17, 22, 29]}}}, "F": {"districts": ["新居地区", "長田地区", "花之木地区", "神戸地区"], "schedule": {"４月": {"金属類": [30], "紙布類・びん類": [2], "ペットボトルアルミ缶": [13], "硬プラ・革製品": [13], "埋立ごみ": [], "容器包装プラ": [6, 16, 22, 29]}, "５月": {"金属類": [13], "紙布類・びん類": [7], "ペットボトルアルミ缶": [20], "硬プラ・革製品": [20], "埋立ごみ": [28], "容器包装プラ": [6, 11, 18, 27]}, "６月": {"金属類": [3], "紙布類・びん類": [11], "ペットボトルアルミ缶": [24], "硬プラ・革製品": [24], "埋立ごみ": [], "容器包装プラ": [4, 10, 15, 22]}, "７月": {"金属類": [23], "紙布類・びん類": [2], "ペットボトルアルミ缶": [29], "硬プラ・革製品": [29], "埋立ごみ": [13], "容器包装プラ": [1, 8, 15, 22, 27]}, "８月": {"金属類": [13], "紙布類・びん類": [6], "ペットボトルアルミ缶": [12], "硬プラ・革製品": [12], "埋立ごみ": [], "容器包装プラ": [5, 10, 19, 26, 31]}, "９月": {"金属類": [10], "紙布類・びん類": [3], "ペットボトルアルミ缶": [16], "硬プラ・革製品": [16], "埋立ごみ": [17], "容器包装プラ": [7, 14, 23, 30]}, "１０月": {"金属類": [19], "紙布類・びん類": [1], "ペットボトルアルミ缶": [15], "硬プラ・革製品": [15], "埋立ごみ": [], "容器包装プラ": [7, 14, 21, 28]}, "１１月": {"金属類": [9], "紙布類・びん類": [4], "ペットボトルアルミ缶": [12], "硬プラ・革製品": [12], "埋立ごみ": [26], "容器包装プラ": [2, 11, 16, 25, 30]}, "１２月": {"金属類": [24], "紙布類・びん類": [3], "ペットボトルアルミ缶": [9], "硬プラ・革製品": [9], "埋立ごみ": [], "容器包装プラ": [10, 14, 23]}, "１月": {"金属類": [28], "紙布類・びん類": [7], "ペットボトルアルミ缶": [21], "硬プラ・革製品": [21], "埋立ごみ": [13], "容器包装プラ": [6, 14, 18, 27]}, "２月": {"金属類": [18], "紙布類・びん類": [4], "ペットボトルアルミ缶": [25], "硬プラ・革製品": [25], "埋立ごみ": [], "容器包装プラ": [3, 10, 15, 22]}, "３月": {"金属類": [8], "紙布類・びん類": [18], "ペットボトルアルミ缶": [11], "硬プラ・革製品": [11], "埋立ごみ": [31], "容器包装プラ": [3, 10, 15, 24, 29]}}}};
+
+        // State
+        let selectedMonth = "４月";
+
+        // Calendar mapping (Fiscal Year 2026/2027)
+        const monthInfo = {
+            "４月": { year: 2026, monthIndex: 3 },
+            "５月": { year: 2026, monthIndex: 4 },
+            "６月": { year: 2026, monthIndex: 5 },
+            "７月": { year: 2026, monthIndex: 6 },
+            "８月": { year: 2026, monthIndex: 7 },
+            "９月": { year: 2026, monthIndex: 8 },
+            "１０月": { year: 2026, monthIndex: 9 },
+            "１１月": { year: 2026, monthIndex: 10 },
+            "１２月": { year: 2026, monthIndex: 11 },
+            "１月": { year: 2027, monthIndex: 0 },
+            "２月": { year: 2027, monthIndex: 1 },
+            "３月": { year: 2027, monthIndex: 2 }
+        };
+
+        const monthKeys = ["４月", "５月", "６月", "７月", "８月", "９月", "１０月", "１１月", "１２月", "１月", "２月", "３月"];
+
+        // Category configurations for UI
+        const categories = {
+            "金属類": { label: "金属", class: "badge-metal" },
+            "紙布類・びん類": { label: "紙びん", class: "badge-paper" },
+            "ペットボトルアルミ缶": { label: "ペット缶", class: "badge-pet" },
+            "硬プラ・革製品": { label: "硬プラ", class: "badge-hardplat" },
+            "埋立ごみ": { label: "埋立", class: "badge-landfill" },
+            "容器包装プラ": { label: "プラ", class: "badge-plastic" }
+        };
+
+        // DOM elements
+        const monthSelect = document.getElementById("monthSelect");
+        const prevMonthBtn = document.getElementById("prevMonth");
+        const nextMonthBtn = document.getElementById("nextMonth");
+        const calendarGrid = document.getElementById("calendarGrid");
+
+        // Init
+        function init() {
+            setupEventListeners();
+            renderCalendar();
+        }
+
+        function setupEventListeners() {
+            // Month select change
+            monthSelect.addEventListener("change", (e) => {
+                selectedMonth = e.target.value;
+                renderCalendar();
+            });
+
+            // Month navigation
+            prevMonthBtn.addEventListener("click", () => {
+                let idx = monthKeys.indexOf(selectedMonth);
+                if (idx > 0) {
+                    selectedMonth = monthKeys[idx - 1];
+                    monthSelect.value = selectedMonth;
+                    renderCalendar();
+                }
+            });
+
+            nextMonthBtn.addEventListener("click", () => {
+                let idx = monthKeys.indexOf(selectedMonth);
+                if (idx < monthKeys.length - 1) {
+                    selectedMonth = monthKeys[idx + 1];
+                    monthSelect.value = selectedMonth;
+                    renderCalendar();
+                }
+            });
+        }
+
+        function renderCalendar() {
+            calendarGrid.innerHTML = "";
+            
+            const info = monthInfo[selectedMonth];
+            const year = info.year;
+            const monthIndex = info.monthIndex; // 0-based
+
+            // First day of the month
+            const firstDay = new Date(year, monthIndex, 1);
+            // Total days in the month
+            const totalDays = new Date(year, monthIndex + 1, 0).getDate();
+            // Day of week of the first day (0 = Sun, 1 = Mon, ..., 6 = Sat)
+            const startDayOfWeek = firstDay.getDay();
+
+            // Render empty cells for padding
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyCell = document.createElement("div");
+                emptyCell.className = "calendar-day empty";
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            const groups = ["A", "B", "C", "D", "E", "F"];
+
+            // Render days
+            for (let day = 1; day <= totalDays; day++) {
+                const dayCell = document.createElement("div");
+                dayCell.className = "calendar-day";
+                
+                // Day of week for classes
+                const currentDayOfWeek = new Date(year, monthIndex, day).getDay();
+                if (currentDayOfWeek === 0) dayCell.classList.add("sunday");
+                if (currentDayOfWeek === 6) dayCell.classList.add("saturday");
+
+                // Check today
+                const today = new Date();
+                if (today.getFullYear() === year && today.getMonth() === monthIndex && today.getDate() === day) {
+                    dayCell.classList.add("today");
+                }
+
+                // Day number
+                const dayNum = document.createElement("span");
+                dayNum.className = "day-num";
+                dayNum.textContent = day;
+                dayCell.appendChild(dayNum);
+
+                // Check waste collections
+                const dayBadges = document.createElement("div");
+                dayBadges.className = "waste-badges";
+
+                groups.forEach(gName => {
+                    const monthSchedule = scheduleData[gName].schedule[selectedMonth] || {};
+                    
+                    for (const [catName, catConfig] of Object.entries(categories)) {
+                        const collectionDays = monthSchedule[catName] || [];
+                        if (collectionDays.includes(day)) {
+                            const badge = document.createElement("span");
+                            badge.className = `waste-badge ${catConfig.class}`;
+                            
+                            // Format: "A紙びん" (Group Letter + Category Label)
+                            badge.textContent = `${gName}${catConfig.label}`;
+                            badge.title = `${gName}グループ - ${catName}`;
+                            
+                            dayBadges.appendChild(badge);
+                        }
+                    }
+                });
+
+                dayCell.appendChild(dayBadges);
+                calendarGrid.appendChild(dayCell);
+            }
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
