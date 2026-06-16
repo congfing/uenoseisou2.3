@@ -313,9 +313,10 @@
                 letter-spacing: 0;
             }
             .panel {
-                width: max-content;
-                min-width: 100%;
-                padding: 1rem;
+                width: calc(100vw - 1rem);
+                max-width: calc(100vw - 1rem);
+                min-width: 0;
+                padding: 0.5rem;
             }
             .month-selector-wrapper {
                 gap: 0.5rem;
@@ -331,23 +332,30 @@
             .calendar-header,
             .calendar-grid {
                 grid-template-columns: repeat(7, minmax(0, 1fr));
+                gap: 0.18rem;
                 min-width: 100%;
+                width: 100%;
+            }
+            .calendar-header {
+                font-size: 0.78rem;
             }
             body.compact-items .calendar-header,
             body.compact-items .calendar-grid {
                 grid-template-columns: repeat(7, 108px);
                 min-width: 756px;
+                width: max-content;
             }
             .calendar-day {
                 min-height: 90px;
-                padding: 0.25rem;
+                min-width: 0;
+                padding: 0.16rem;
             }
             .day-num {
                 font-size: 0.85rem;
             }
             .waste-badge {
-                font-size: 0.62rem;
-                padding: 0.15rem 0.25rem;
+                font-size: 0.56rem;
+                padding: 0.14rem 0.1rem;
             }
             .legend {
                 gap: 0.5rem 1rem;
