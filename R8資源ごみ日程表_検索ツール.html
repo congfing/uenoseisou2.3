@@ -126,6 +126,30 @@
             background: rgba(255, 255, 255, 0.05);
         }
 
+        .display-toggle-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin: -0.7rem 0 1.2rem;
+        }
+
+        .display-toggle-btn {
+            min-width: 148px;
+            min-height: 42px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(15, 23, 42, 0.58);
+            color: var(--text-primary);
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0.55rem 1rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        .display-toggle-btn:active {
+            transform: translateY(1px);
+        }
+
         /* Legend */
         .legend {
             display: flex;
@@ -239,6 +263,11 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
             display: block;
             width: 100%;
+            overflow-wrap: anywhere;
+            word-break: keep-all;
+        }
+
+        body.compact-items .waste-badge {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: clip;
@@ -288,8 +317,24 @@
                 min-width: 100%;
                 padding: 1rem;
             }
+            .month-selector-wrapper {
+                gap: 0.5rem;
+            }
+            .month-selector {
+                font-size: 1rem;
+                padding: 0.7rem 0.5rem;
+            }
+            .display-toggle-wrapper {
+                justify-content: flex-start;
+                margin: -0.45rem 0 1rem;
+            }
             .calendar-header,
             .calendar-grid {
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                min-width: 100%;
+            }
+            body.compact-items .calendar-header,
+            body.compact-items .calendar-grid {
                 grid-template-columns: repeat(7, 108px);
                 min-width: 756px;
             }
@@ -347,6 +392,9 @@
                 </select>
                 <button class="month-nav-btn" id="nextMonth">▶</button>
             </div>
+            <div class="display-toggle-wrapper">
+                <button class="display-toggle-btn" id="displayToggle" type="button" aria-pressed="false">1行表示</button>
+            </div>
 
             <div>
                 <div class="calendar-header">
@@ -402,6 +450,7 @@
         const monthSelect = document.getElementById("monthSelect");
         const prevMonthBtn = document.getElementById("prevMonth");
         const nextMonthBtn = document.getElementById("nextMonth");
+        const displayToggle = document.getElementById("displayToggle");
         const calendarGrid = document.getElementById("calendarGrid");
 
         // Init
@@ -434,6 +483,12 @@
                     monthSelect.value = selectedMonth;
                     renderCalendar();
                 }
+            });
+
+            displayToggle.addEventListener("click", () => {
+                const compact = document.body.classList.toggle("compact-items");
+                displayToggle.textContent = compact ? "折り返し表示" : "1行表示";
+                displayToggle.setAttribute("aria-pressed", String(compact));
             });
         }
 
