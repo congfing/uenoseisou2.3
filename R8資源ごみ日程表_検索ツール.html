@@ -263,8 +263,11 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
             display: block;
             width: 100%;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
             overflow-wrap: anywhere;
-            word-break: keep-all;
+            word-break: break-all;
         }
 
         body.compact-items .waste-badge {
@@ -463,6 +466,9 @@
 
         // Init
         function init() {
+            document.body.classList.remove("compact-items");
+            displayToggle.textContent = "1行表示";
+            displayToggle.setAttribute("aria-pressed", "false");
             setupEventListeners();
             renderCalendar();
         }
