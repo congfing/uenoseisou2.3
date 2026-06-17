@@ -167,6 +167,7 @@
             border-radius: 24px;
             padding: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            overflow-x: auto;
         }
 
         .month-panel {
@@ -339,6 +340,12 @@
             white-space: nowrap;
         }
 
+        /* 1行表示モード（nowrap-mode）時のレイアウト最小幅 */
+        .nowrap-mode .calendar-grid,
+        .nowrap-mode .calendar-header {
+            min-width: 700px;
+        }
+
         /* Category Specific Colors */
         .badge-metal { background: var(--color-metal); }
         .badge-paper { background: var(--color-paper); }
@@ -443,8 +450,8 @@
                 white-space: normal;
             }
             .nowrap-mode .waste-badge {
-                font-size: 0.52rem;
-                padding: 0.1rem 0.15rem;
+                font-size: 0.62rem;
+                padding: 0.15rem 0.25rem;
                 white-space: nowrap;
             }
             .legend {
