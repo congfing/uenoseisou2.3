@@ -81,77 +81,91 @@
             border-radius: 24px;
             padding: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            overflow-x: auto;
         }
 
-        /* Month Selector */
-        .month-selector-wrapper {
+        /* Sticky Header for navigation and controls */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--panel-border);
+            padding: 0.75rem 1rem;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
             margin-bottom: 1.5rem;
+        }
+
+        .header-content {
+            max-width: 1000px;
+            width: 75%;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
         }
 
-        .month-selector {
-            flex: 1;
-            padding: 0.8rem 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--panel-border);
-            background: rgba(15, 23, 42, 0.6);
-            color: var(--text-primary);
-            font-size: 1.1rem;
-            font-weight: 600;
-            outline: none;
-            cursor: pointer;
-            text-align: center;
+        .nav-scroll-wrapper {
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            padding-bottom: 0.1rem;
+            flex-grow: 1;
+        }
+        
+        .nav-scroll-wrapper::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
         }
 
-        .month-nav-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            border: 1px solid var(--panel-border);
-            background: rgba(15, 23, 42, 0.4);
-            color: var(--text-primary);
-            font-size: 1.2rem;
+        .nav-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            padding: 0.35rem 0.65rem;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            white-space: nowrap;
             transition: all 0.2s ease;
         }
 
-        .month-nav-btn:hover {
+        .nav-btn:hover {
+            color: var(--text-primary);
             background: rgba(255, 255, 255, 0.05);
         }
 
-        .display-toggle-wrapper {
-            display: flex;
-            justify-content: flex-end;
-            margin: -0.7rem 0 1.2rem;
-        }
-
-        .display-toggle-btn {
-            min-width: 148px;
-            min-height: 42px;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(15, 23, 42, 0.58);
+        .nav-btn.active {
             color: var(--text-primary);
-            font-size: 0.92rem;
-            font-weight: 700;
+            background: var(--accent-color);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
-            padding: 0.55rem 1rem;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
-        .display-toggle-btn:active {
-            transform: translateY(1px);
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        body.compact-items .panel {
-            overflow-x: auto;
+        .control-btn.active {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
         }
 
         /* Legend */
@@ -199,12 +213,6 @@
             grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 0.5rem;
             min-height: 550px;
-        }
-
-        body.compact-items .calendar-header,
-        body.compact-items .calendar-grid {
-            grid-template-columns: repeat(7, minmax(112px, 1fr));
-            min-width: 784px;
         }
 
         .calendar-day {
@@ -299,13 +307,16 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
             display: block;
             width: 100%;
+            white-space: normal; /* 折り返しありをデフォルトに */
+            word-break: break-all;
         }
 
-        body.compact-items .waste-badge {
+        /* 1行表示モード時のスタイル */
+        .nowrap-mode .waste-badge {
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: clip;
         }
+
+
 
         /* Category Specific Colors */
         .badge-metal { background: var(--color-metal); }
@@ -333,17 +344,28 @@
 
         /* Mobile specific styling */
         @media (max-width: 600px) {
-            header,
-            main {
+            header, main {
                 width: 100%;
             }
-            .display-toggle-wrapper {
-                justify-content: flex-start;
+            h1 {
+                font-size: 1.4rem;
             }
-            body.compact-items .calendar-header,
-            body.compact-items .calendar-grid {
-                grid-template-columns: repeat(7, 108px);
-                min-width: 756px;
+            .subtitle {
+                font-size: 0.8rem;
+            }
+            .sticky-header {
+                padding: 0.5rem;
+            }
+            .header-content {
+                width: 100%;
+            }
+            .nav-btn {
+                padding: 0.25rem 0.45rem;
+                font-size: 0.8rem;
+            }
+            .control-btn {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.72rem;
             }
             .calendar-day {
                 min-height: 90px;
@@ -358,6 +380,12 @@
             .waste-badge {
                 font-size: 0.62rem;
                 padding: 0.15rem 0.25rem;
+                white-space: normal;
+            }
+            .nowrap-mode .waste-badge {
+                font-size: 0.52rem;
+                padding: 0.1rem 0.15rem;
+                white-space: nowrap;
             }
             .legend {
                 gap: 0.5rem 1rem;
@@ -369,7 +397,31 @@
     <header>
         <h1>令和8年度 資源ごみ・その他収集カレンダー</h1>
         <p class="subtitle">全グループ（A〜F）の収集日程を重ねて表示したマスタカレンダーです。</p>
+        <div style="margin-top: 1rem;">
+            <a href="R8資源ごみ日程表_縦長一括カレンダー.html" style="color: #a5b4fc; text-decoration: none; font-size: 0.85rem; font-weight: 600; background: rgba(99, 102, 241, 0.15); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s; display: inline-block; backdrop-filter: blur(8px);">📅 年間一括カレンダーはこちら</a>
+        </div>
     </header>
+
+    <!-- Sticky Month Navigation and Toggle -->
+    <nav class="sticky-header">
+        <div class="header-content">
+            <div class="nav-scroll-wrapper" id="monthNav">
+                <button class="nav-btn" onclick="changeMonth('４月')">4月</button>
+                <button class="nav-btn" onclick="changeMonth('５月')">5月</button>
+                <button class="nav-btn" onclick="changeMonth('６月')">6月</button>
+                <button class="nav-btn" onclick="changeMonth('７月')">7月</button>
+                <button class="nav-btn" onclick="changeMonth('８月')">8月</button>
+                <button class="nav-btn" onclick="changeMonth('９月')">9月</button>
+                <button class="nav-btn" onclick="changeMonth('１０月')">10月</button>
+                <button class="nav-btn" onclick="changeMonth('１１月')">11月</button>
+                <button class="nav-btn" onclick="changeMonth('１２月')">12月</button>
+                <button class="nav-btn" onclick="changeMonth('１月')">1月</button>
+                <button class="nav-btn" onclick="changeMonth('２月')">2月</button>
+                <button class="nav-btn" onclick="changeMonth('３月')">3月</button>
+            </div>
+            <button id="toggleDisplayBtn" class="control-btn">↔ 1行表示にする</button>
+        </div>
+    </nav>
 
     <main>
         <!-- Legend at the top for quick reference -->
@@ -384,28 +436,6 @@
 
         <!-- Main calendar panel -->
         <div class="panel">
-            <div class="month-selector-wrapper">
-                <button class="month-nav-btn" id="prevMonth">◀</button>
-                <select class="month-selector" id="monthSelect">
-                    <option value="４月">2026年 4月</option>
-                    <option value="５月">2026年 5月</option>
-                    <option value="６月">2026年 6月</option>
-                    <option value="７月">2026年 7月</option>
-                    <option value="８月">2026年 8月</option>
-                    <option value="９月">2026年 9月</option>
-                    <option value="１０月">2026年 10月</option>
-                    <option value="１１月">2026年 11月</option>
-                    <option value="１２月">2026年 12月</option>
-                    <option value="１月">2027年 1月</option>
-                    <option value="２月">2027年 2月</option>
-                    <option value="３月">2027年 3月</option>
-                </select>
-                <button class="month-nav-btn" id="nextMonth">▶</button>
-            </div>
-            <div class="display-toggle-wrapper">
-                <button class="display-toggle-btn" id="displayToggle" type="button" aria-pressed="false">1行表示</button>
-            </div>
-
             <div>
                 <div class="calendar-header">
                     <div>月</div>
@@ -480,65 +510,56 @@
         };
 
         // DOM elements
-        const monthSelect = document.getElementById("monthSelect");
-        const prevMonthBtn = document.getElementById("prevMonth");
-        const nextMonthBtn = document.getElementById("nextMonth");
-        const displayToggle = document.getElementById("displayToggle");
         const calendarGrid = document.getElementById("calendarGrid");
+        const toggleDisplayBtn = document.getElementById("toggleDisplayBtn");
 
         // Init
         function init() {
-            selectedMonth = getTodayMonth();
-            monthSelect.value = selectedMonth;
-            document.body.classList.remove("compact-items");
-            displayToggle.textContent = "1行表示";
-            displayToggle.setAttribute("aria-pressed", "false");
-            setupEventListeners();
-            renderCalendar();
-        }
-
-        function getTodayMonth() {
+            // 今日の日付から現在の月（年度内）を初期選択に設定
             const today = new Date();
-            const currentYear = today.getFullYear();
-            const currentMonthIndex = today.getMonth();
-            const foundMonth = monthKeys.find((monthKey) => {
-                const info = monthInfo[monthKey];
-                return info.year === currentYear && info.monthIndex === currentMonthIndex;
-            });
-            return foundMonth || selectedMonth;
+            const curYear = today.getFullYear();
+            const curMonth = today.getMonth();
+            for (const [key, info] of Object.entries(monthInfo)) {
+                if (info.year === curYear && info.monthIndex === curMonth) {
+                    selectedMonth = key;
+                    break;
+                }
+            }
+
+            setupEventListeners();
+            changeMonth(selectedMonth);
         }
 
         function setupEventListeners() {
-            // Month select change
-            monthSelect.addEventListener("change", (e) => {
-                selectedMonth = e.target.value;
-                renderCalendar();
-            });
-
-            // Month navigation
-            prevMonthBtn.addEventListener("click", () => {
-                let idx = monthKeys.indexOf(selectedMonth);
-                if (idx > 0) {
-                    selectedMonth = monthKeys[idx - 1];
-                    monthSelect.value = selectedMonth;
-                    renderCalendar();
+            // 表示モード切替のイベントリスナー
+            toggleDisplayBtn.addEventListener("click", () => {
+                const isNowrap = calendarGrid.classList.toggle("nowrap-mode");
+                if (isNowrap) {
+                    toggleDisplayBtn.textContent = "↔ 折り返し表示にする";
+                    toggleDisplayBtn.classList.add("active");
+                } else {
+                    toggleDisplayBtn.textContent = "↔ 1行表示にする";
+                    toggleDisplayBtn.classList.remove("active");
                 }
             });
+        }
 
-            nextMonthBtn.addEventListener("click", () => {
-                let idx = monthKeys.indexOf(selectedMonth);
-                if (idx < monthKeys.length - 1) {
-                    selectedMonth = monthKeys[idx + 1];
-                    monthSelect.value = selectedMonth;
-                    renderCalendar();
-                }
+        // 月を変更する関数（グローバル）
+        function changeMonth(mKey) {
+            selectedMonth = mKey;
+            
+            // ナビゲーションボタンのアクティブ状態を更新
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
             });
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => btn.textContent === mKey.replace('月', '') + '月');
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+                // モバイル等で横スクロール位置を調整
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
 
-            displayToggle.addEventListener("click", () => {
-                const compact = document.body.classList.toggle("compact-items");
-                displayToggle.textContent = compact ? "折り返し表示" : "1行表示";
-                displayToggle.setAttribute("aria-pressed", String(compact));
-            });
+            renderCalendar();
         }
 
         function renderCalendar() {
@@ -552,11 +573,12 @@
             const firstDay = new Date(year, monthIndex, 1);
             // Total days in the month
             const totalDays = new Date(year, monthIndex + 1, 0).getDate();
-            // Day of week in a Monday-first calendar (0 = Mon, ..., 6 = Sun)
-            const startDayOfWeek = (firstDay.getDay() + 6) % 7;
+            // Day of week of the first day (0 = Sun, 1 = Mon, ..., 6 = Sat)
+            const startDayOfWeek = firstDay.getDay();
 
-            // Render empty cells for padding
-            for (let i = 0; i < startDayOfWeek; i++) {
+            // Render empty cells for padding (starting from Monday)
+            const startOffset = (startDayOfWeek === 0) ? 6 : startDayOfWeek - 1;
+            for (let i = 0; i < startOffset; i++) {
                 const emptyCell = document.createElement("div");
                 emptyCell.className = "calendar-day empty";
                 calendarGrid.appendChild(emptyCell);
@@ -589,7 +611,8 @@
                 dayNum.textContent = day;
                 dayHeader.appendChild(dayNum);
 
-                const dateKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                // Add holiday if it exists
+                const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 if (holidays[dateKey]) {
                     dayCell.classList.add("holiday");
                     const holidaySpan = document.createElement("span");
