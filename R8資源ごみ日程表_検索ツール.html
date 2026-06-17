@@ -81,6 +81,7 @@
             border-radius: 24px;
             padding: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            overflow-x: auto;
         }
 
         /* Sticky Header for navigation and controls */
@@ -316,6 +317,12 @@
             white-space: nowrap;
         }
 
+        /* 1行表示モード（nowrap-mode）時のレイアウト最小幅 */
+        .nowrap-mode .calendar-grid,
+        .nowrap-mode .calendar-header {
+            min-width: 700px;
+        }
+
 
 
         /* Category Specific Colors */
@@ -379,12 +386,12 @@
             }
             .waste-badge {
                 font-size: 0.62rem;
-                padding: 0.15rem 0.25rem;
+                padding: 0.15rem 0.40rem;
                 white-space: normal;
             }
             .nowrap-mode .waste-badge {
-                font-size: 0.52rem;
-                padding: 0.1rem 0.15rem;
+                font-size: 0.62rem;
+                padding: 0.15rem 0.50rem;
                 white-space: nowrap;
             }
             .legend {
@@ -436,7 +443,7 @@
 
         <!-- Main calendar panel -->
         <div class="panel">
-            <div>
+            <div id="calendarWrap">
                 <div class="calendar-header">
                     <div>月</div>
                     <div>火</div>
@@ -511,6 +518,7 @@
 
         // DOM elements
         const calendarGrid = document.getElementById("calendarGrid");
+        const calendarWrap = document.getElementById("calendarWrap");
         const toggleDisplayBtn = document.getElementById("toggleDisplayBtn");
 
         // Init
@@ -533,7 +541,7 @@
         function setupEventListeners() {
             // 表示モード切替のイベントリスナー
             toggleDisplayBtn.addEventListener("click", () => {
-                const isNowrap = calendarGrid.classList.toggle("nowrap-mode");
+                const isNowrap = calendarWrap.classList.toggle("nowrap-mode");
                 if (isNowrap) {
                     toggleDisplayBtn.textContent = "↔ 折り返し表示にする";
                     toggleDisplayBtn.classList.add("active");
