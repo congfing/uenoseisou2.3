@@ -251,5 +251,16 @@ function showMonth(n) {
     b.classList.toggle('active',i===n);
   });
 }
+
+function getTodayMonthIndex() {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  if (month >= 4) return month - 4;
+  return month + 8;
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  showMonth(getTodayMonthIndex());
+});
 </script>
 </body></html>

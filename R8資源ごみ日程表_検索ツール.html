@@ -488,11 +488,24 @@
 
         // Init
         function init() {
+            selectedMonth = getTodayMonth();
+            monthSelect.value = selectedMonth;
             document.body.classList.remove("compact-items");
             displayToggle.textContent = "1行表示";
             displayToggle.setAttribute("aria-pressed", "false");
             setupEventListeners();
             renderCalendar();
+        }
+
+        function getTodayMonth() {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonthIndex = today.getMonth();
+            const foundMonth = monthKeys.find((monthKey) => {
+                const info = monthInfo[monthKey];
+                return info.year === currentYear && info.monthIndex === currentMonthIndex;
+            });
+            return foundMonth || selectedMonth;
         }
 
         function setupEventListeners() {
