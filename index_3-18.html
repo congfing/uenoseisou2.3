@@ -1115,8 +1115,7 @@ function savePropertyData(){
   state.entryData[prop.name]=data;
   if(state.entryDraft) delete state.entryDraft[prop.name];
   setLastData(prop.name,data,state.selectedStaff,state.date);
-  state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
-  state.entryOrder.push(prop.name);
+  if(!state.entryOrder.includes(prop.name)) state.entryOrder.push(prop.name);
   const returnScreen=state.entryReturnScreen||9;
   if(returnScreen===9) autoSavePropertyListAOrder();
   saveSession();
@@ -1473,6 +1472,16 @@ function hideFieldDropdown(input){ setTimeout(()=>{input.parentElement.querySele
 // ===== HISTORY =====
 let displayedHistoryRecords=[];
 
+function getHistoryPropertiesInEntryOrder(record){
+  const names=Array.isArray(record.entryOrder)&&record.entryOrder.length
+    ? [...record.entryOrder]
+    : Object.keys(record.entryData||{});
+  Object.keys(record.entryData||{}).forEach(name=>{
+    if(!names.includes(name)) names.push(name);
+  });
+  return names.map(name=>allProperties.find(prop=>prop.name===name)).filter(Boolean);
+}
+
 function checkPastData(dateVal){
   const banner=document.getElementById('pastDataBanner');
   const entries=document.getElementById('pastDataEntries');
@@ -1508,7 +1517,7 @@ function renderHistory(filterDate){
     div.className='history-item';
     // Build detail table
     let tableRows='';
-    const sorted=[...allProperties].sort((a,b)=>(a.order||999)-(b.order||999));
+    const sorted=getHistoryPropertiesInEntryOrder(record);
     sorted.forEach(prop=>{
       const data=record.entryData[prop.name]; if(!data)return;
       let nameShown=false;
@@ -1806,7 +1815,7 @@ function shareHistoryAsExcel(ri, event){
 
   // Build Excel rows
   const rows = [['日付', '曜日', '担当者', '物件名', '項目', '値', '単位']];
-  const sorted = [...allProperties].sort((a,b) => (a.order||999) - (b.order||999));
+  const sorted = getHistoryPropertiesInEntryOrder(record);
   sorted.forEach(prop => {
     const data = record.entryData[prop.name];
     if(!data) return;
@@ -1849,7 +1858,7 @@ function sendHistoryByMail(ri, event){
   body += `担当：${record.staffName}\n`;
   body += `─────────────────\n`;
 
-  const sorted = [...allProperties].sort((a,b) => (a.order||999) - (b.order||999));
+  const sorted = getHistoryPropertiesInEntryOrder(record);
   sorted.forEach(prop => {
     const data = record.entryData[prop.name];
     if(!data) return;
