@@ -519,9 +519,17 @@ function getAllHistory(){
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
   if (!Array.isArray(saved)) return DEFAULT_PROPERTIES.slice();
-  const savedNames = new Set(saved.map(p => p.name));
-  const newProps = DEFAULT_PROPERTIES.filter(p => !savedNames.has(p.name));
-  return [...saved, ...newProps];
+  const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
+  const retainedByName = new Map();
+  saved.forEach(prop => {
+    if(prop&&prop.name&&(defaultNames.has(prop.name)||prop.isCustom===true)) retainedByName.set(prop.name,prop);
+  });
+  const retained = [...retainedByName.values()];
+  const retainedNames = new Set(retained.map(p => p.name));
+  const newProps = DEFAULT_PROPERTIES.filter(p => !retainedNames.has(p.name));
+  const merged = [...retained, ...newProps];
+  saveJSON(LS_PROPERTIES,merged);
+  return merged;
 })();
 let staffList     = loadJSON(LS_STAFF, DEFAULT_STAFF);
 
@@ -1896,7 +1904,7 @@ function getMailTo(){
 
 // ===== RESET PROPERTIES TO DEFAULT =====
 function resetPropertiesToDefault(){
-  if(!confirm('物件リストをデフォルト（45件）に戻しますか？\n追加・変更した物件情報はすべて消えます。')) return;
+  if(!confirm(`物件リストをデフォルト（${DEFAULT_PROPERTIES.length}件）に戻しますか？\n追加・変更した物件情報はすべて消えます。`)) return;
   localStorage.removeItem(LS_PROPERTIES);
   allProperties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
   saveJSON(LS_PROPERTIES, allProperties);
@@ -1930,7 +1938,7 @@ function addNewProperty(){
   if(!fields.length){alert('入力項目を1つ以上追加してください');return;}
   const maxOrder=allProperties.reduce((m,p)=>Math.max(m,p.order||0),0);
   newPropDays.sort((a,b)=>ORDERED_DAYS.indexOf(a)-ORDERED_DAYS.indexOf(b));
-  allProperties.push({name,order:maxOrder+1,days:[...newPropDays],fields});
+  allProperties.push({name,order:maxOrder+1,days:[...newPropDays],fields,isCustom:true});
   saveJSON(LS_PROPERTIES,allProperties);
   document.getElementById('newPropertyName').value='';
   document.querySelectorAll('#newPropertyDays .day-check-label').forEach(l=>l.classList.remove('checked'));
