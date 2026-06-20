@@ -497,17 +497,13 @@ function getAllHistory(){
     .sort((a,b)=>b.date.localeCompare(a.date));
 }
 
-// localStorageの物件 + コードに新規追加された物件をマージ（削除済みは除外）
+// 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
-  if (!saved) return DEFAULT_PROPERTIES.slice();
+  if (!Array.isArray(saved)) return DEFAULT_PROPERTIES.slice();
   const savedNames = new Set(saved.map(p => p.name));
-  // デフォルトにあってlocalStorageにない物件を末尾に追加
   const newProps = DEFAULT_PROPERTIES.filter(p => !savedNames.has(p.name));
-  // デフォルトから削除された物件をlocalStorageからも除外
-  const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
-  const filtered = saved.filter(p => defaultNames.has(p.name));
-  return [...filtered, ...newProps];
+  return [...saved, ...newProps];
 })();
 let staffList     = loadJSON(LS_STAFF, DEFAULT_STAFF);
 
