@@ -502,7 +502,13 @@ function getFieldValue(data,field){
   return data[field.label]!==undefined ? data[field.label] : '';
 }
 function saveHistory(date,staff,entryData){
-  saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {date,staffName:staff,entryData});
+  saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {
+    date,
+    staffName:staff,
+    entryData,
+    entryOrder:[...state.entryOrder],
+    updatedAt:Date.now()
+  });
   // keep index of all history keys
   let idx=loadJSON('keiryo_hist_index',[]);
   const key=date+'_'+staff;
@@ -512,7 +518,7 @@ function saveHistory(date,staff,entryData){
 function getAllHistory(){
   const idx=loadJSON('keiryo_hist_index',[]);
   return idx.map(k=>loadJSON(LS_HISTORY_PREFIX+k,null)).filter(Boolean)
-    .sort((a,b)=>b.date.localeCompare(a.date));
+    .sort((a,b)=>b.date.localeCompare(a.date)||((b.updatedAt||0)-(a.updatedAt||0)));
 }
 
 // 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
@@ -581,25 +587,47 @@ function restoreSession(){
   return true;
 }
 
+function restoreLatestHistory(date){
+  const record=getAllHistory().find(item=>item.date===date);
+  if(!record||!record.staffName||!record.entryData) return false;
+  state.date=record.date;
+  const d=new Date(record.date+'T00:00:00');
+  state.dayName=DAYS_JP[d.getDay()];
+  state.selectedStaff=record.staffName;
+  state.entryData={...record.entryData};
+  state.entryDraft={};
+  state.entryOrder=Array.isArray(record.entryOrder)&&record.entryOrder.length
+    ? [...record.entryOrder]
+    : Object.keys(record.entryData);
+  state.currentPropertyIndex=-1;
+  state.currentScreen=9;
+  state.entryReturnScreen=9;
+  document.getElementById('dateInput').value=record.date;
+  return true;
+}
+
 // ===== INIT =====
 window.onload = function(){
   const t=new Date();
   const y=t.getFullYear();
   const m=String(t.getMonth()+1).padStart(2,'0');
   const d=String(t.getDate()).padStart(2,'0');
-  document.getElementById('dateInput').value=`${y}-${m}-${d}`;
+  const todayStr=`${y}-${m}-${d}`;
+  document.getElementById('dateInput').value=todayStr;
 
-  if(restoreSession() && state.selectedStaff){
-    // 入力途中のデータがあれば復元
+  const sessionRestored=restoreSession();
+  const hasSessionWork=sessionRestored&&state.selectedStaff&&
+    (Object.keys(state.entryData).length>0||Object.keys(state.entryDraft).length>0);
+  const historyRestored=hasSessionWork?false:restoreLatestHistory(todayStr);
+
+  if((hasSessionWork||historyRestored)&&state.selectedStaff){
     document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
-    renderPropertyList();
-    if(state.currentScreen === 4 && state.currentPropertyIndex >= 0 && state.currentPropertyIndex < allProperties.length){
-      // 入力画面を直接復元（中断した物件の入力画面へ）
+    document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
+    if(hasSessionWork&&state.currentScreen===4&&state.currentPropertyIndex>=0&&state.currentPropertyIndex<allProperties.length){
       openEntry(state.currentPropertyIndex, {stopPropagation:()=>{}}, state.entryReturnScreen);
     } else {
-      const scr = [3,4,5,9].includes(state.currentScreen) ? (state.currentScreen===3 ? 3 : 9) : (state.currentScreen||1);
-      if(scr===9) renderPropertyListA();
-      showScreen(scr);
+      renderPropertyListA();
+      showScreen(9);
     }
   } else {
     updateNav(1);
@@ -1523,7 +1551,9 @@ function reloadHistoryEntry(ri,event){
   state.selectedStaff=record.staffName;
   state.entryData={...record.entryData};
   state.entryDraft={};
-  state.entryOrder=Object.keys(record.entryData);
+  state.entryOrder=Array.isArray(record.entryOrder)&&record.entryOrder.length
+    ? [...record.entryOrder]
+    : Object.keys(record.entryData);
   state.currentPropertyIndex=-1;
   document.getElementById('dateInput').value=record.date;
   document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
@@ -1546,6 +1576,13 @@ function deleteHistory(ri,event){
   idx=idx.filter(k=>k!==key);
   saveJSON('keiryo_hist_index',idx);
   localStorage.removeItem(LS_HISTORY_PREFIX+key);
+  if(state.date===record.date&&state.selectedStaff===record.staffName){
+    localStorage.removeItem(LS_SESSION);
+    state.entryData={};
+    state.entryDraft={};
+    state.entryOrder=[];
+    state.currentPropertyIndex=-1;
+  }
   state._histFilterDate=filterDate;
   renderHistory(filterDate);
 }
