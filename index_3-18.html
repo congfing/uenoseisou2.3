@@ -713,6 +713,71 @@ function goToScreen3(){
   renderPropertyListA();showScreen(9);
 }
 
+const PROPERTY_NAME_READINGS={
+  'あみやき亭':'あみやきてい',
+  '厚板プレス工業':'あついたぷれすこうぎょう',
+  '飯田金属':'いいだきんぞく',
+  'いがっこ給食センター':'いがっこきゅうしょくせんたー',
+  '伊賀神戸駅':'いがかんべえき',
+  '伊賀の街':'いがのまち',
+  'イオンタウン伊賀':'いおんたうんいが',
+  '魚民 上野市駅前店':'うおたみうえのしえきまえてん',
+  '上野法務合同庁舎':'うえのほうむごうどうちょうしゃ',
+  'KFC イオンタウン伊賀上野店':'けーえふしーいおんたうんいがうえのてん',
+  '旧上野庁舎 SAKAKURA BASE':'きゅううえのちょうしゃさかくらべーす',
+  'クスリのアオキ 伊賀上野店':'くすりのあおきいがうえのてん',
+  'クスリのアオキ 平野東店':'くすりのあおきひらのひがしてん',
+  '検察庁':'けんさつちょう',
+  'コカ・コーラボトラーズ':'こかこーらぼとらーず',
+  'コメリ ＨＣ上野店':'こめりほーむせんたーうえのてん',
+  '古本市場 上野店':'ふるほんいちばうえのてん',
+  '三重県伊賀庁舎':'みえけんいがちょうしゃ',
+  'すき家 伊賀上野店':'すきやいがうえのてん',
+  'セカンドストリート 伊賀小田店':'せかんどすとりーといがおたてん',
+  'セブン伊賀忍者市駅南店':'せぶんいがにんじゃしえきみなみてん',
+  'セブン伊賀東条店':'せぶんいがとうじょうてん',
+  'セブン伊賀平野北谷店':'せぶんいがひらのきただにてん',
+  'セブン伊賀平野東町店':'せぶんいがひらのひがしまちてん',
+  'セブン伊賀緑ヶ丘東町店':'せぶんいがみどりがおかひがしまちてん',
+  'セブン伊賀緑ヶ丘本町店':'せぶんいがみどりがおかほんまちてん',
+  'セブン伊賀四十九町北店':'せぶんいがしじゅくちょうきたてん',
+  '創価学会 伊賀上野文化会館':'そうかがっかいいがうえのぶんかかいかん',
+  'チョーヤ梅酒':'ちょーやうめしゅ',
+  '津地方裁判所':'つちほうさいばんしょ',
+  'ドラッグセイムス 伊賀上野店':'どらっぐせいむすいがうえのてん',
+  'ドラッグセイムス 伊賀小田店':'どらっぐせいむすいがおたてん',
+  'ナフコ 伊賀店':'なふこいがてん',
+  '西松屋 伊賀上野店':'にしまつやいがうえのてん',
+  '農業屋 伊賀上野店':'のうぎょうやいがうえのてん',
+  'びっくりドンキー 伊賀上野店':'びっくりどんきーいがうえのてん',
+  '法務局':'ほうむきょく',
+  'ほっともっと 伊賀桑町店':'ほっともっといがくわまちてん',
+  'ほっともっと 伊賀白鳳通り店':'ほっともっといがはくほうどおりてん',
+  'マックスバリュ 上野店':'まっくすばりゅうえのてん',
+  'マックスバリュ 佐那具店':'まっくすばりゅさなぐてん',
+  '㈱やさいの戸島屋':'やさいのとじまや',
+  'ライフテクノサービス':'らいふてくのさーびす',
+  'LA・MU':'らむー'
+};
+const PROPERTY_NAME_COLLATOR=new Intl.Collator('ja',{sensitivity:'base',numeric:true});
+
+function sortPropertiesByReading(props){
+  return props.sort((a,b)=>PROPERTY_NAME_COLLATOR.compare(
+    PROPERTY_NAME_READINGS[a.name]||a.name,
+    PROPERTY_NAME_READINGS[b.name]||b.name
+  ));
+}
+
+function getPropertyListABase(){
+  const saved=getSavedOrder(state.selectedStaff,state.dayName);
+  const props=[...allProperties];
+  if(saved&&saved.length){
+    const names=[...saved,...props.map(prop=>prop.name).filter(name=>!saved.includes(name))];
+    return props.sort((a,b)=>names.indexOf(a.name)-names.indexOf(b.name));
+  }
+  return sortPropertiesByReading(props);
+}
+
 function getSortedProps(){
   const saved=getSavedOrder(state.selectedStaff,state.dayName);
   let props=[...allProperties];
@@ -720,7 +785,7 @@ function getSortedProps(){
     const names=[...saved,...props.map(p=>p.name).filter(n=>!saved.includes(n))];
     props.sort((a,b)=>names.indexOf(a.name)-names.indexOf(b.name));
   } else {
-    props.sort((a,b)=>(a.order||999)-(b.order||999));
+    sortPropertiesByReading(props);
   }
   return props;
 }
@@ -729,7 +794,7 @@ function renderPropertyListA(){
   const c=document.getElementById('propertyListA');
   if(!c) return;
   c.innerHTML='';
-  const baseProps=getSortedProps();
+  const baseProps=getPropertyListABase();
   const entered=state.entryOrder.map(name=>baseProps.find(prop=>prop.name===name)).filter(Boolean);
   const remaining=baseProps.filter(prop=>!state.entryOrder.includes(prop.name));
   const props=[...entered,...remaining];
@@ -757,7 +822,7 @@ function renderPropertyListA(){
 
 function autoSavePropertyListAOrder(){
   if(!state.selectedStaff||!state.dayName) return;
-  const baseProps=getSortedProps();
+  const baseProps=getPropertyListABase();
   const enteredNames=state.entryOrder.filter(name=>baseProps.some(prop=>prop.name===name));
   const remainingNames=baseProps.map(prop=>prop.name).filter(name=>!enteredNames.includes(name));
   setSavedOrder(state.selectedStaff,state.dayName,[...enteredNames,...remainingNames]);
@@ -787,7 +852,7 @@ function renderPropertyList(){
   } else if(hasSaved){
     hint.textContent='📌 前回の入力順で表示中';
   } else {
-    hint.textContent='番号順で表示中';
+    hint.textContent='五十音順で表示中';
   }
   renderDaySaveSingle();
 
