@@ -550,6 +550,18 @@ let state = {
 };
 
 const LS_SESSION = 'keiryo_session';
+const LS_ORDER_CLEANUP = 'keiryo_order_cleanup_3_18_v1';
+
+function clearLegacySavedOrdersOnce(){
+  if(localStorage.getItem(LS_ORDER_CLEANUP)==='done') return;
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith(LS_ORDER_PREFIX)) keys.push(key);
+  }
+  keys.forEach(key=>localStorage.removeItem(key));
+  localStorage.setItem(LS_ORDER_CLEANUP,'done');
+}
 
 function saveSession(){
   saveJSON(LS_SESSION, {
@@ -608,6 +620,7 @@ function restoreLatestHistory(date){
 
 // ===== INIT =====
 window.onload = function(){
+  clearLegacySavedOrdersOnce();
   const t=new Date();
   const y=t.getFullYear();
   const m=String(t.getMonth()+1).padStart(2,'0');
