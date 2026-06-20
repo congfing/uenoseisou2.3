@@ -1576,11 +1576,15 @@ function deleteHistory(ri,event){
   idx=idx.filter(k=>k!==key);
   saveJSON('keiryo_hist_index',idx);
   localStorage.removeItem(LS_HISTORY_PREFIX+key);
+  const recordDate=new Date(record.date+'T00:00:00');
+  const recordDayName=DAYS_JP[recordDate.getDay()];
+  localStorage.removeItem(LS_ORDER_PREFIX+record.staffName+'_'+recordDayName);
   if(state.date===record.date&&state.selectedStaff===record.staffName){
     localStorage.removeItem(LS_SESSION);
     state.entryData={};
     state.entryDraft={};
     state.entryOrder=[];
+    state.customOrder=null;
     state.currentPropertyIndex=-1;
   }
   state._histFilterDate=filterDate;
