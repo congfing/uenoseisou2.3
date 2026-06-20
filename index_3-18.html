@@ -729,7 +729,10 @@ function renderPropertyListA(){
   const c=document.getElementById('propertyListA');
   if(!c) return;
   c.innerHTML='';
-  const props=[...allProperties].sort((a,b)=>(a.order||999)-(b.order||999));
+  const baseProps=getSortedProps();
+  const entered=state.entryOrder.map(name=>baseProps.find(prop=>prop.name===name)).filter(Boolean);
+  const remaining=baseProps.filter(prop=>!state.entryOrder.includes(prop.name));
+  const props=[...entered,...remaining];
   const enteredCount=Object.keys(state.entryData).length;
   document.getElementById('propCountA').textContent=props.length+'件';
   document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}　入力済み ${enteredCount}件`;
@@ -750,6 +753,14 @@ function renderPropertyListA(){
     btn.onclick=event=>openEntry(idx,event,9);
     c.appendChild(btn);
   });
+}
+
+function autoSavePropertyListAOrder(){
+  if(!state.selectedStaff||!state.dayName) return;
+  const baseProps=getSortedProps();
+  const enteredNames=state.entryOrder.filter(name=>baseProps.some(prop=>prop.name===name));
+  const remainingNames=baseProps.map(prop=>prop.name).filter(name=>!enteredNames.includes(name));
+  setSavedOrder(state.selectedStaff,state.dayName,[...enteredNames,...remainingNames]);
 }
 
 function renderPropertyList(){
@@ -996,10 +1007,11 @@ function savePropertyData(){
   setLastData(prop.name,data,state.selectedStaff,state.date);
   state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
   state.entryOrder.push(prop.name);
+  const returnScreen=state.entryReturnScreen||9;
+  if(returnScreen===9) autoSavePropertyListAOrder();
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
   const savedName = prop.name;
-  const returnScreen=state.entryReturnScreen||9;
   if(returnScreen===9){
     renderPropertyListA();showScreen(9);
   } else {
