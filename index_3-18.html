@@ -182,7 +182,7 @@
     <button class="nav-tab active" id="navDate" onclick="navTo(1)">📅 日付選択</button>
     <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
     <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
-    <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リストA<span id="entryCountBadgeA" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
     <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
     <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
     <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
@@ -242,7 +242,7 @@
 <!-- Screen 9: Simple property list A -->
 <div class="screen" id="screen9">
   <div style="padding-top:16px">
-    <div class="section-title">物件リストA<span class="count-badge" id="propCountA"></span></div>
+    <div class="section-title">物件リスト２列<span class="count-badge" id="propCountA"></span></div>
     <div class="section-sub" id="screen9sub"></div>
     <div class="property-list-a" id="propertyListA"></div>
   </div>
@@ -673,7 +673,7 @@ function updateNav(n){
   state.currentScreen=n;
   const backBtn=document.getElementById('backBtn');
   if(backBtn) backBtn.style.display='flex';
-  const titles={0:'設定',1:'計量データ入力',2:'担当者選択',3:'物件リスト',4:'データ入力',5:'確認・保存',6:'履歴',7:'メール設定',8:'変換',9:'物件リストA'};
+  const titles={0:'設定',1:'計量データ入力',2:'担当者選択',3:'物件リスト',4:'データ入力',5:'確認・保存',6:'履歴',7:'メール設定',8:'変換',9:'物件リスト２列'};
   document.getElementById('headerTitle').textContent=titles[n]||'';
   const dl=document.getElementById('headerDateLabel');
   dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
