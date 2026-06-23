@@ -420,7 +420,7 @@ const DEFAULT_PROPERTIES = [
   { name:'チョーヤ梅酒',       order:28, days:[], fields:[{label:'可燃㎥',unit:'㎥'},{label:'可燃',unit:'kg'},{label:'第2収集㎥',unit:'㎥'},{label:'第2収集',unit:'kg'}] },
   // ── マックスバリュ ──
   { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
-  { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
+  { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
   // ── やさいの戸島屋 ──
   { name:'㈱やさいの戸島屋',     order:31, days:[], fields:[{label:'可燃',unit:'袋'}] },
   // ── 古本市場・サイリス ──
@@ -487,13 +487,19 @@ function formatAutoKg(value){
   const rounded=Math.round(value*1000)/1000;
   return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/,'');
 }
-function applyMaxValuSanaguAutoKg(prop,sourceKey,sourceValue){
-  if(!prop||prop.name!=='マックスバリュ 佐那具店') return;
-  const rules={
-    '可燃__袋':{target:'可燃__kg',multiplier:3},
-    '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
+function applyMaxValuAutoKg(prop,sourceKey,sourceValue){
+  if(!prop) return;
+  const propertyRules={
+    'マックスバリュ 佐那具店':{
+      '可燃__袋':{target:'可燃__kg',multiplier:3},
+      '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
+    },
+    'マックスバリュ 上野店':{
+      '可燃__袋':{target:'可燃__kg',multiplier:2},
+      '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
+    }
   };
-  const rule=rules[sourceKey];
+  const rule=propertyRules[prop.name]?.[sourceKey];
   if(!rule) return;
   const targetInput=document.querySelector(`input.num-input[data-field-key="${rule.target}"]`);
   if(!targetInput) return;
@@ -1021,7 +1027,7 @@ function openEntry(idx,event){
     input.addEventListener('input', () => {
       if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
       state.entryDraft[prop.name][key] = input.value;
-      applyMaxValuSanaguAutoKg(prop,key,input.value);
+      applyMaxValuAutoKg(prop,key,input.value);
       saveSession();
     });
   });
