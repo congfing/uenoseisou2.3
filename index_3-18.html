@@ -529,6 +529,10 @@ function applyMaxValuAutoKg(prop,sourceKey,sourceValue){
   if(!state.entryDraft[prop.name]) state.entryDraft[prop.name]={};
   state.entryDraft[prop.name][rule.target]=nextValue;
 }
+function getAutoKgNote(prop,field){
+  if(!prop||!['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(prop.name)) return '';
+  return field.label==='可燃'&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
+}
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {
     date,
@@ -1158,7 +1162,9 @@ function openEntry(idx,event,returnScreen){
       hint=`<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastValue} ${field.unit}</span></div>`;
     }
     const currentValue=existing[key]!==undefined ? existing[key] : getFieldValue(existing,field);
-    div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span></div>
+    const autoKgNote=getAutoKgNote(prop,field);
+    const noteHtml=autoKgNote ? `<span class="field-unit">${autoKgNote}</span>` : '';
+    div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span>${noteHtml}</div>
       ${hint}
       <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
         id="${inputId}" data-field-key="${key}" placeholder="0" value="${currentValue}">`;
