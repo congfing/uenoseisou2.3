@@ -483,6 +483,26 @@ function getFieldValue(data,field){
   if(data[key]!==undefined) return data[key];
   return data[field.label]!==undefined ? data[field.label] : '';
 }
+function formatAutoKg(value){
+  const rounded=Math.round(value*1000)/1000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/,'');
+}
+function applyMaxValuSanaguAutoKg(prop,sourceKey,sourceValue){
+  if(!prop||prop.name!=='マックスバリュ 佐那具店') return;
+  const rules={
+    '可燃__袋':{target:'可燃__kg',multiplier:3},
+    '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
+  };
+  const rule=rules[sourceKey];
+  if(!rule) return;
+  const targetInput=document.querySelector(`input.num-input[data-field-key="${rule.target}"]`);
+  if(!targetInput) return;
+  const numeric=parseFloat(sourceValue);
+  const nextValue=sourceValue!==''&&!Number.isNaN(numeric) ? formatAutoKg(numeric*rule.multiplier) : '';
+  targetInput.value=nextValue;
+  if(!state.entryDraft[prop.name]) state.entryDraft[prop.name]={};
+  state.entryDraft[prop.name][rule.target]=nextValue;
+}
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {date,staffName:staff,entryData});
   // keep index of all history keys
@@ -1001,6 +1021,7 @@ function openEntry(idx,event){
     input.addEventListener('input', () => {
       if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
       state.entryDraft[prop.name][key] = input.value;
+      applyMaxValuSanaguAutoKg(prop,key,input.value);
       saveSession();
     });
   });
