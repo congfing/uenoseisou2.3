@@ -531,7 +531,7 @@ function applyMaxValuAutoKg(prop,sourceKey,sourceValue){
 }
 function getAutoKgNote(prop,field){
   if(!prop||!['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(prop.name)) return '';
-  return field.label==='可燃'&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
+  return ['可燃','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
 }
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {
