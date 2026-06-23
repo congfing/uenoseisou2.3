@@ -395,6 +395,7 @@ const LS_STAFF         = 'keiryo_staff';
 const LS_ORDER_PREFIX  = 'keiryo_order_';
 const LS_LASTDATA_PREFIX = 'keiryo_last_';
 const LS_HISTORY_PREFIX  = 'keiryo_hist_'; // + date_staffName
+const LS_MAIL_SENT_PREFIX = 'keiryo_mail_sent_';
 const DEFAULT_PROPERTIES = [
   // ── ほっともっと ──
   { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'紙屑',unit:'袋'}] },
@@ -492,6 +493,12 @@ const DEFAULT_STAFF = ['担当者A','担当者B'];
 
 function loadJSON(key,def){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
 function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+function historyKey(record){ return record ? record.date+'_'+record.staffName : ''; }
+function isHistoryMailSent(record){ return !!loadJSON(LS_MAIL_SENT_PREFIX+historyKey(record),false); }
+function markHistoryMailSent(record){
+  if(!record) return;
+  saveJSON(LS_MAIL_SENT_PREFIX+historyKey(record),true);
+}
 function getSavedOrder(staff,day){ return loadJSON(LS_ORDER_PREFIX+staff+'_'+day,null); }
 function setSavedOrder(staff,day,arr){ saveJSON(LS_ORDER_PREFIX+staff+'_'+day,arr); }
 function getLastData(name){ return loadJSON(LS_LASTDATA_PREFIX+name,null); }
@@ -1590,6 +1597,7 @@ function renderHistory(filterDate){
     const d=new Date(record.date+'T00:00:00');
     const dayName=DAYS_JP[d.getDay()];
     const enteredCount=Object.keys(record.entryData).length;
+    const mailButtonLabel=isHistoryMailSent(record)?'✉️ 送信済み':'✉️ メールで送信';
     const div=document.createElement('div');
     div.className='history-item';
     // Build detail table
@@ -1624,7 +1632,7 @@ function renderHistory(filterDate){
         </div>
         <div style="margin-top:8px;display:flex;gap:8px">
           <button class="btn btn-success" style="flex:1" onclick="shareHistoryAsExcel(${ri},event)">📊 Excelで共有</button>
-          <button class="btn btn-secondary" style="flex:1" onclick="sendHistoryByMail(${ri},event)">✉️ メール本文</button>
+          <button class="btn btn-secondary" style="flex:1" id="histMailBtn_${ri}" onclick="sendHistoryByMail(${ri},event)">${mailButtonLabel}</button>
         </div>
       </div>`;
     c.appendChild(div);
@@ -1675,6 +1683,7 @@ function deleteHistory(ri,event){
   idx=idx.filter(k=>k!==key);
   saveJSON('keiryo_hist_index',idx);
   localStorage.removeItem(LS_HISTORY_PREFIX+key);
+  localStorage.removeItem(LS_MAIL_SENT_PREFIX+key);
   const recordDate=new Date(record.date+'T00:00:00');
   const recordDayName=DAYS_JP[recordDate.getDay()];
   localStorage.removeItem(LS_ORDER_PREFIX+record.staffName+'_'+recordDayName);
@@ -1958,6 +1967,9 @@ function sendHistoryByMail(ri, event){
   const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）`);
   const bodyEncoded = encodeURIComponent(body);
   openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
+  markHistoryMailSent(record);
+  const button=document.getElementById(`histMailBtn_${ri}`);
+  if(button) button.textContent='✉️ 送信済み';
 }
 
 function openMailComposer(mailtoUrl){
