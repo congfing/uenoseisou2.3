@@ -28,66 +28,66 @@
   /* ===== BUTTONS ===== */
   .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
   .btn-primary { }
-  .btn-secondary { background: #e2e8f0; color: #444; }
-  .btn-success { background: #22c55e; color: white; }
-  .btn-warning { background: #f59e0b; color: white; }
-  .btn-danger { background: #fee2e2; color: #dc2626; }
+  .btn-secondary { background: #ddd; color: #444; }
+  .btn-success { background: #fff; color: #000; border: 2px solid #000; }
+  .btn-warning { background: #fff; color: #000; border: 2px solid #000; }
+  .btn-danger { background: #fff; color: #000; border: 2px solid #000; }
   .btn-enter { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 12px; }
   .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 8px; display: inline-block; width: auto; }
 
   /* ===== INPUTS ===== */
-  input[type="date"], input[type="text"] { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; outline: none; }
-  input:focus { border-color: #1a6eb5; }
-  .num-input { width: 100%; font-size: 22px; text-align: center; padding: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; }
-  .num-input:focus { border-color: #1a6eb5; }
+  input[type="date"], input[type="text"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+  input:focus { border-color: #000; }
+  .num-input { width: 100%; font-size: 22px; text-align: center; padding: 14px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+  .num-input:focus { border-color: #000; }
 
   /* ===== STAFF ===== */
   .staff-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px;
     border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
     cursor: pointer; border: 2px solid transparent; }
-  .staff-item.selected { border-color: #1a6eb5; }
-  .staff-check { color: #1a6eb5; font-size: 20px; display: none; }
+  .staff-item.selected { border-color: #000; }
+  .staff-check { color: #000; font-size: 20px; display: none; }
   .staff-item.selected .staff-check { display: block; }
-  .order-saved-badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+  .order-saved-badge { display: inline-block; background: #fff; color: #000; border: 1px solid #000; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
 
 
   /* ===== 曜日保存ボタン ===== */
   .day-save-single { border-radius: 10px; padding: 8px 12px;
     margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+    border: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
   .day-save-single button { flex: 1; padding: 9px 8px; border-radius: 8px;
-    border: 2px solid #10b981; background: #d1fae5; color: #065f46;
+    border: 2px solid #000; background: #fff; color: #000;
     font-size: 14px; font-weight: bold; cursor: pointer;
     -webkit-tap-highlight-color: transparent; }
   .day-save-single button:active { transform: scale(0.96); }
-  .day-save-single .saved-note { font-size: 11px; color: #10b981; }
+  .day-save-single .saved-note { font-size: 11px; color: #000; }
 
   /* ===== COMBINED PROPERTY LIST+SETTINGS ===== */
   .prop-card { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
-  .prop-card.done { border-color: #22c55e; }
+  .prop-card.done { border-color: #000; }
   .prop-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
   .prop-order-input { width: 40px !important; max-width: 40px !important; min-width: 40px !important;
     padding: 5px 3px; text-align: center; font-size: 15px; font-weight: bold;
-    border: 2px solid #e2e8f0; border-radius: 8px; color: #1a6eb5;
+    border: 2px solid #ddd; border-radius: 8px; color: #000;
     flex-shrink: 0; outline: none; }
-  .prop-order-input:focus { border-color: #1a6eb5; }
+  .prop-order-input:focus { border-color: #000; }
   .prop-seq-num { width: 30px; min-width: 30px; text-align: center; font-size: 15px; font-weight: bold;
-    color: #1a6eb5; flex-shrink: 0; }
+    color: #000; flex-shrink: 0; }
   .drag-handle { color: #bbb; font-size: 20px; cursor: grab; padding: 0 6px; user-select: none;
     touch-action: none; flex-shrink: 0; line-height: 1; border: none; background: none; }
   .drag-handle:active { cursor: grabbing; color: #888; }
   .prop-card.drag-dragging { opacity: 0.35; }
-  .prop-card.drag-over-top { border-top: 3px solid #1a6eb5; }
-  .prop-card.drag-over-bottom { border-bottom: 3px solid #1a6eb5; }
+  .prop-card.drag-over-top { border-top: 3px solid #000; }
+  .prop-card.drag-over-bottom { border-bottom: 3px solid #000; }
   #drag-ghost { position: fixed; z-index: 9999; pointer-events: none; background: white;
     border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.25); padding: 10px 14px;
     font-size: 15px; font-weight: 600; color: #333; display: none; max-width: 320px;
-    border: 2px solid #1a6eb5; }
+    border: 2px solid #000; }
   .prop-info { flex: 1; min-width: 0; overflow: hidden; }
   .prop-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .prop-days { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
-  .day-dot { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: bold; background: #e2e8f0; color: #94a3b8; }
-  .day-dot.today { background: #1a6eb5; color: white; }
+  .day-dot { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: bold; background: #ddd; color: #777; }
+  .day-dot.today { background: #fff; color: #000; border: 1px solid #000; }
   .prop-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .prop-status-icon { font-size: 20px; }
   .prop-toggle { color: #aaa; font-size: 14px; }
@@ -97,71 +97,73 @@
 
   /* Day checkboxes */
   .day-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .day-check-label { display: flex; align-items: center; gap: 3px; background: #e2e8f0;
+  .day-check-label { display: flex; align-items: center; gap: 3px; background: #ddd;
     padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold;
     transition: all 0.15s; user-select: none; }
   .day-check-label input { display: none; }
-  .day-check-label.checked { background: #1a6eb5; color: white; }
-  .day-check-label.today-day { outline: 2px solid #f59e0b; outline-offset: 1px; }
+  .day-check-label.checked { background: #fff; color: #000; border: 1px solid #000; }
+  .day-check-label.today-day { outline: 2px solid #000; outline-offset: 1px; }
 
   /* Field editor */
   .fields-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 600; }
   .field-edit-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
   .field-name-wrap { flex: 1; position: relative; }
-  .field-name-wrap input { padding: 7px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 6px; width: 100%; outline: none; }
-  .field-name-wrap input:focus { border-color: #1a6eb5; }
+  .field-name-wrap input { padding: 7px; font-size: 14px; border: 1px solid #ddd; border-radius: 6px; width: 100%; outline: none; }
+  .field-name-wrap input:focus { border-color: #000; }
   .field-dropdown { position: absolute; top: 100%; left: 0; right: 0;
-    border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     z-index: 300; max-height: 180px; overflow-y: auto; display: none; }
   .field-dropdown.open { display: block; }
   .field-dropdown-item { padding: 9px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
   .field-dropdown-item:last-child { border-bottom: none; }
-  .field-dropdown-item:active { background: #eff6ff; }
-  .field-edit-row select { padding: 7px 4px; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 6px; width: 54px; }
+  .field-dropdown-item:active { background: #fff; }
+  .field-edit-row select { padding: 7px 4px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; width: 54px; }
 
   /* Data entry */
   .field-group { margin-bottom: 14px; }
   .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
   .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
   .last-val-hint { font-size: 12px; color: #aaa; margin-bottom: 4px; }
-  .last-val-hint span { font-weight: bold; color: #94a3b8; }
+  .last-val-hint span { font-weight: bold; color: #777; }
 
   /* ===== SIMPLE PROPERTY LIST A ===== */
   .property-list-a { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .property-list-a button { min-height: 58px; padding: 9px 8px; border: 2px solid #e2e8f0;
+  .property-list-a button { min-height: 58px; padding: 9px 8px; border: 2px solid #ddd;
     border-radius: 8px; background: white; color: #222; font-size: 14px; font-weight: 600;
     line-height: 1.35; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
-  .property-list-a button.done { border-color: #22c55e; background: #f0fdf4; }
-  .property-list-a button:active { background: #eff6ff; }
+  .property-list-a button.done {
+    border: 3px double #000;
+  }
+  .property-list-a button:active { background: #fff; }
 
   /* Summary */
   .summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .summary-table th { background: #1a6eb5; color: white; padding: 8px; text-align: left; }
-  .summary-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
-  .summary-table tr:nth-child(even) td { background: #f8fafc; }
+  .summary-table th { background: #fff; color: #000; padding: 8px; text-align: left; border-bottom: 2px solid #000; }
+  .summary-table td { padding: 8px; border-bottom: 1px solid #ddd; }
+  .summary-table tr:nth-child(even) td { background: #f8f8f8; }
 
   /* Misc */
-  .section-title { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #1a6eb5; border-radius: 12px; padding: 8px 12px; }
+  .section-title { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #000; border-radius: 12px; padding: 8px 12px; }
   .section-sub { font-size: 13px; color: #888; margin-bottom: 16px; }
-  .count-badge { display: inline-block; background: #1a6eb5; color: white; border-radius: 20px; padding: 2px 10px; font-size: 13px; font-weight: bold; margin-left: 8px; }
+  .count-badge { display: inline-block; background: #fff; color: #000; border: 1px solid #000; border-radius: 20px; padding: 2px 10px; font-size: 13px; font-weight: bold; margin-left: 8px; }
   .add-row { display: flex; gap: 8px; margin-top: 8px; }
   .add-row input { flex: 1; }
   .empty-state { text-align: center; padding: 32px 16px; color: #aaa; }
-  .save-order-banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px;
+  .save-order-banner { background: #fff; border: 1px solid #000; border-radius: 10px;
     padding: 10px 12px; margin-bottom: 10px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
-  .save-order-banner span { font-size: 13px; color: #92400e; flex: 1; }
+  .save-order-banner span { font-size: 13px; color: #000; flex: 1; }
   .sort-hint { font-size: 12px; color: #aaa; text-align: center; padding: 2px 0 8px; }
 
   /* History */
   .history-item { border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); overflow: hidden; }
   .history-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
-  .history-date { font-size: 15px; font-weight: 700; color: #1a6eb5; }
+  .history-date { font-size: 15px; font-weight: 700; color: #000; }
   .history-staff { font-size: 13px; color: #888; margin-top: 2px; }
   .history-body { overscroll-behavior-x: contain; padding: 10px 14px; border-top: 1px solid #f0f0f0; display: none; }
   .history-body.open { display: block; }
-  .past-data-banner { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 10px;
+  .past-data-banner { background: #fff; border: 1px solid #000; border-radius: 10px;
     padding: 12px; margin-top: 12px; display: none; }
-  .past-data-banner .banner-title { font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+  .past-data-banner .banner-title { font-size: 14px; font-weight: 600; color: #000; margin-bottom: 6px; }
   .past-data-banner .banner-entries { font-size: 13px; color: #555; margin-bottom: 8px; }
 
   /* 誤操作防止: 旧ホーム/戻るボタンは非表示 */
@@ -181,8 +183,8 @@
   <div class="nav-tabs">
     <button class="nav-tab active" id="navDate" onclick="navTo(1)">📅 日付選択</button>
     <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
-    <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
-    <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#22c55e;color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
     <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
     <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
     <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
@@ -321,13 +323,13 @@
     <!-- テキストファイルから変換（バックアップ用） -->
     <div class="card" style="margin-top:4px">
       <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#555">📂 テキストファイルから変換（バックアップ用）</div>
-      <input type="file" id="txtFileInput" accept=".txt" style="width:100%;padding:10px;border:2px dashed #cbd5e1;border-radius:8px;font-size:14px;background:#f8fafc" onchange="loadTxtFile(event)">
+      <input type="file" id="txtFileInput" accept=".txt" style="width:100%;padding:10px;border:2px dashed #ccc;border-radius:8px;font-size:14px;background:#f8f8f8" onchange="loadTxtFile(event)">
       <div id="txtPreview" style="margin-top:14px;display:none">
-        <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#1a6eb5">📋 読み込み内容</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#000">📋 読み込み内容</div>
         <div id="txtPreviewTable" style="overflow-x:auto"></div>
         <button class="btn btn-primary" style="margin-top:14px" onclick="convertTxtToXlsx()">📥 Excelで保存（.xlsx）</button>
       </div>
-      <div id="txtError" style="margin-top:10px;color:#dc2626;font-size:13px;display:none"></div>
+      <div id="txtError" style="margin-top:10px;color:#000;font-size:13px;display:none"></div>
     </div>
   </div>
 </div>
@@ -1335,13 +1337,13 @@ function showConvertPreview(idx){
   // ボタンのハイライト
   records.forEach((_,i)=>{
     const b=document.getElementById(`convBtn_${i}`);
-    if(b) b.style.background=i===idx?'#1a6eb5':''  ;
+    if(b) b.style.background=i===idx?'#000':''  ;
     if(b) b.style.color=i===idx?'white':'';
   });
   const propNames=Object.keys(rec.entryData);
   let html=`<div style="font-size:13px;margin-bottom:8px;color:#555">📋 ${rec.date}　${rec.staffName}　${propNames.length}件</div>`;
   html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html+='<tr style="background:#e2e8f0"><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #cbd5e1">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">単位</th></tr>';
+  html+='<tr style="background:#ddd"><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #ccc">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">単位</th></tr>';
   propNames.forEach(name=>{
     const data=rec.entryData[name];
     const prop=allProperties.find(p=>p.name===name);
@@ -1349,9 +1351,9 @@ function showConvertPreview(idx){
     prop.fields.forEach((f,fi)=>{
       const fieldValue=getFieldValue(data,f);
       const val=fieldValue!==''?fieldValue:'－';
-      html+=`<tr style="background:${fi%2===0?'#fff':'#f8fafc'}">`;
-      if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${name}</td>`;
-      html+=`<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.label}</td><td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:right">${val}</td><td style="padding:5px 8px;border:1px solid #e2e8f0">${f.unit}</td></tr>`;
+      html+=`<tr style="background:${fi%2===0?'#fff':'#f8f8f8'}">`;
+      if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #ddd;font-weight:700;vertical-align:top">${name}</td>`;
+      html+=`<td style="padding:5px 8px;border:1px solid #ddd">${f.label}</td><td style="padding:5px 8px;border:1px solid #ddd;text-align:right">${val}</td><td style="padding:5px 8px;border:1px solid #ddd">${f.unit}</td></tr>`;
     });
   });
   html+='</table></div>';
@@ -1455,14 +1457,14 @@ function renderTxtPreview(parsed){
     📅 ${parsed.date}　👤 ${parsed.staff}　🏢 ${parsed.props.length}件
   </div>`;
   html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<tr style="background:#e2e8f0"><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #cbd5e1">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #cbd5e1">単位</th></tr>';
+  html += '<tr style="background:#ddd"><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #ccc">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">単位</th></tr>';
   parsed.props.forEach(prop=>{
     prop.fields.forEach((f, fi)=>{
-      html += `<tr style="background:${fi%2===0?'#fff':'#f8fafc'}">`;
-      html += fi===0 ? `<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:700;vertical-align:top">${prop.name}</td>` : '';
-      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.label}</td>`;
-      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:right">${f.value!==''?f.value:'－'}</td>`;
-      html += `<td style="padding:5px 8px;border:1px solid #e2e8f0">${f.unit}</td></tr>`;
+      html += `<tr style="background:${fi%2===0?'#fff':'#f8f8f8'}">`;
+      html += fi===0 ? `<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #ddd;font-weight:700;vertical-align:top">${prop.name}</td>` : '';
+      html += `<td style="padding:5px 8px;border:1px solid #ddd">${f.label}</td>`;
+      html += `<td style="padding:5px 8px;border:1px solid #ddd;text-align:right">${f.value!==''?f.value:'－'}</td>`;
+      html += `<td style="padding:5px 8px;border:1px solid #ddd">${f.unit}</td></tr>`;
     });
   });
   html += '</table>';
@@ -1574,7 +1576,7 @@ function renderHistory(filterDate){
       </div>
       <div class="history-body" id="hbody_${ri}">
         ${tableRows?`<table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:#f0f4f8"><th style="padding:6px;text-align:left">物件</th><th style="padding:6px;text-align:left">項目</th><th style="padding:6px;text-align:right">値</th><th style="padding:6px">単位</th></tr></thead>
+          <thead><tr style="background:#f0f0f0"><th style="padding:6px;text-align:left">物件</th><th style="padding:6px;text-align:left">項目</th><th style="padding:6px;text-align:right">値</th><th style="padding:6px">単位</th></tr></thead>
           <tbody>${tableRows}</tbody></table>`:'<div style="color:#aaa;font-size:13px">データなし</div>'}
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="reloadHistoryEntry(${ri},event)">このデータで再入力</button>
@@ -1825,7 +1827,7 @@ function movePropToPos(fromIdx, input){
       const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
       const top = cards[toIdx].getBoundingClientRect().top + window.scrollY - headerH - 8;
       window.scrollTo({ top, behavior:'smooth' });
-      cards[toIdx].style.background = '#d1fae5';
+      cards[toIdx].style.background = '#fff';
       setTimeout(()=>{ cards[toIdx].style.background = ''; }, 800);
     }
   }, 50);
@@ -1977,9 +1979,9 @@ function loadMailSettings(){
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
     row.innerHTML = `
-      <input type="checkbox" id="mailChk_${i}" ${item.enabled?'checked':''} style="width:20px;height:20px;flex-shrink:0;accent-color:#1a6eb5">
+      <input type="checkbox" id="mailChk_${i}" ${item.enabled?'checked':''} style="width:20px;height:20px;flex-shrink:0;accent-color:#000">
       <input type="email" id="mailAddr_${i}" value="${item.addr}" placeholder="メールアドレス ${i+1}"
-        style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none">`;
+        style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;outline:none">`;
     c.appendChild(row);
   });
 }
