@@ -437,7 +437,7 @@ const DEFAULT_PROPERTIES = [
   // ── チョーヤ梅酒 ──
   { name:'チョーヤ梅酒',       order:28, days:[], fields:[{label:'可燃㎥',unit:'㎥'},{label:'可燃',unit:'kg'},{label:'第2収集㎥',unit:'㎥'},{label:'第2収集',unit:'kg'}] },
   // ── マックスバリュ ──
-  { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
+  { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'可燃袋',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ袋',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
   { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
   // ── やさいの戸島屋 ──
   { name:'㈱やさいの戸島屋',     order:31, days:[], fields:[{label:'可燃',unit:'袋'}] },
@@ -522,13 +522,27 @@ function getAllHistory(){
 }
 
 // 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
+function mergeDefaultProperty(savedProp,defaultProp){
+  if(!defaultProp||!Array.isArray(savedProp.fields)||!Array.isArray(defaultProp.fields)) return savedProp;
+  const savedByKey=new Map(savedProp.fields.map(field=>[`${field.label}__${field.unit}`,field]));
+  const defaultKeys=new Set(defaultProp.fields.map(field=>`${field.label}__${field.unit}`));
+  const fields=defaultProp.fields.map(field=>savedByKey.get(`${field.label}__${field.unit}`)||field);
+  savedProp.fields.forEach(field=>{
+    if(!defaultKeys.has(`${field.label}__${field.unit}`)) fields.push(field);
+  });
+  return {...savedProp,order:savedProp.order||defaultProp.order,days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days,fields};
+}
+
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
   if (!Array.isArray(saved)) return DEFAULT_PROPERTIES.slice();
   const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
+  const defaultByName = new Map(DEFAULT_PROPERTIES.map(p => [p.name,p]));
   const retainedByName = new Map();
   saved.forEach(prop => {
-    if(prop&&prop.name&&(defaultNames.has(prop.name)||prop.isCustom===true)) retainedByName.set(prop.name,prop);
+    if(!prop||!prop.name) return;
+    if(defaultNames.has(prop.name)) retainedByName.set(prop.name,mergeDefaultProperty(prop,defaultByName.get(prop.name)));
+    else if(prop.isCustom===true) retainedByName.set(prop.name,prop);
   });
   const retained = [...retainedByName.values()];
   const retainedNames = new Set(retained.map(p => p.name));
