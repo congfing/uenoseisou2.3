@@ -5,7 +5,7 @@
 
   const APPS = [
     { label: 'Home', href: 'index.html' },
-    { label: '計量', href: 'index_3-17.html' },
+    { label: '計量', href: 'index_3-18.html' },
     { label: '物件表', href: 'index_2-3_bukken.html' },
     { label: '列選択', href: 'index_2-4_colview.html' },
     { label: 'メモ', href: 'index_5-1.html' }
