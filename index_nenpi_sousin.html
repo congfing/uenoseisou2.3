@@ -152,8 +152,8 @@
 
     .top-recipient-row {
       display: grid;
-      grid-template-columns: 42px minmax(180px, 1fr) 110px;
-      gap: 10px;
+      grid-template-columns: 42px minmax(100px, 0.8fr) minmax(180px, 1.4fr) 70px 70px;
+      gap: 8px;
       align-items: center;
       min-width: 0;
     }
@@ -182,6 +182,11 @@
     .top-save-button {
       white-space: nowrap;
       width: 100%;
+    }
+
+    .top-delete-button {
+      width: 100%;
+      white-space: nowrap;
     }
 
     main {
@@ -623,8 +628,8 @@
       }
 
       .top-recipient-row {
-        grid-template-columns: 38px minmax(0, 1fr) 96px;
-        gap: 8px;
+        grid-template-columns: 34px minmax(76px, 0.8fr) minmax(118px, 1.2fr) 54px 54px;
+        gap: 5px;
       }
 
       .span-2,
@@ -681,13 +686,8 @@
       }
 
       .top-recipient-row {
-        grid-template-columns: 34px minmax(0, 1fr);
-        gap: 6px;
-      }
-
-      .top-save-button {
-        grid-column: 2;
-        justify-self: stretch;
+        grid-template-columns: 32px minmax(64px, 0.8fr) minmax(104px, 1.2fr) 48px 48px;
+        gap: 4px;
       }
 
       .top-recipient-check,
@@ -709,10 +709,11 @@
         padding-right: 2px;
       }
 
-      .top-save-button {
+      .top-save-button,
+      .top-delete-button {
         min-height: 46px;
-        padding: 8px 6px;
-        font-size: 13px;
+        padding: 8px 4px;
+        font-size: 12px;
       }
 
       .tab-panel {
@@ -952,11 +953,16 @@
     });
 
     document.getElementById("topRecipientList").addEventListener("input", (event) => {
-      const input = event.target.closest("[data-top-email]");
+      const input = event.target.closest("[data-top-name], [data-top-email]");
       if (!input) return;
-      const item = findTopRecipient(input.dataset.topEmail);
-      item.email = input.value.trim();
+      const item = findTopRecipient(input.dataset.topEmail || input.dataset.topName);
+      if (input.dataset.topName) {
+        item.name = input.value.trim();
+      } else {
+        item.email = input.value.trim();
+      }
       item.saved = false;
+      item.editing = true;
       saveState();
       const row = input.closest(".top-recipient-row");
       const button = row.querySelector("[data-save-top-recipient]");
@@ -973,15 +979,37 @@
     });
 
     document.getElementById("topRecipientList").addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-delete-top-recipient]");
+      if (deleteButton) {
+        const item = findTopRecipient(deleteButton.dataset.deleteTopRecipient);
+        item.name = "";
+        item.email = "";
+        item.selected = false;
+        item.saved = false;
+        item.editing = false;
+        saveState();
+        setMessage(messages.topRecipient, "削除しました。");
+        render();
+        return;
+      }
+
       const button = event.target.closest("[data-save-top-recipient]");
       if (!button) return;
       const item = findTopRecipient(button.dataset.saveTopRecipient);
+      if (item.saved && !item.editing) {
+        item.editing = true;
+        saveState();
+        setMessage(messages.topRecipient, "編集できます。");
+        render();
+        return;
+      }
       if (!isValidEmail(item.email)) {
         setMessage(messages.topRecipient, "送付先アドレスを正しく入力してください。", true);
         return;
       }
       item.saved = true;
       item.selected = true;
+      item.editing = false;
       saveState();
       setMessage(messages.topRecipient, "保存しました。");
       render();
@@ -1131,9 +1159,11 @@
     function createTopRecipients() {
       return Array.from({ length: 5 }, (_, index) => ({
         id: `top-${index + 1}`,
+        name: "",
         email: "",
         selected: false,
-        saved: false
+        saved: false,
+        editing: false
       }));
     }
 
@@ -1143,9 +1173,11 @@
       items.slice(0, 5).forEach((item, index) => {
         base[index] = {
           id: base[index].id,
+          name: item?.name || "",
           email: item?.email || "",
           selected: Boolean(item?.selected),
-          saved: Boolean(item?.saved)
+          saved: Boolean(item?.saved),
+          editing: Boolean(item?.editing)
         };
       });
       return base;
@@ -1167,10 +1199,12 @@
           <label class="top-recipient-check" aria-label="送付先${index + 1}を選択">
             <input type="checkbox" data-top-selected="${recipient.id}" ${recipient.selected ? "checked" : ""}>
           </label>
-          <input type="email" data-top-email="${recipient.id}" value="${escapeHtml(recipient.email)}" placeholder="送付先アドレス ${index + 1}">
+          <input type="text" data-top-name="${recipient.id}" value="${escapeHtml(recipient.name || "")}" placeholder="宛名" ${recipient.saved && !recipient.editing ? "disabled" : ""}>
+          <input type="email" data-top-email="${recipient.id}" value="${escapeHtml(recipient.email)}" placeholder="メールアドレス" ${recipient.saved && !recipient.editing ? "disabled" : ""}>
           <button class="button secondary top-save-button ${recipient.saved ? "saved" : ""}" type="button" data-save-top-recipient="${recipient.id}">
-            ${recipient.saved ? "保存済み" : "保存"}
+            ${recipient.saved && !recipient.editing ? "編集" : "保存"}
           </button>
+          <button class="button secondary top-delete-button" type="button" data-delete-top-recipient="${recipient.id}">削除</button>
         </div>
       `).join("");
     }
