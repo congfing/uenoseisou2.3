@@ -1064,7 +1064,8 @@
 
     function entryListHtml() {
       if (state.records.length === 0) return `<div class="empty">燃費データはまだ保存されていません。</div>`;
-      const rows = [...calculatedRecords()].reverse().map((item) => [
+      const displayRecords = historyDisplayRecords();
+      const rows = displayRecords.map((item) => [
         escapeHtml(item.fuelDate || ""),
         escapeHtml(item.vehicleLabel || ""),
         escapeHtml(item.driverLabel || ""),
@@ -1074,11 +1075,10 @@
         item.sent ? `<span class="status-sent">送信済み</span>` : "",
         historyActionButtons(item.id)
       ]);
-      return tableHtml(["給油日", "車番", "運転手", "メーター", "給油量", "燃費", "送信", "操作"], rows, (item) => item.id);
+      return tableHtml(["給油日", "車番", "運転手", "メーター", "給油量", "燃費", "送信", "操作"], rows, (item) => item.id, displayRecords);
     }
 
-    function tableHtml(headers, rows, rowIdGetter = null) {
-      const historyRows = rowIdGetter ? calculatedRecords().slice().reverse() : [];
+    function tableHtml(headers, rows, rowIdGetter = null, rowItems = []) {
       return `
         <div class="table-wrap">
           <table>
@@ -1087,7 +1087,7 @@
             </thead>
             <tbody>
               ${rows.map((row, rowIndex) => {
-                const rowId = rowIdGetter ? rowIdGetter(historyRows[rowIndex]) : "";
+                const rowId = rowIdGetter ? rowIdGetter(rowItems[rowIndex]) : "";
                 const selectedClass = rowId && rowId === state.selectedRecordId ? " class=\"selected-record\"" : "";
                 return `<tr${selectedClass}>${row.map((cell, index) => `<td data-label="${escapeHtml(headers[index] || "")}">${cell}</td>`).join("")}</tr>`;
               }).join("")}
@@ -1253,6 +1253,18 @@
 
     function selectedCalculatedRecord() {
       return calculatedRecords().find((record) => record.id === state.selectedRecordId) || null;
+    }
+
+    function historyDisplayRecords() {
+      return calculatedRecords().slice().sort((a, b) => {
+        const dateCompare = String(b.fuelDate || "").localeCompare(String(a.fuelDate || ""));
+        if (dateCompare) return dateCompare;
+        return recordIndex(b.id) - recordIndex(a.id);
+      });
+    }
+
+    function recordIndex(id) {
+      return state.records.findIndex((record) => record.id === id);
     }
 
     function calculatedRecords() {
