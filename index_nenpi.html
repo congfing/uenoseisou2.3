@@ -905,6 +905,10 @@
       if (!record) return;
       state.records.push(record);
       state.selectedRecordId = record.id;
+      state.lastEntry = {
+        vehicleId: record.vehicleId,
+        driverId: record.driverId
+      };
       saveState();
       event.target.reset();
       setDefaults();
@@ -947,6 +951,14 @@
       document.getElementById(id).addEventListener("change", updatePreview);
     });
 
+    ["entryDriver", "entryVehicle"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", () => {
+        state.lastEntry.driverId = document.getElementById("entryDriver").value;
+        state.lastEntry.vehicleId = document.getElementById("entryVehicle").value;
+        saveState();
+      });
+    });
+
     setDefaults();
     render();
 
@@ -959,10 +971,11 @@
           vehicles: Array.isArray(saved?.vehicles) ? saved.vehicles : [],
           drivers: Array.isArray(saved?.drivers) ? saved.drivers : [],
           records: Array.isArray(saved?.records) ? saved.records : [],
-          selectedRecordId: saved?.selectedRecordId || ""
+          selectedRecordId: saved?.selectedRecordId || "",
+          lastEntry: normalizeLastEntry(saved?.lastEntry)
         };
       } catch {
-        return { activeTab: "mail", mail: [], vehicles: [], drivers: [], records: [], selectedRecordId: "" };
+        return { activeTab: "mail", mail: [], vehicles: [], drivers: [], records: [], selectedRecordId: "", lastEntry: { vehicleId: "", driverId: "" } };
       }
     }
 
@@ -979,6 +992,13 @@
         memo: item?.memo || "",
         selected: Boolean(item?.selected)
       }));
+    }
+
+    function normalizeLastEntry(item) {
+      return {
+        vehicleId: item?.vehicleId || "",
+        driverId: item?.driverId || ""
+      };
     }
 
     function setActiveTab(tab) {
@@ -1018,8 +1038,8 @@
     function renderEntryOptions() {
       const vehicleSelect = document.getElementById("entryVehicle");
       const driverSelect = document.getElementById("entryDriver");
-      const selectedVehicle = vehicleSelect.value;
-      const selectedDriver = driverSelect.value;
+      const selectedVehicle = vehicleSelect.value || state.lastEntry.vehicleId;
+      const selectedDriver = driverSelect.value || state.lastEntry.driverId;
 
       vehicleSelect.innerHTML = `<option value="">選択してください</option>${state.vehicles.map((item) => (
         `<option value="${escapeHtml(item.id)}">${escapeHtml([item.no, item.type].filter(Boolean).join(" / "))}</option>`
@@ -1030,6 +1050,8 @@
 
       vehicleSelect.value = state.vehicles.some((item) => item.id === selectedVehicle) ? selectedVehicle : "";
       driverSelect.value = state.drivers.some((item) => item.id === selectedDriver) ? selectedDriver : "";
+      state.lastEntry.vehicleId = vehicleSelect.value;
+      state.lastEntry.driverId = driverSelect.value;
     }
 
     function mailListHtml() {
