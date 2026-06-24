@@ -148,6 +148,8 @@
       display: grid;
       gap: 8px;
       margin-top: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .top-recipient-row {
@@ -155,7 +157,12 @@
       grid-template-columns: 42px minmax(100px, 0.8fr) minmax(180px, 1.4fr) 70px 70px;
       gap: 8px;
       align-items: center;
+      width: 100%;
       min-width: 0;
+    }
+
+    .top-recipient-list .top-recipient-row {
+      min-width: 520px;
     }
 
     .top-recipient-check {
@@ -645,8 +652,8 @@
       }
 
       .top-recipient-row {
-        grid-template-columns: 34px minmax(76px, 0.8fr) minmax(118px, 1.2fr) 54px 54px;
-        gap: 5px;
+        grid-template-columns: 38px 110px 210px 58px 58px;
+        gap: 6px;
       }
 
       .span-2,
@@ -703,8 +710,8 @@
       }
 
       .top-recipient-row {
-        grid-template-columns: 32px minmax(64px, 0.8fr) minmax(104px, 1.2fr) 48px 48px;
-        gap: 4px;
+        grid-template-columns: 36px 104px 200px 54px 54px;
+        gap: 6px;
       }
 
       .top-recipient-check,
