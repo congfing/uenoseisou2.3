@@ -363,6 +363,17 @@
       gap: 8px;
     }
 
+    .mail-select-cell {
+      display: grid;
+      place-items: center;
+    }
+
+    .mail-select-cell input {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--line);
+    }
+
     .small-button {
       min-height: 34px;
       border: 1px solid var(--line);
@@ -652,6 +663,12 @@
     </div>
 
     <section class="panel active" id="panel-mail" aria-labelledby="screenTitle">
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済みメール</h2>
+        </div>
+        <div id="mailList"></div>
+      </div>
       <div class="panel-body">
         <div class="section-title">
           <h2>メール登録</h2>
@@ -675,15 +692,15 @@
           </div>
         </form>
       </div>
-      <div class="list-box">
-        <div class="section-title">
-          <h2>登録済みメール</h2>
-        </div>
-        <div id="mailList"></div>
-      </div>
     </section>
 
     <section class="panel" id="panel-vehicle" aria-labelledby="screenTitle">
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済み車番</h2>
+        </div>
+        <div id="vehicleList"></div>
+      </div>
       <div class="panel-body">
         <div class="section-title">
           <h2>車番登録</h2>
@@ -707,15 +724,15 @@
           </div>
         </form>
       </div>
-      <div class="list-box">
-        <div class="section-title">
-          <h2>登録済み車番</h2>
-        </div>
-        <div id="vehicleList"></div>
-      </div>
     </section>
 
     <section class="panel" id="panel-driver" aria-labelledby="screenTitle">
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済み運転手</h2>
+        </div>
+        <div id="driverList"></div>
+      </div>
       <div class="panel-body">
         <div class="section-title">
           <h2>運転手登録</h2>
@@ -735,12 +752,6 @@
             <button class="button" type="button" data-clear-form="driverForm">入力を消す</button>
           </div>
         </form>
-      </div>
-      <div class="list-box">
-        <div class="section-title">
-          <h2>登録済み運転手</h2>
-        </div>
-        <div id="driverList"></div>
       </div>
     </section>
 
@@ -842,7 +853,8 @@
         id: crypto.randomUUID(),
         name: document.getElementById("mailName").value.trim(),
         address,
-        memo: document.getElementById("mailMemo").value.trim()
+        memo: document.getElementById("mailMemo").value.trim(),
+        selected: true
       });
       saveState();
       event.target.reset();
@@ -905,6 +917,7 @@
       const deleteButton = event.target.closest("[data-delete]");
       const selectButton = event.target.closest("[data-select-record]");
       const sendButton = event.target.closest("[data-send-record]");
+      const mailCheck = event.target.closest("[data-mail-selected]");
       if (editButton) {
         editItem(editButton.dataset.kind, editButton.dataset.edit);
       }
@@ -918,6 +931,14 @@
       }
       if (sendButton) {
         sendRecord(sendButton.dataset.sendRecord);
+      }
+      if (mailCheck) {
+        const item = state.mail.find((row) => row.id === mailCheck.dataset.mailSelected);
+        if (item) {
+          item.selected = mailCheck.checked;
+          saveState();
+          render();
+        }
       }
     });
 
@@ -934,7 +955,7 @@
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
         return {
           activeTab: saved?.activeTab || "mail",
-          mail: Array.isArray(saved?.mail) ? saved.mail : [],
+          mail: normalizeMail(saved?.mail),
           vehicles: Array.isArray(saved?.vehicles) ? saved.vehicles : [],
           drivers: Array.isArray(saved?.drivers) ? saved.drivers : [],
           records: Array.isArray(saved?.records) ? saved.records : [],
@@ -947,6 +968,17 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function normalizeMail(items) {
+      if (!Array.isArray(items)) return [];
+      return items.map((item) => ({
+        id: item?.id || crypto.randomUUID(),
+        name: item?.name || "",
+        address: item?.address || "",
+        memo: item?.memo || "",
+        selected: Boolean(item?.selected)
+      }));
     }
 
     function setActiveTab(tab) {
@@ -1002,7 +1034,8 @@
 
     function mailListHtml() {
       if (state.mail.length === 0) return `<div class="empty">メールはまだ登録されていません。</div>`;
-      return tableHtml(["表示名", "メールアドレス", "メモ", "操作"], state.mail.map((item) => [
+      return tableHtml(["選択", "表示名", "メールアドレス", "メモ", "操作"], state.mail.map((item) => [
+        `<label class="mail-select-cell" aria-label="${escapeHtml(item.address || "メール")}を選択"><input type="checkbox" data-mail-selected="${item.id}" ${item.selected ? "checked" : ""}></label>`,
         escapeHtml(item.name || ""),
         escapeHtml(item.address || ""),
         escapeHtml(item.memo || ""),
@@ -1190,9 +1223,7 @@
             ${detailItem("燃費", record.fuelEconomy === "" ? "" : `${formatValue(record.fuelEconomy)} km/L`)}
           </div>
           <label>送信先
-            <select id="historyMailSelect">
-              ${historyMailOptions()}
-            </select>
+            <input type="text" value="${escapeHtml(selectedMailLabels())}" readonly>
           </label>
           <div class="actions">
             <button class="button" type="button" data-send-record="${record.id}">メール送信</button>
@@ -1210,14 +1241,14 @@
       `;
     }
 
-    function historyMailOptions() {
-      if (state.mail.length === 0) {
-        return `<option value="">メール登録なし</option>`;
-      }
-      return state.mail.map((item) => {
-        const label = item.name ? `${item.name} / ${item.address}` : item.address;
-        return `<option value="${escapeHtml(item.address)}">${escapeHtml(label)}</option>`;
-      }).join("");
+    function selectedMailLabels() {
+      const selected = selectedMailItems();
+      if (selected.length === 0) return "メール登録で送信先を選択してください";
+      return selected.map((item) => item.name || item.address).join(", ");
+    }
+
+    function selectedMailItems() {
+      return state.mail.filter((item) => item.selected && item.address);
     }
 
     function selectedCalculatedRecord() {
@@ -1253,12 +1284,18 @@
     function sendRecord(id) {
       const record = calculatedRecords().find((item) => item.id === id);
       if (!record) return;
-      const select = document.getElementById("historyMailSelect");
-      const address = select ? select.value : "";
+      const addresses = selectedMailItems().map((item) => item.address);
+      if (addresses.length === 0) {
+        setMessage("メール登録で送信先を選択してください。", true);
+        state.activeTab = "mail";
+        saveState();
+        render();
+        return;
+      }
       const url = new URL("https://mail.google.com/mail/");
       url.searchParams.set("view", "cm");
       url.searchParams.set("fs", "1");
-      url.searchParams.set("to", address);
+      url.searchParams.set("to", addresses.join(","));
       url.searchParams.set("su", SUBJECT);
       url.searchParams.set("body", buildRecordMailBody(record));
       const savedRecord = state.records.find((item) => item.id === id);
