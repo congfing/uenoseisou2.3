@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>燃費管理</title>
+  <script>
+    if (window.self !== window.top || new URLSearchParams(location.search).get("embedded") === "1") {
+      document.documentElement.classList.add("embedded");
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --text: #000000;
+      --muted: #333333;
+      --line: #000000;
+      --soft: #f2f2f2;
+      --danger: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      max-width: 100%;
+      min-width: 0;
+      font: inherit;
+    }
+
+    .titlebar {
+      display: grid;
+      grid-template-columns: 78px minmax(160px, 1fr) minmax(128px, 220px);
+      align-items: center;
+      height: 22px;
+      min-height: 22px;
+      border: 1px solid var(--line);
+      background: #fff;
+      line-height: 1;
+    }
+
+    .embedded .titlebar {
+      display: none;
+    }
+
+    .window-controls {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 7px;
+      border-right: 1px solid var(--line);
+    }
+
+    .window-control {
+      width: 12px;
+      height: 12px;
+      min-height: 12px;
+      padding: 0;
+      border: 1px solid #000;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .close {
+      background: #ff5f57;
+      border-color: #e0443e;
+    }
+
+    .home {
+      background: #febc2e;
+      border-color: #d89e24;
+    }
+
+    .reload {
+      background: #28c840;
+      border-color: #1eab33;
+    }
+
+    .app-title,
+    .file-name {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      padding: 0 8px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .app-title {
+      justify-content: center;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .file-name {
+      justify-content: flex-end;
+      font-size: 11px;
+    }
+
+    .tabbar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-top: 0;
+      background: #fff;
+    }
+
+    .embedded .tabbar {
+      border-top: 1px solid var(--line);
+    }
+
+    .tab {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .tab:last-child {
+      border-right: 1px solid var(--line);
+    }
+
+    .tab.active {
+      background: #fff;
+      border-width: 2px;
+      box-shadow: none;
+    }
+
+    .app {
+      width: min(1120px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 18px 0 34px;
+    }
+
+    .screen-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 26px;
+    }
+
+    h2 {
+      font-size: 20px;
+    }
+
+    .hint,
+    .message {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .message {
+      min-height: 24px;
+      font-weight: 800;
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    .panel {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input,
+    textarea,
+    select {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--line);
+      box-shadow: 0 0 0 2px var(--soft);
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .span-2 {
+      grid-column: span 2;
+    }
+
+    .span-4 {
+      grid-column: span 4;
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .entry-column {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 14px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .button:hover {
+      background: var(--soft);
+    }
+
+    .button.danger {
+      color: var(--danger);
+    }
+
+    .list-box {
+      border-top: 1px solid var(--line);
+      padding: 18px;
+      background: #fff;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--soft);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .small-button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 9px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .small-button:hover {
+      background: var(--soft);
+    }
+
+    tr.selected-record td {
+      background: var(--soft);
+      font-weight: 900;
+    }
+
+    .history-detail {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-item {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .detail-value {
+      min-height: 24px;
+      overflow-wrap: anywhere;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .status-sent {
+      display: inline-block;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      padding: 3px 8px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .preview {
+      min-height: 180px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 820px) {
+      .tabbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .span-4 {
+        grid-column: span 2;
+      }
+
+      .screen-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .titlebar {
+        grid-template-columns: 68px 1fr minmax(92px, 34vw);
+      }
+
+      .tabbar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .tab,
+      .tab:nth-child(2),
+      .tab:nth-child(-n+2) {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .tab:last-child {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tab.active {
+        box-shadow: none;
+      }
+
+      .app {
+        width: calc(100% - 16px);
+        padding: 12px 0 28px;
+      }
+
+      .tab {
+        min-height: 46px;
+        font-size: 14px;
+      }
+
+      .panel-body,
+      .list-box {
+        padding: 12px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .entry-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .entry-column {
+        gap: 10px;
+      }
+
+      .span-2,
+      .span-4 {
+        grid-column: span 1;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      input,
+      textarea,
+      select,
+      .button {
+        min-height: 46px;
+        font-size: 16px;
+      }
+
+      .actions .button {
+        flex: 1 1 100%;
+      }
+
+      .table-wrap {
+        overflow-x: visible;
+        border: 0;
+        border-radius: 0;
+      }
+
+      table,
+      thead,
+      tbody,
+      tr,
+      th,
+      td {
+        display: block;
+      }
+
+      table {
+        min-width: 0;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: grid;
+        gap: 10px;
+      }
+
+      tr {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      tr.selected-record {
+        border-width: 2px;
+      }
+
+      td {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        gap: 8px;
+        min-height: 40px;
+        border-bottom: 1px solid var(--line);
+        padding: 9px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      td:last-child {
+        border-bottom: 0;
+      }
+
+      .row-actions {
+        flex-direction: column;
+      }
+
+      .small-button {
+        width: 100%;
+        min-height: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="titlebar">
+    <div class="window-controls" aria-label="画面操作">
+      <button class="window-control close" type="button" data-title-action="home" aria-label="起動画面へ戻る" title="起動画面へ戻る"></button>
+      <button class="window-control home" type="button" data-title-action="home" aria-label="起動画面へ戻る" title="起動画面へ戻る"></button>
+      <button class="window-control reload" type="button" data-title-action="reload" aria-label="再読み込み" title="再読み込み"></button>
+    </div>
+    <div class="app-title">上野清掃2.3 v2-3</div>
+    <div class="file-name">index_nenpi.html</div>
+  </header>
+
+  <nav class="tabbar" aria-label="燃費管理メニュー">
+    <button class="tab active" type="button" data-tab="mail">メール登録</button>
+    <button class="tab" type="button" data-tab="vehicle">車番登録</button>
+    <button class="tab" type="button" data-tab="driver">運転手登録</button>
+    <button class="tab" type="button" data-tab="entry">データ入力</button>
+    <button class="tab" type="button" data-tab="history">入力履歴</button>
+  </nav>
+
+  <main class="app">
+    <div class="screen-head">
+      <div>
+        <h1 id="screenTitle">メール登録</h1>
+        <div class="hint" id="screenHint">送信先のメールアドレスを登録します。</div>
+      </div>
+      <div class="message" id="globalMessage"></div>
+    </div>
+
+    <section class="panel active" id="panel-mail" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div class="section-title">
+          <h2>メール登録</h2>
+          <div class="hint">送信時に選ぶ宛先を保存します。</div>
+        </div>
+        <form id="mailForm" autocomplete="on">
+          <div class="form-grid">
+            <label class="span-2">表示名
+              <input id="mailName" type="text" placeholder="例：事務所">
+            </label>
+            <label class="span-2">メールアドレス
+              <input id="mailAddress" type="email" placeholder="例：example@gmail.com" required>
+            </label>
+            <label class="span-4">メモ
+              <input id="mailMemo" type="text" placeholder="必要があれば入力">
+            </label>
+          </div>
+          <div class="actions">
+            <button class="button" type="submit">登録</button>
+            <button class="button" type="button" data-clear-form="mailForm">入力を消す</button>
+          </div>
+        </form>
+      </div>
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済みメール</h2>
+        </div>
+        <div id="mailList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-vehicle" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div class="section-title">
+          <h2>車番登録</h2>
+          <div class="hint">車番と車種を先に登録しておきます。</div>
+        </div>
+        <form id="vehicleForm" autocomplete="on">
+          <div class="form-grid">
+            <label>車番
+              <input id="vehicleNo" type="text" inputmode="numeric" placeholder="例：1234" required>
+            </label>
+            <label>車種
+              <input id="vehicleType" type="text" placeholder="例：軽トラック">
+            </label>
+            <label class="span-2">メモ
+              <input id="vehicleMemo" type="text" placeholder="必要があれば入力">
+            </label>
+          </div>
+          <div class="actions">
+            <button class="button" type="submit">登録</button>
+            <button class="button" type="button" data-clear-form="vehicleForm">入力を消す</button>
+          </div>
+        </form>
+      </div>
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済み車番</h2>
+        </div>
+        <div id="vehicleList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-driver" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div class="section-title">
+          <h2>運転手登録</h2>
+          <div class="hint">データ入力で選ぶ運転手を保存します。</div>
+        </div>
+        <form id="driverForm" autocomplete="on">
+          <div class="form-grid">
+            <label class="span-2">運転手名
+              <input id="driverName" type="text" placeholder="例：西山" required>
+            </label>
+            <label class="span-2">メモ
+              <input id="driverMemo" type="text" placeholder="必要があれば入力">
+            </label>
+          </div>
+          <div class="actions">
+            <button class="button" type="submit">登録</button>
+            <button class="button" type="button" data-clear-form="driverForm">入力を消す</button>
+          </div>
+        </form>
+      </div>
+      <div class="list-box">
+        <div class="section-title">
+          <h2>登録済み運転手</h2>
+        </div>
+        <div id="driverList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-entry" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div class="section-title">
+          <h2>データ入力</h2>
+          <div class="hint">登録した車番と運転手を選んで燃費データを入れます。</div>
+        </div>
+        <form id="entryForm" autocomplete="on">
+          <div class="entry-grid">
+            <div class="entry-column">
+              <label>給油日
+                <input id="fuelDate" type="date" required>
+              </label>
+              <label>運転手
+                <select id="entryDriver" required></select>
+              </label>
+              <label>車番
+                <select id="entryVehicle" required></select>
+              </label>
+            </div>
+            <div class="entry-column">
+              <label>オドメーター
+                <input id="odometer" type="number" min="0" step="1" placeholder="例：123456">
+              </label>
+              <label>給油量(L)
+                <input id="fuelVolume" type="number" min="0" step="0.01" placeholder="例：23.4" required>
+              </label>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="button" type="submit">履歴に保存</button>
+            <button class="button" type="button" data-clear-form="entryForm">入力を消す</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-history" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div class="section-title">
+          <h2>入力履歴</h2>
+          <div class="hint">保存した燃費データを確認します。</div>
+        </div>
+        <div id="entryList"></div>
+        <div id="historyDetail"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "fuel-manager-tabs-v1";
+    const SUBJECT = "[燃費報告]";
+    const state = loadState();
+    const tabMeta = {
+      mail: ["メール登録", "送信先のメールアドレスを登録します。"],
+      vehicle: ["車番登録", "燃費入力で使う車番を登録します。"],
+      driver: ["運転手登録", "燃費入力で使う運転手を登録します。"],
+      entry: ["データ入力", "登録済みの情報から燃費データを入力します。"],
+      history: ["入力履歴", "保存した燃費データを確認します。"]
+    };
+
+    const globalMessage = document.getElementById("globalMessage");
+    const screenTitle = document.getElementById("screenTitle");
+    const screenHint = document.getElementById("screenHint");
+
+    document.querySelectorAll("[data-title-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.titleAction === "reload") {
+          location.reload();
+          return;
+        }
+        location.href = "index.html";
+      });
+    });
+
+    document.querySelectorAll("[data-tab]").forEach((button) => {
+      button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+    });
+
+    document.querySelectorAll("[data-clear-form]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById(button.dataset.clearForm).reset();
+        setDefaults();
+        render();
+        setMessage("入力を消しました。");
+      });
+    });
+
+    document.getElementById("mailForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const address = document.getElementById("mailAddress").value.trim();
+      if (!isValidEmail(address)) {
+        setMessage("メールアドレスを正しく入力してください。", true);
+        return;
+      }
+      state.mail.push({
+        id: crypto.randomUUID(),
+        name: document.getElementById("mailName").value.trim(),
+        address,
+        memo: document.getElementById("mailMemo").value.trim()
+      });
+      saveState();
+      event.target.reset();
+      render();
+      setMessage("メールを登録しました。");
+    });
+
+    document.getElementById("vehicleForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const no = normalizeVehicleNo(document.getElementById("vehicleNo").value);
+      if (!no) {
+        setMessage("車番を入力してください。", true);
+        return;
+      }
+      state.vehicles.push({
+        id: crypto.randomUUID(),
+        no,
+        type: document.getElementById("vehicleType").value.trim(),
+        memo: document.getElementById("vehicleMemo").value.trim()
+      });
+      saveState();
+      event.target.reset();
+      render();
+      setMessage("車番を登録しました。");
+    });
+
+    document.getElementById("driverForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = document.getElementById("driverName").value.trim();
+      if (!name) {
+        setMessage("運転手名を入力してください。", true);
+        return;
+      }
+      state.drivers.push({
+        id: crypto.randomUUID(),
+        name,
+        memo: document.getElementById("driverMemo").value.trim()
+      });
+      saveState();
+      event.target.reset();
+      render();
+      setMessage("運転手を登録しました。");
+    });
+
+    document.getElementById("entryForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = readEntry();
+      if (!record) return;
+      state.records.push(record);
+      state.selectedRecordId = record.id;
+      saveState();
+      event.target.reset();
+      setDefaults();
+      render();
+      setMessage("燃費データを保存しました。");
+    });
+
+    document.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-edit]");
+      const deleteButton = event.target.closest("[data-delete]");
+      const selectButton = event.target.closest("[data-select-record]");
+      const sendButton = event.target.closest("[data-send-record]");
+      if (editButton) {
+        editItem(editButton.dataset.kind, editButton.dataset.edit);
+      }
+      if (deleteButton) {
+        deleteItem(deleteButton.dataset.kind, deleteButton.dataset.delete);
+      }
+      if (selectButton) {
+        state.selectedRecordId = selectButton.dataset.selectRecord;
+        saveState();
+        render();
+      }
+      if (sendButton) {
+        sendRecord(sendButton.dataset.sendRecord);
+      }
+    });
+
+    ["fuelDate", "entryDriver", "entryVehicle", "odometer", "fuelVolume"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", updatePreview);
+      document.getElementById(id).addEventListener("change", updatePreview);
+    });
+
+    setDefaults();
+    render();
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return {
+          activeTab: saved?.activeTab || "mail",
+          mail: Array.isArray(saved?.mail) ? saved.mail : [],
+          vehicles: Array.isArray(saved?.vehicles) ? saved.vehicles : [],
+          drivers: Array.isArray(saved?.drivers) ? saved.drivers : [],
+          records: Array.isArray(saved?.records) ? saved.records : [],
+          selectedRecordId: saved?.selectedRecordId || ""
+        };
+      } catch {
+        return { activeTab: "mail", mail: [], vehicles: [], drivers: [], records: [], selectedRecordId: "" };
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function setActiveTab(tab) {
+      state.activeTab = tab;
+      saveState();
+      render();
+      setMessage("");
+    }
+
+    function render() {
+      renderTabs();
+      renderLists();
+      renderEntryOptions();
+      updatePreview();
+    }
+
+    function renderTabs() {
+      const active = state.activeTab in tabMeta ? state.activeTab : "mail";
+      document.querySelectorAll("[data-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === active);
+      });
+      document.querySelectorAll(".panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `panel-${active}`);
+      });
+      screenTitle.textContent = tabMeta[active][0];
+      screenHint.textContent = tabMeta[active][1];
+    }
+
+    function renderLists() {
+      document.getElementById("mailList").innerHTML = mailListHtml();
+      document.getElementById("vehicleList").innerHTML = vehicleListHtml();
+      document.getElementById("driverList").innerHTML = driverListHtml();
+      document.getElementById("entryList").innerHTML = entryListHtml();
+      document.getElementById("historyDetail").innerHTML = historyDetailHtml();
+    }
+
+    function renderEntryOptions() {
+      const vehicleSelect = document.getElementById("entryVehicle");
+      const driverSelect = document.getElementById("entryDriver");
+      const selectedVehicle = vehicleSelect.value;
+      const selectedDriver = driverSelect.value;
+
+      vehicleSelect.innerHTML = `<option value="">選択してください</option>${state.vehicles.map((item) => (
+        `<option value="${escapeHtml(item.id)}">${escapeHtml([item.no, item.type].filter(Boolean).join(" / "))}</option>`
+      )).join("")}`;
+      driverSelect.innerHTML = `<option value="">選択してください</option>${sortedDrivers().map((item) => (
+        `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`
+      )).join("")}`;
+
+      vehicleSelect.value = state.vehicles.some((item) => item.id === selectedVehicle) ? selectedVehicle : "";
+      driverSelect.value = state.drivers.some((item) => item.id === selectedDriver) ? selectedDriver : "";
+    }
+
+    function mailListHtml() {
+      if (state.mail.length === 0) return `<div class="empty">メールはまだ登録されていません。</div>`;
+      return tableHtml(["表示名", "メールアドレス", "メモ", "操作"], state.mail.map((item) => [
+        escapeHtml(item.name || ""),
+        escapeHtml(item.address || ""),
+        escapeHtml(item.memo || ""),
+        actionButtons("mail", item.id)
+      ]));
+    }
+
+    function vehicleListHtml() {
+      if (state.vehicles.length === 0) return `<div class="empty">車番はまだ登録されていません。</div>`;
+      return tableHtml(["車番", "車種", "メモ", "操作"], state.vehicles.map((item) => [
+        escapeHtml(item.no || ""),
+        escapeHtml(item.type || ""),
+        escapeHtml(item.memo || ""),
+        actionButtons("vehicle", item.id)
+      ]));
+    }
+
+    function driverListHtml() {
+      if (state.drivers.length === 0) return `<div class="empty">運転手はまだ登録されていません。</div>`;
+      return tableHtml(["運転手名", "メモ", "操作"], sortedDrivers().map((item) => [
+        escapeHtml(item.name || ""),
+        escapeHtml(item.memo || ""),
+        actionButtons("driver", item.id)
+      ]));
+    }
+
+    function entryListHtml() {
+      if (state.records.length === 0) return `<div class="empty">燃費データはまだ保存されていません。</div>`;
+      const rows = [...calculatedRecords()].reverse().map((item) => [
+        escapeHtml(item.fuelDate || ""),
+        escapeHtml(item.vehicleLabel || ""),
+        escapeHtml(item.driverLabel || ""),
+        escapeHtml(formatValue(item.odometer)),
+        escapeHtml(formatValue(item.fuelVolume)),
+        escapeHtml(formatValue(item.fuelEconomy)),
+        item.sent ? `<span class="status-sent">送信済み</span>` : "",
+        historyActionButtons(item.id)
+      ]);
+      return tableHtml(["給油日", "車番", "運転手", "メーター", "給油量", "燃費", "送信", "操作"], rows, (item) => item.id);
+    }
+
+    function tableHtml(headers, rows, rowIdGetter = null) {
+      const historyRows = rowIdGetter ? calculatedRecords().slice().reverse() : [];
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+            </thead>
+            <tbody>
+              ${rows.map((row, rowIndex) => {
+                const rowId = rowIdGetter ? rowIdGetter(historyRows[rowIndex]) : "";
+                const selectedClass = rowId && rowId === state.selectedRecordId ? " class=\"selected-record\"" : "";
+                return `<tr${selectedClass}>${row.map((cell, index) => `<td data-label="${escapeHtml(headers[index] || "")}">${cell}</td>`).join("")}</tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function actionButtons(kind, id) {
+      return `
+        <div class="row-actions">
+          <button class="small-button" type="button" data-kind="${kind}" data-edit="${id}">編集</button>
+          <button class="small-button" type="button" data-kind="${kind}" data-delete="${id}">削除</button>
+        </div>
+      `;
+    }
+
+    function historyActionButtons(id) {
+      return `
+        <div class="row-actions">
+          <button class="small-button" type="button" data-select-record="${id}">選択</button>
+          <button class="small-button" type="button" data-kind="record" data-edit="${id}">編集</button>
+          <button class="small-button" type="button" data-kind="record" data-delete="${id}">削除</button>
+        </div>
+      `;
+    }
+
+    function editItem(kind, id) {
+      if (kind === "mail") {
+        const item = state.mail.find((row) => row.id === id);
+        if (!item) return;
+        document.getElementById("mailName").value = item.name || "";
+        document.getElementById("mailAddress").value = item.address || "";
+        document.getElementById("mailMemo").value = item.memo || "";
+        state.mail = state.mail.filter((row) => row.id !== id);
+        state.activeTab = "mail";
+      }
+      if (kind === "vehicle") {
+        const item = state.vehicles.find((row) => row.id === id);
+        if (!item) return;
+        document.getElementById("vehicleNo").value = item.no || "";
+        document.getElementById("vehicleType").value = item.type || "";
+        document.getElementById("vehicleMemo").value = item.memo || "";
+        state.vehicles = state.vehicles.filter((row) => row.id !== id);
+        state.activeTab = "vehicle";
+      }
+      if (kind === "driver") {
+        const item = state.drivers.find((row) => row.id === id);
+        if (!item) return;
+        document.getElementById("driverName").value = item.name || "";
+        document.getElementById("driverMemo").value = item.memo || "";
+        state.drivers = state.drivers.filter((row) => row.id !== id);
+        state.activeTab = "driver";
+      }
+      if (kind === "record") {
+        const item = state.records.find((row) => row.id === id);
+        if (!item) return;
+        document.getElementById("fuelDate").value = item.fuelDate || todayLocalDate();
+        document.getElementById("entryVehicle").value = item.vehicleId || "";
+        document.getElementById("entryDriver").value = item.driverId || "";
+        document.getElementById("odometer").value = formatValue(item.odometer);
+        document.getElementById("fuelVolume").value = formatValue(item.fuelVolume);
+        state.records = state.records.filter((row) => row.id !== id);
+        state.activeTab = "entry";
+      }
+      saveState();
+      render();
+      setMessage("編集内容を入力欄に戻しました。登録すると上書きできます。");
+    }
+
+    function deleteItem(kind, id) {
+      if (!confirm("削除します。よろしいですか？")) return;
+      const keyMap = {
+        mail: "mail",
+        vehicle: "vehicles",
+        driver: "drivers",
+        record: "records"
+      };
+      const key = keyMap[kind];
+      if (!key) return;
+      state[key] = state[key].filter((item) => item.id !== id);
+      if (kind === "record" && state.selectedRecordId === id) {
+        state.selectedRecordId = "";
+      }
+      saveState();
+      render();
+      setMessage("削除しました。");
+    }
+
+    function readEntry() {
+      const vehicle = state.vehicles.find((item) => item.id === document.getElementById("entryVehicle").value);
+      const driver = state.drivers.find((item) => item.id === document.getElementById("entryDriver").value);
+      if (!document.getElementById("fuelDate").value || !vehicle || !driver) {
+        setMessage("給油日、車番、運転手を選択してください。", true);
+        return null;
+      }
+      if (numberOrBlank(document.getElementById("fuelVolume").value) === "") {
+        setMessage("給油量を入力してください。", true);
+        return null;
+      }
+      return {
+        id: crypto.randomUUID(),
+        fuelDate: document.getElementById("fuelDate").value,
+        vehicleId: vehicle.id,
+        vehicleLabel: [vehicle.no, vehicle.type].filter(Boolean).join(" / "),
+        driverId: driver.id,
+        driverLabel: driver.name,
+        odometer: numberOrBlank(document.getElementById("odometer").value),
+        fuelVolume: numberOrBlank(document.getElementById("fuelVolume").value),
+        sent: false
+      };
+    }
+
+    function historyDetailHtml() {
+      if (state.records.length === 0) return "";
+      const record = selectedCalculatedRecord();
+      if (!record) {
+        return `<div class="history-detail"><div class="empty">履歴を選択してください。</div></div>`;
+      }
+      return `
+        <div class="history-detail">
+          <div class="section-title">
+            <h2>選択中のデータ</h2>
+            ${record.sent ? `<span class="status-sent">送信済み</span>` : `<span class="hint">未送信</span>`}
+          </div>
+          <div class="detail-grid">
+            ${detailItem("給油日", record.fuelDate)}
+            ${detailItem("運転手", record.driverLabel)}
+            ${detailItem("車番", record.vehicleLabel)}
+            ${detailItem("オドメーター", formatValue(record.odometer))}
+            ${detailItem("給油量", `${formatValue(record.fuelVolume)} L`)}
+            ${detailItem("燃費", record.fuelEconomy === "" ? "" : `${formatValue(record.fuelEconomy)} km/L`)}
+          </div>
+          <label>送信先
+            <select id="historyMailSelect">
+              ${historyMailOptions()}
+            </select>
+          </label>
+          <div class="actions">
+            <button class="button" type="button" data-send-record="${record.id}">メール送信</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function detailItem(label, value) {
+      return `
+        <div class="detail-item">
+          <div class="detail-label">${escapeHtml(label)}</div>
+          <div class="detail-value">${escapeHtml(value || "")}</div>
+        </div>
+      `;
+    }
+
+    function historyMailOptions() {
+      if (state.mail.length === 0) {
+        return `<option value="">メール登録なし</option>`;
+      }
+      return state.mail.map((item) => {
+        const label = item.name ? `${item.name} / ${item.address}` : item.address;
+        return `<option value="${escapeHtml(item.address)}">${escapeHtml(label)}</option>`;
+      }).join("");
+    }
+
+    function selectedCalculatedRecord() {
+      return calculatedRecords().find((record) => record.id === state.selectedRecordId) || null;
+    }
+
+    function calculatedRecords() {
+      const previousByVehicle = new Map();
+      return [...state.records]
+        .map((record, index) => ({ record, index }))
+        .sort((a, b) => {
+          const dateCompare = String(a.record.fuelDate || "").localeCompare(String(b.record.fuelDate || ""));
+          return dateCompare || a.index - b.index;
+        })
+        .map(({ record }) => {
+          const odometer = numberOrBlank(record.odometer);
+          const fuelVolume = numberOrBlank(record.fuelVolume);
+          let fuelEconomy = "";
+          const previousOdometer = previousByVehicle.get(record.vehicleId);
+          if (odometer !== "" && previousOdometer !== undefined && fuelVolume) {
+            const distance = odometer - previousOdometer;
+            if (distance >= 0) {
+              fuelEconomy = round2(distance / fuelVolume);
+            }
+          }
+          if (record.vehicleId && odometer !== "") {
+            previousByVehicle.set(record.vehicleId, odometer);
+          }
+          return { ...record, fuelEconomy };
+        });
+    }
+
+    function sendRecord(id) {
+      const record = calculatedRecords().find((item) => item.id === id);
+      if (!record) return;
+      const select = document.getElementById("historyMailSelect");
+      const address = select ? select.value : "";
+      const url = new URL("https://mail.google.com/mail/");
+      url.searchParams.set("view", "cm");
+      url.searchParams.set("fs", "1");
+      url.searchParams.set("to", address);
+      url.searchParams.set("su", SUBJECT);
+      url.searchParams.set("body", buildRecordMailBody(record));
+      const savedRecord = state.records.find((item) => item.id === id);
+      if (savedRecord) {
+        savedRecord.sent = true;
+      }
+      state.selectedRecordId = id;
+      saveState();
+      render();
+      setMessage("送信済みに変更しました。");
+      window.open(url.toString(), "_blank", "noopener");
+    }
+
+    function buildRecordMailBody(record) {
+      return [
+        `給油日：${record.fuelDate || ""}`,
+        `運転手：${record.driverLabel || ""}`,
+        `車番：${record.vehicleLabel || ""}`,
+        `オドメーター：${formatValue(record.odometer)}`,
+        `給油量(L)：${formatValue(record.fuelVolume)}`,
+        `燃費(km/L)：${formatValue(record.fuelEconomy)}`
+      ].join("\n");
+    }
+
+    function updatePreview() {
+      buildCurrentMailBody();
+    }
+
+    function buildCurrentMailBody() {
+      const vehicle = state.vehicles.find((item) => item.id === document.getElementById("entryVehicle").value);
+      const driver = state.drivers.find((item) => item.id === document.getElementById("entryDriver").value);
+      const rows = [
+        `給油日：${document.getElementById("fuelDate").value || ""}`,
+        `車番：${vehicle ? vehicle.no : ""}`,
+        `車種：${vehicle ? vehicle.type || "" : ""}`,
+        `運転手：${driver ? driver.name : ""}`,
+        `オドメーター：${document.getElementById("odometer").value || ""}`,
+        `給油量(L)：${document.getElementById("fuelVolume").value || ""}`
+      ];
+      return rows.join("\n");
+    }
+
+    function setDefaults() {
+      const date = document.getElementById("fuelDate");
+      if (date && !date.value) date.value = todayLocalDate();
+    }
+
+    function setMessage(text, isError = false) {
+      globalMessage.textContent = text;
+      globalMessage.classList.toggle("error", isError);
+    }
+
+    function sortedDrivers() {
+      return [...state.drivers].sort((a, b) => {
+        return String(a.name || "").localeCompare(String(b.name || ""), "ja");
+      });
+    }
+
+    function normalizeVehicleNo(value) {
+      return String(value ?? "").replace(/-/g, "").trim();
+    }
+
+    function numberOrBlank(value) {
+      if (value === "" || value === null || value === undefined) return "";
+      const number = Number(value);
+      return Number.isFinite(number) ? number : "";
+    }
+
+    function formatValue(value) {
+      return value === "" || value === null || value === undefined ? "" : String(value);
+    }
+
+    function round2(value) {
+      return Math.round(value * 100) / 100;
+    }
+
+    function todayLocalDate() {
+      const date = new Date();
+      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+      return date.toISOString().slice(0, 10);
+    }
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+  </script>
+</body>
+</html>
