@@ -330,6 +330,20 @@
       background: #fff;
     }
 
+    .register-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .register-table-wrap table {
+      min-width: 640px;
+    }
+
+    .register-table-wrap th,
+    .register-table-wrap td {
+      white-space: nowrap;
+    }
+
     table {
       width: 100%;
       min-width: 760px;
@@ -630,6 +644,52 @@
       .small-button {
         width: 100%;
         min-height: 40px;
+      }
+
+      .register-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .register-table-wrap table {
+        display: table;
+        min-width: 640px;
+      }
+
+      .register-table-wrap thead {
+        display: table-header-group;
+      }
+
+      .register-table-wrap tbody {
+        display: table-row-group;
+      }
+
+      .register-table-wrap tr {
+        display: table-row;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .register-table-wrap th,
+      .register-table-wrap td {
+        display: table-cell;
+        min-height: 0;
+        white-space: nowrap;
+        overflow-wrap: normal;
+      }
+
+      .register-table-wrap td::before {
+        content: none;
+      }
+
+      .register-table-wrap .row-actions {
+        flex-direction: row;
+      }
+
+      .register-table-wrap .small-button {
+        width: auto;
+        min-height: 34px;
       }
     }
   </style>
@@ -1062,7 +1122,7 @@
         escapeHtml(item.address || ""),
         escapeHtml(item.memo || ""),
         actionButtons("mail", item.id)
-      ]));
+      ]), null, [], "register-table-wrap");
     }
 
     function vehicleListHtml() {
@@ -1072,7 +1132,7 @@
         escapeHtml(item.type || ""),
         escapeHtml(item.memo || ""),
         actionButtons("vehicle", item.id)
-      ]));
+      ]), null, [], "register-table-wrap");
     }
 
     function driverListHtml() {
@@ -1081,7 +1141,7 @@
         escapeHtml(item.name || ""),
         escapeHtml(item.memo || ""),
         actionButtons("driver", item.id)
-      ]));
+      ]), null, [], "register-table-wrap");
     }
 
     function entryListHtml() {
@@ -1100,9 +1160,9 @@
       return tableHtml(["給油日", "車番", "運転手", "メーター", "給油量", "燃費", "送信", "操作"], rows, (item) => item.id, displayRecords);
     }
 
-    function tableHtml(headers, rows, rowIdGetter = null, rowItems = []) {
+    function tableHtml(headers, rows, rowIdGetter = null, rowItems = [], wrapClass = "") {
       return `
-        <div class="table-wrap">
+        <div class="table-wrap ${wrapClass}">
           <table>
             <thead>
               <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
