@@ -189,6 +189,23 @@
       white-space: nowrap;
     }
 
+    .top-recipient-text {
+      min-width: 0;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     main {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -710,7 +727,8 @@
       }
 
       .top-save-button,
-      .top-delete-button {
+      .top-delete-button,
+      .top-recipient-text {
         min-height: 46px;
         padding: 8px 4px;
         font-size: 12px;
@@ -1199,8 +1217,12 @@
           <label class="top-recipient-check" aria-label="送付先${index + 1}を選択">
             <input type="checkbox" data-top-selected="${recipient.id}" ${recipient.selected ? "checked" : ""}>
           </label>
-          <input type="text" data-top-name="${recipient.id}" value="${escapeHtml(recipient.name || "")}" placeholder="宛名" ${recipient.saved && !recipient.editing ? "disabled" : ""}>
-          <input type="email" data-top-email="${recipient.id}" value="${escapeHtml(recipient.email)}" placeholder="メールアドレス" ${recipient.saved && !recipient.editing ? "disabled" : ""}>
+          ${recipient.saved && !recipient.editing
+            ? `<span class="top-recipient-text" title="${escapeHtml(recipient.name || "")}">${escapeHtml(recipient.name || "宛名なし")}</span>`
+            : `<input type="text" data-top-name="${recipient.id}" value="${escapeHtml(recipient.name || "")}" placeholder="宛名">`}
+          ${recipient.saved && !recipient.editing
+            ? `<span class="top-recipient-text" title="${escapeHtml(recipient.email)}">${escapeHtml(recipient.email)}</span>`
+            : `<input type="email" data-top-email="${recipient.id}" value="${escapeHtml(recipient.email)}" placeholder="メールアドレス">`}
           <button class="button secondary top-save-button ${recipient.saved ? "saved" : ""}" type="button" data-save-top-recipient="${recipient.id}">
             ${recipient.saved && !recipient.editing ? "編集" : "保存"}
           </button>
