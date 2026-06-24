@@ -219,6 +219,13 @@
       margin-bottom: 14px;
     }
 
+    .panel-note {
+      margin: -6px 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -648,8 +655,8 @@
       <div class="panel-body">
         <div class="section-title">
           <h2>メール登録</h2>
-          <div class="hint">送信時に選ぶ宛先を保存します。</div>
         </div>
+        <div class="panel-note">送信時に選ぶ宛先を保存します。</div>
         <form id="mailForm" autocomplete="on">
           <div class="form-grid">
             <label class="span-2">表示名
@@ -680,8 +687,8 @@
       <div class="panel-body">
         <div class="section-title">
           <h2>車番登録</h2>
-          <div class="hint">車番と車種を先に登録しておきます。</div>
         </div>
+        <div class="panel-note">車番と車種を先に登録しておきます。</div>
         <form id="vehicleForm" autocomplete="on">
           <div class="form-grid">
             <label>車番
@@ -712,8 +719,8 @@
       <div class="panel-body">
         <div class="section-title">
           <h2>運転手登録</h2>
-          <div class="hint">データ入力で選ぶ運転手を保存します。</div>
         </div>
+        <div class="panel-note">データ入力で選ぶ運転手を保存します。</div>
         <form id="driverForm" autocomplete="on">
           <div class="form-grid">
             <label class="span-2">運転手名
@@ -741,8 +748,8 @@
       <div class="panel-body">
         <div class="section-title">
           <h2>データ入力</h2>
-          <div class="hint">登録した車番と運転手を選んで燃費データを入れます。</div>
         </div>
+        <div class="panel-note">登録した車番と運転手を選んで燃費データを入れます。</div>
         <form id="entryForm" autocomplete="on">
           <div class="entry-grid">
             <div class="entry-column">
@@ -777,8 +784,8 @@
       <div class="panel-body">
         <div class="section-title">
           <h2>入力履歴</h2>
-          <div class="hint">保存した燃費データを確認します。</div>
         </div>
+        <div class="panel-note">保存した燃費データを確認します。</div>
         <div id="entryList"></div>
         <div id="historyDetail"></div>
       </div>
