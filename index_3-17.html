@@ -509,12 +509,7 @@ function setAutoMultiplier(prop,sourceKey,value){
 }
 function getAutoKgRule(prop,sourceKey){
   if(!prop) return;
-  const propertyRules={
-    'マックスバリュ 上野店':{
-      '可燃__袋':{target:'可燃__kg',multiplier:2},
-      '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
-    }
-  };
+  const propertyRules={};
   if(prop.name==='イオンタウン伊賀'){
     const targets={
       '可燃__袋':'可燃__kg',
@@ -526,6 +521,14 @@ function getAutoKgRule(prop,sourceKey){
     const defaults={
       '可燃__袋':{target:'可燃__kg',multiplier:3},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
+    };
+    const rule=defaults[sourceKey];
+    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
+  }
+  if(prop.name==='マックスバリュ 上野店'){
+    const defaults={
+      '可燃__袋':{target:'可燃__kg',multiplier:2},
+      '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
     };
     const rule=defaults[sourceKey];
     if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
