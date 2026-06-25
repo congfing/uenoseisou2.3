@@ -159,7 +159,7 @@
     }
 
     .screen-head {
-      display: flex;
+      display: none;
       align-items: flex-end;
       justify-content: space-between;
       gap: 14px;
@@ -823,16 +823,9 @@
 
     <section class="panel active" id="panel-mail" aria-labelledby="screenTitle">
       <div class="list-box">
-        <div class="section-title">
-          <h2>登録済みメール</h2>
-        </div>
         <div id="mailList"></div>
       </div>
       <div class="panel-body">
-        <div class="section-title">
-          <h2>メール登録</h2>
-        </div>
-        <div class="panel-note">送信時に選ぶ宛先を保存します。</div>
         <form id="mailForm" autocomplete="on">
           <div class="form-grid">
             <label class="span-2">表示名
@@ -855,16 +848,9 @@
 
     <section class="panel" id="panel-vehicle" aria-labelledby="screenTitle">
       <div class="list-box">
-        <div class="section-title">
-          <h2>登録済み車番</h2>
-        </div>
         <div id="vehicleList"></div>
       </div>
       <div class="panel-body">
-        <div class="section-title">
-          <h2>車番登録</h2>
-        </div>
-        <div class="panel-note">車番と車種を先に登録しておきます。</div>
         <form id="vehicleForm" autocomplete="on">
           <div class="form-grid">
             <label>車番
@@ -887,16 +873,9 @@
 
     <section class="panel" id="panel-driver" aria-labelledby="screenTitle">
       <div class="list-box">
-        <div class="section-title">
-          <h2>登録済み運転手</h2>
-        </div>
         <div id="driverList"></div>
       </div>
       <div class="panel-body">
-        <div class="section-title">
-          <h2>運転手登録</h2>
-        </div>
-        <div class="panel-note">データ入力で選ぶ運転手を保存します。</div>
         <form id="driverForm" autocomplete="on">
           <div class="form-grid">
             <label class="span-2">運転手名
