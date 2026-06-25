@@ -166,6 +166,14 @@
       margin-bottom: 12px;
     }
 
+    .screen-head.hidden {
+      display: none;
+    }
+
+    body.entry-tab .screen-head {
+      display: none !important;
+    }
+
     h1,
     h2 {
       margin: 0;
@@ -908,10 +916,6 @@
 
     <section class="panel" id="panel-entry" aria-labelledby="screenTitle">
       <div class="panel-body">
-        <div class="section-title">
-          <h2>データ入力</h2>
-        </div>
-        <div class="panel-note">登録した車番と運転手を選んで燃費データを入れます。</div>
         <form id="entryForm" autocomplete="on">
           <div class="entry-grid">
             <div class="entry-column">
@@ -967,6 +971,7 @@
     };
 
     const globalMessage = document.getElementById("globalMessage");
+    const screenHead = document.querySelector(".screen-head");
     const screenTitle = document.getElementById("screenTitle");
     const screenHint = document.getElementById("screenHint");
 
@@ -1174,6 +1179,8 @@
       document.querySelectorAll(".panel").forEach((panel) => {
         panel.classList.toggle("active", panel.id === `panel-${active}`);
       });
+      screenHead.classList.toggle("hidden", active === "entry");
+      document.body.classList.toggle("entry-tab", active === "entry");
       screenTitle.textContent = tabMeta[active][0];
       screenHint.textContent = tabMeta[active][1];
     }
