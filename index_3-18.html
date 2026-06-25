@@ -123,6 +123,8 @@
   .field-group { margin-bottom: 14px; }
   .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
   .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
+  .auto-multiplier-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 600; color: #555; }
+  .auto-multiplier-row select { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; color: #000; }
   .last-val-hint { font-size: 12px; color: #aaa; margin-bottom: 4px; }
   .last-val-hint span { font-weight: bold; color: #777; }
 
@@ -396,6 +398,7 @@ const LS_ORDER_PREFIX  = 'keiryo_order_';
 const LS_LASTDATA_PREFIX = 'keiryo_last_';
 const LS_HISTORY_PREFIX  = 'keiryo_hist_'; // + date_staffName
 const LS_MAIL_SENT_PREFIX = 'keiryo_mail_sent_';
+const LS_AUTO_MULTIPLIER_PREFIX = 'keiryo_auto_multiplier_';
 const DEFAULT_PROPERTIES = [
   // ── ほっともっと ──
   { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'紙屑',unit:'袋'}] },
@@ -432,7 +435,7 @@ const DEFAULT_PROPERTIES = [
   // ── 伊賀神戸駅 ──
   { name:'伊賀神戸駅',         order:23, days:[], fields:[{label:'可燃',unit:'袋'},{label:'カン',unit:'袋'},{label:'ビン',unit:'袋'},{label:'その他',unit:'袋'}] },
   // ── イオンタウン・びっくりドンキー・KFC ──
-  { name:'イオンタウン伊賀',       order:24, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'ハンガー',unit:'kg'},{label:'段ボール',unit:'kg'}] },
+  { name:'イオンタウン伊賀',       order:24, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'ハンガー',unit:'kg'},{label:'段ボール',unit:'kg'}] },
   { name:'びっくりドンキー 伊賀上野店',   order:25, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
   { name:'KFC イオンタウン伊賀上野店',                order:26, days:[], fields:[{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
   // ── コカ・コーラボトラーズ ──
@@ -514,19 +517,52 @@ function formatAutoKg(value){
   const rounded=Math.round(value*1000)/1000;
   return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/,'');
 }
-function applyMaxValuAutoKg(prop,sourceKey,sourceValue){
+function autoMultiplierStorageKey(prop,sourceKey){ return LS_AUTO_MULTIPLIER_PREFIX+prop.name+'_'+sourceKey; }
+function getAutoMultiplier(prop,sourceKey,fallback){
+  const value=loadJSON(autoMultiplierStorageKey(prop,sourceKey),fallback);
+  const numeric=parseFloat(value);
+  return Number.isNaN(numeric) ? fallback : numeric;
+}
+function setAutoMultiplier(prop,sourceKey,value){
+  const numeric=parseFloat(value);
+  saveJSON(autoMultiplierStorageKey(prop,sourceKey),Number.isNaN(numeric)?1:numeric);
+}
+function getAutoKgRule(prop,sourceKey){
   if(!prop) return;
   const propertyRules={
-    'マックスバリュ 佐那具店':{
-      '可燃__袋':{target:'可燃__kg',multiplier:3},
-      '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
-    },
     'マックスバリュ 上野店':{
       '可燃__袋':{target:'可燃__kg',multiplier:2},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
     }
   };
-  const rule=propertyRules[prop.name]?.[sourceKey];
+  if(prop.name==='イオンタウン伊賀'){
+    const targets={
+      '可燃__袋':'可燃__kg',
+      '生ごみ__袋':'生ごみ__kg'
+    };
+    if(targets[sourceKey]) return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,1),selectable:true};
+  }
+  if(prop.name==='マックスバリュ 佐那具店'){
+    const defaults={
+      '可燃__袋':{target:'可燃__kg',multiplier:3},
+      '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
+    };
+    const rule=defaults[sourceKey];
+    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
+  }
+  return propertyRules[prop.name]?.[sourceKey];
+}
+function getAutoMultiplierControl(prop,sourceKey){
+  const rule=getAutoKgRule(prop,sourceKey);
+  if(!rule||!rule.selectable) return '';
+  const selected=String(getAutoMultiplier(prop,sourceKey,rule.multiplier||1));
+  const options=Array.from({length:10},(_,i)=>String(i+1))
+    .map(value=>`<option value="${value}" ${value===selected?'selected':''}>${value}</option>`)
+    .join('');
+  return `<div class="auto-multiplier-row"><span>倍率</span><select class="auto-multiplier-select" data-source-key="${sourceKey}">${options}</select></div>`;
+}
+function applyAutoKg(prop,sourceKey,sourceValue){
+  const rule=getAutoKgRule(prop,sourceKey);
   if(!rule) return;
   const targetInput=document.querySelector(`input.num-input[data-field-key="${rule.target}"]`);
   if(!targetInput) return;
@@ -537,7 +573,7 @@ function applyMaxValuAutoKg(prop,sourceKey,sourceValue){
   state.entryDraft[prop.name][rule.target]=nextValue;
 }
 function getAutoKgNote(prop,field){
-  if(!prop||!['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(prop.name)) return '';
+  if(!prop||!['マックスバリュ 佐那具店','マックスバリュ 上野店','イオンタウン伊賀'].includes(prop.name)) return '';
   return ['可燃','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
 }
 function saveHistory(date,staff,entryData){
@@ -1174,15 +1210,24 @@ function openEntry(idx,event,returnScreen){
     div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span>${noteHtml}</div>
       ${hint}
       <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-        id="${inputId}" data-field-key="${key}" placeholder="0" value="${currentValue}">`;
+        id="${inputId}" data-field-key="${key}" placeholder="0" value="${currentValue}">
+      ${getAutoMultiplierControl(prop,key)}`;
     c.appendChild(div);
     const input = div.querySelector('input.num-input');
     input.addEventListener('input', () => {
       if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
       state.entryDraft[prop.name][key] = input.value;
-      applyMaxValuAutoKg(prop,key,input.value);
+      applyAutoKg(prop,key,input.value);
       saveSession();
     });
+    const multiplierSelect=div.querySelector('select.auto-multiplier-select');
+    if(multiplierSelect){
+      multiplierSelect.addEventListener('change', () => {
+        setAutoMultiplier(prop,key,multiplierSelect.value);
+        applyAutoKg(prop,key,input.value);
+        saveSession();
+      });
+    }
   });
   showScreen(4);
 }
