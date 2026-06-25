@@ -247,6 +247,8 @@
     select {
       display: block;
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       min-height: 44px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -254,6 +256,20 @@
       background: #fff;
       color: var(--text);
       outline: none;
+    }
+
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    input::-webkit-date-and-time-value {
+      display: block;
+      width: 100%;
+      text-align: left;
     }
 
     input:focus,
