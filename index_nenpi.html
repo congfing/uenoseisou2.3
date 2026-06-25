@@ -262,14 +262,33 @@
       -webkit-appearance: none;
       appearance: none;
       width: 100%;
+      inline-size: 100%;
       max-width: 100%;
+      max-inline-size: 100%;
       min-width: 0;
+      min-inline-size: 0;
     }
 
     input::-webkit-date-and-time-value {
       display: block;
       width: 100%;
+      min-width: 0;
       text-align: left;
+    }
+
+    #fuelDate {
+      width: 100%;
+      inline-size: 100%;
+      max-width: 100%;
+      max-inline-size: 100%;
+      min-width: 0;
+      min-inline-size: 0;
+    }
+
+    @supports (-webkit-touch-callout: none) {
+      #fuelDate {
+        width: -webkit-fill-available;
+      }
     }
 
     input:focus,
@@ -302,6 +321,18 @@
     .entry-column {
       display: grid;
       gap: 12px;
+      min-width: 0;
+    }
+
+    .entry-column label {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .entry-column input,
+    .entry-column select {
+      width: 100%;
+      max-width: 100%;
       min-width: 0;
     }
 
