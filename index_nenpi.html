@@ -118,7 +118,7 @@
 
     .tabbar {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
       padding: 8px;
       border: 1px solid var(--line);
@@ -513,6 +513,29 @@
       background: #fff;
     }
 
+    .graph-box {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .fuel-chart {
+      display: block;
+      width: 100%;
+      min-width: 620px;
+      height: auto;
+    }
+
+    .chart-label {
+      fill: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -594,7 +617,7 @@
 
       .tabbar {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .tab,
@@ -810,6 +833,7 @@
     <button class="tab" type="button" data-tab="driver">運転手登録</button>
     <button class="tab" type="button" data-tab="entry">データ入力</button>
     <button class="tab" type="button" data-tab="history">入力履歴</button>
+    <button class="tab" type="button" data-tab="graph">グラフ表示</button>
   </nav>
 
   <main class="app">
@@ -935,6 +959,12 @@
         <div id="historyDetail"></div>
       </div>
     </section>
+
+    <section class="panel" id="panel-graph" aria-labelledby="screenTitle">
+      <div class="panel-body">
+        <div id="graphArea"></div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -946,7 +976,8 @@
       vehicle: ["車番登録", "燃費入力で使う車番を登録します。"],
       driver: ["運転手登録", "燃費入力で使う運転手を登録します。"],
       entry: ["データ入力", "登録済みの情報から燃費データを入力します。"],
-      history: ["入力履歴", "保存した燃費データを確認します。"]
+      history: ["入力履歴", "保存した燃費データを確認します。"],
+      graph: ["グラフ表示", "燃費データをグラフで確認します。"]
     };
 
     const globalMessage = document.getElementById("globalMessage");
@@ -1170,6 +1201,7 @@
       document.getElementById("driverList").innerHTML = driverListHtml();
       document.getElementById("entryList").innerHTML = entryListHtml();
       document.getElementById("historyDetail").innerHTML = historyDetailHtml();
+      document.getElementById("graphArea").innerHTML = graphHtml();
     }
 
     function renderEntryOptions() {
@@ -1391,6 +1423,51 @@
       `;
     }
 
+    function graphHtml() {
+      const points = calculatedRecords()
+        .filter((record) => numberOrBlank(record.fuelEconomy) !== "")
+        .sort((a, b) => {
+          const dateCompare = String(a.fuelDate || "").localeCompare(String(b.fuelDate || ""));
+          return dateCompare || recordIndex(a.id) - recordIndex(b.id);
+        });
+
+      if (points.length === 0) {
+        return `<div class="empty">グラフにできる燃費データはまだありません。</div>`;
+      }
+
+      const width = 720;
+      const height = 280;
+      const pad = { left: 52, right: 18, top: 22, bottom: 48 };
+      const values = points.map((record) => Number(record.fuelEconomy));
+      const min = Math.max(0, Math.min(...values) - 1);
+      const max = Math.max(...values) + 1;
+      const xStep = points.length === 1 ? 0 : (width - pad.left - pad.right) / (points.length - 1);
+      const yFor = (value) => pad.top + (max - value) / (max - min || 1) * (height - pad.top - pad.bottom);
+      const coords = points.map((record, index) => ({
+        x: points.length === 1 ? pad.left + (width - pad.left - pad.right) / 2 : pad.left + xStep * index,
+        y: yFor(Number(record.fuelEconomy)),
+        record
+      }));
+      const polyline = coords.map((point) => `${point.x},${point.y}`).join(" ");
+
+      return `
+        <div class="graph-box">
+          <svg class="fuel-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="燃費グラフ">
+            <line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#000" stroke-width="1"></line>
+            <line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#000" stroke-width="1"></line>
+            <text class="chart-label" x="8" y="${pad.top + 8}">${escapeHtml(max.toFixed(1))}</text>
+            <text class="chart-label" x="8" y="${height - pad.bottom}">${escapeHtml(min.toFixed(1))}</text>
+            ${coords.length > 1 ? `<polyline points="${polyline}" fill="none" stroke="#000" stroke-width="3"></polyline>` : ""}
+            ${coords.map((point) => `
+              <circle cx="${point.x}" cy="${point.y}" r="5" fill="#fff" stroke="#000" stroke-width="2"></circle>
+              <text class="chart-label" x="${Math.max(4, point.x - 18)}" y="${point.y - 10}">${escapeHtml(formatValue(point.record.fuelEconomy))}</text>
+              <text class="chart-label" x="${Math.max(4, point.x - 34)}" y="${height - 18}">${escapeHtml(shortDate(point.record.fuelDate))}</text>
+            `).join("")}
+          </svg>
+        </div>
+      `;
+    }
+
     function detailItem(label, value) {
       return `
         <div class="detail-item">
@@ -1424,6 +1501,11 @@
 
     function recordIndex(id) {
       return state.records.findIndex((record) => record.id === id);
+    }
+
+    function shortDate(value) {
+      const parts = String(value || "").split("-");
+      return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : value;
     }
 
     function calculatedRecords() {
