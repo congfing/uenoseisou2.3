@@ -411,12 +411,18 @@ const LS_MAIL_SENT_PREFIX = 'keiryo_mail_sent_';
 const LS_AUTO_MULTIPLIER_PREFIX = 'keiryo_auto_multiplier_';
 const SAKAKURA_PROPERTY_NAME='旧上野庁舎 SAKAKURA BASE';
 const SAKAKURA_AUTO_PAIRS=[
-  {bag:'ホテル可燃白__袋',kg:'ホテル可燃__kg',nonburn:'ホテル不燃白__kg'},
-  {bag:'図書館可燃青__袋',kg:'図書館可燃__kg',nonburn:'図書館不燃青__kg'},
-  {bag:'物販可燃透明__袋',kg:'物販可燃__kg',nonburn:'物販不燃透明__kg'},
-  {bag:'カフェ可燃黒__袋',kg:'カフェ可燃__kg',nonburn:'カフェ不燃黒__kg'}
+  {bag:'ホテル可燃 白__袋',kg:'ホテル可燃__kg',nonburn:'ホテル不燃 白__kg'},
+  {bag:'図書館可燃 青__袋',kg:'図書館可燃__kg',nonburn:'図書館不燃 青__kg'},
+  {bag:'物販可燃 透明__袋',kg:'物販可燃__kg',nonburn:'物販不燃 透明__kg'},
+  {bag:'カフェ可燃 黒__袋',kg:'カフェ可燃__kg',nonburn:'カフェ不燃 黒__kg'}
 ];
-const SAKAKURA_OBSOLETE_FIELD_KEYS=new Set(['白袋__袋','青袋__袋','黒袋__袋','ホテル不燃__kg','図書館不燃__kg','物販不燃__kg','カフェ可燃__袋','カフェ不燃__kg']);
+const SAKAKURA_OBSOLETE_FIELD_KEYS=new Set([
+  '白袋__袋','青袋__袋','黒袋__袋',
+  'ホテル可燃白__袋','ホテル不燃__kg','ホテル不燃白__kg',
+  '図書館可燃青__袋','図書館不燃__kg','図書館不燃青__kg',
+  '物販可燃透明__袋','物販不燃__kg','物販不燃透明__kg',
+  'カフェ可燃__袋','カフェ可燃黒__袋','カフェ不燃__kg','カフェ不燃黒__kg'
+]);
 const DEFAULT_PROPERTIES = [
   // ── ほっともっと ──
   { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'紙屑',unit:'袋'}] },
@@ -468,7 +474,7 @@ const DEFAULT_PROPERTIES = [
   // ── 古本市場・サイリス ──
   { name:'古本市場 上野店',           order:32, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'古紙',unit:'kg'},{label:'資源',unit:'袋'},{label:'資源',unit:'kg'}] },
   // ── 旧上野庁舎（SAKAKURABASE） ──
-  { name:'旧上野庁舎 SAKAKURA BASE',         order:33, days:[], fields:[{label:'ホテル可燃白',unit:'袋'},{label:'ホテル可燃',unit:'kg'},{label:'ホテル不燃白',unit:'kg'},{label:'図書館可燃青',unit:'袋'},{label:'図書館可燃',unit:'kg'},{label:'図書館不燃青',unit:'kg'},{label:'物販可燃透明',unit:'袋'},{label:'物販可燃',unit:'kg'},{label:'物販不燃透明',unit:'kg'},{label:'カフェ可燃黒',unit:'袋'},{label:'カフェ可燃',unit:'kg'},{label:'カフェ不燃黒',unit:'kg'}] },
+  { name:'旧上野庁舎 SAKAKURA BASE',         order:33, days:[], fields:[{label:'ホテル可燃 白',unit:'袋'},{label:'ホテル可燃',unit:'kg'},{label:'ホテル不燃 白',unit:'kg'},{label:'図書館可燃 青',unit:'袋'},{label:'図書館可燃',unit:'kg'},{label:'図書館不燃 青',unit:'kg'},{label:'物販可燃 透明',unit:'袋'},{label:'物販可燃',unit:'kg'},{label:'物販不燃 透明',unit:'kg'},{label:'カフェ可燃 黒',unit:'袋'},{label:'カフェ可燃',unit:'kg'},{label:'カフェ不燃 黒',unit:'kg'}] },
   // ── 魚民 ──
   { name:'魚民 上野市駅前店',               order:34, days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'紙',unit:'kg'},{label:'不燃ビニ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'割れ物',unit:'kg'},{label:'発泡',unit:'kg'}] },
   // ── 厚板プレス工業 ──
