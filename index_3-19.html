@@ -423,6 +423,16 @@ const SAKAKURA_OBSOLETE_FIELD_KEYS=new Set([
   '物販可燃透明__袋','物販不燃__kg','物販不燃透明__kg',
   'カフェ可燃__袋','カフェ可燃黒__袋','カフェ不燃__kg','カフェ不燃黒__kg'
 ]);
+const LEGACY_FIELD_VALUE_KEYS={
+  [`${SAKAKURA_PROPERTY_NAME}::ホテル可燃 白__袋`]:['ホテル可燃白__袋'],
+  [`${SAKAKURA_PROPERTY_NAME}::ホテル不燃 白__kg`]:['ホテル不燃白__kg','ホテル不燃__kg'],
+  [`${SAKAKURA_PROPERTY_NAME}::図書館可燃 青__袋`]:['図書館可燃青__袋'],
+  [`${SAKAKURA_PROPERTY_NAME}::図書館不燃 青__kg`]:['図書館不燃青__kg','図書館不燃__kg'],
+  [`${SAKAKURA_PROPERTY_NAME}::物販可燃 透明__袋`]:['物販可燃透明__袋'],
+  [`${SAKAKURA_PROPERTY_NAME}::物販不燃 透明__kg`]:['物販不燃透明__kg','物販不燃__kg'],
+  [`${SAKAKURA_PROPERTY_NAME}::カフェ可燃 黒__袋`]:['カフェ可燃黒__袋','カフェ可燃__袋'],
+  [`${SAKAKURA_PROPERTY_NAME}::カフェ不燃 黒__kg`]:['カフェ不燃黒__kg','カフェ不燃__kg']
+};
 const DEFAULT_PROPERTIES = [
   // ── ほっともっと ──
   { name:'ほっともっと 伊賀桑町店',   order:1,  days:[], fields:[{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'廃プラ',unit:'袋'},{label:'ペットボトル',unit:'袋'},{label:'紙屑',unit:'袋'}] },
@@ -531,10 +541,14 @@ function setSavedOrder(staff,day,arr){ saveJSON(LS_ORDER_PREFIX+staff+'_'+day,ar
 function getLastData(name){ return loadJSON(LS_LASTDATA_PREFIX+name,null); }
 function setLastData(name,data,staff,date){ saveJSON(LS_LASTDATA_PREFIX+name,{data,staffName:staff,date}); }
 function fieldKey(field){ return `${field.label}__${field.unit}`; }
-function getFieldValue(data,field){
+function getFieldValue(data,field,propName=''){
   if(!data) return '';
   const key=fieldKey(field);
   if(data[key]!==undefined) return data[key];
+  const legacyKeys=LEGACY_FIELD_VALUE_KEYS[`${propName}::${key}`]||[];
+  for(const legacyKey of legacyKeys){
+    if(data[legacyKey]!==undefined) return data[legacyKey];
+  }
   return data[field.label]!==undefined ? data[field.label] : '';
 }
 function formatAutoKg(value){
@@ -637,6 +651,9 @@ function getAllHistory(){
 // 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
 function mergeDefaultProperty(savedProp,defaultProp){
   if(!defaultProp||!Array.isArray(savedProp.fields)||!Array.isArray(defaultProp.fields)) return savedProp;
+  if(savedProp.name===SAKAKURA_PROPERTY_NAME){
+    return {...defaultProp,order:savedProp.order||defaultProp.order,days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days};
+  }
   const legacyKey=(field)=>{
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='可燃袋'&&field.unit==='袋') return '可燃__袋';
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='生ごみ袋'&&field.unit==='袋') return '生ごみ__袋';
@@ -1243,13 +1260,13 @@ function getSakakuraPair(prop,fieldIdx){
   return {pairKey:`sakakura_${pair.bag}_${pair.kg}_${pair.nonburn}`,bagIdx,kgIdx,nonburnIdx,horizontal:true};
 }
 
-function getEntryValue(existing,field){
+function getEntryValue(existing,field,propName=''){
   const key=fieldKey(field);
-  return existing[key]!==undefined ? existing[key] : getFieldValue(existing,field);
+  return existing[key]!==undefined ? existing[key] : getFieldValue(existing,field,propName);
 }
 
-function getLastValueHint(lastSaved,field){
-  const lastValue=lastSaved&&lastSaved.data ? getFieldValue(lastSaved.data,field) : '';
+function getLastValueHint(lastSaved,field,propName=''){
+  const lastValue=lastSaved&&lastSaved.data ? getFieldValue(lastSaved.data,field,propName) : '';
   if(lastValue==='') return '';
   return `<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastValue} ${field.unit}</span></div>`;
 }
@@ -1307,25 +1324,25 @@ function openEntry(idx,event,returnScreen){
       div.innerHTML=`<div class="combined-field-row horizontal-combined">
           <div class="combined-field-input">
             <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField)}
+            ${getLastValueHint(lastSaved,bagField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField)}">
+              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
           </div>
           ${multiplierHtml}
           <div class="combined-field-input">
             <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span></div>
-            ${getLastValueHint(lastSaved,kgField)}
+            ${getLastValueHint(lastSaved,kgField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField)}">
+              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
           </div>
         </div>
         <div class="sakakura-nonburn-line">
           <div></div>
           <div class="combined-field-input">
             <div class="combined-field-unit">${nonburnField.label}<span class="field-unit">（kg）</span></div>
-            ${getLastValueHint(lastSaved,nonburnField)}
+            ${getLastValueHint(lastSaved,nonburnField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${nonburnInputId}" data-field-key="${nonburnKey}" placeholder="0" value="${getEntryValue(existing,nonburnField)}">
+              id="${nonburnInputId}" data-field-key="${nonburnKey}" placeholder="0" value="${getEntryValue(existing,nonburnField,prop.name)}">
           </div>
           <div></div>
         </div>`;
@@ -1361,16 +1378,16 @@ function openEntry(idx,event,returnScreen){
       div.innerHTML=`<div class="combined-field-row${multiplierHtml?'':' no-multiplier'}">
           <div class="combined-field-input">
             <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField)}
+            ${getLastValueHint(lastSaved,bagField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField)}">
+              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
           </div>
           ${multiplierHtml}
           <div class="combined-field-input">
             <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
-            ${getLastValueHint(lastSaved,kgField)}
+            ${getLastValueHint(lastSaved,kgField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField)}">
+              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
           </div>
         </div>`;
       c.appendChild(div);
@@ -1389,9 +1406,9 @@ function openEntry(idx,event,returnScreen){
     const autoKgNote=getAutoKgNote(prop,field);
     const noteHtml=autoKgNote ? `<span class="field-unit">${autoKgNote}</span>` : '';
     div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span>${noteHtml}</div>
-      ${getLastValueHint(lastSaved,field)}
+      ${getLastValueHint(lastSaved,field,prop.name)}
       <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-        id="${inputId}" data-field-key="${key}" placeholder="0" value="${getEntryValue(existing,field)}">
+        id="${inputId}" data-field-key="${key}" placeholder="0" value="${getEntryValue(existing,field,prop.name)}">
       ${getAutoMultiplierControl(prop,key)}`;
     c.appendChild(div);
     const input = div.querySelector('input.num-input');
@@ -1494,7 +1511,7 @@ function goToScreen5(){
     const data=state.entryData[prop.name];if(!data)return;
     let nameShown=false;
     prop.fields.forEach((f,fi)=>{
-      const val=getFieldValue(data,f);
+      const val=getFieldValue(data,f,prop.name);
       const display=val!==''&&val!==undefined?val:'-';
       const nameCell=nameShown?'':`<b>${prop.name}</b>`;
       nameShown=true;
@@ -1522,7 +1539,7 @@ function exportText(){
     const data = state.entryData[prop.name];
     lines.push((idx+1) + '．' + prop.name);
     prop.fields.forEach(f => {
-      const fieldValue=getFieldValue(data,f);
+      const fieldValue=getFieldValue(data,f,prop.name);
       const val = fieldValue !== '' ? fieldValue : '－';
       lines.push('　　' + f.label + '：' + val + ' ' + f.unit);
     });
@@ -1547,7 +1564,7 @@ function exportXlsx(){
   const rows=[['物件名','項目','値','単位','日付','担当者']];
   getSortedProps().forEach(prop=>{
     const data=state.entryData[prop.name];if(!data)return;
-    prop.fields.forEach(f=>rows.push([prop.name,f.label,getFieldValue(data,f)!==''?getFieldValue(data,f):'',f.unit,state.date||'',state.selectedStaff||'']));
+    prop.fields.forEach(f=>rows.push([prop.name,f.label,getFieldValue(data,f,prop.name)!==''?getFieldValue(data,f,prop.name):'',f.unit,state.date||'',state.selectedStaff||'']));
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
@@ -1610,7 +1627,7 @@ function showConvertPreview(idx){
     const prop=allProperties.find(p=>p.name===name);
     if(!prop) return;
     prop.fields.forEach((f,fi)=>{
-      const fieldValue=getFieldValue(data,f);
+      const fieldValue=getFieldValue(data,f,name);
       const val=fieldValue!==''?fieldValue:'－';
       html+=`<tr style="background:${fi%2===0?'#fff':'#f8f8f8'}">`;
       if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #ddd;font-weight:700;vertical-align:top">${name}</td>`;
@@ -1631,7 +1648,7 @@ function convertHistToXlsx(idx){
     const data=rec.entryData[name];
     const prop=allProperties.find(p=>p.name===name);
     if(!prop) return;
-    prop.fields.forEach(f=>rows.push([name,f.label,getFieldValue(data,f)!==''?getFieldValue(data,f):'',f.unit,rec.date,rec.staffName]));
+    prop.fields.forEach(f=>rows.push([name,f.label,getFieldValue(data,f,name)!==''?getFieldValue(data,f,name):'',f.unit,rec.date,rec.staffName]));
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
@@ -1821,7 +1838,7 @@ function renderHistory(filterDate){
       const data=record.entryData[prop.name]; if(!data)return;
       let nameShown=false;
       prop.fields.forEach((f,fi)=>{
-        const val=getFieldValue(data,f);
+        const val=getFieldValue(data,f,prop.name);
         if(val===''||val===undefined)return;
         const nameCell=nameShown?'':`<b>${prop.name}</b>`;
         nameShown=true;
@@ -2120,7 +2137,7 @@ function shareHistoryAsExcel(ri, event){
     const data = record.entryData[prop.name];
     if(!data) return;
     prop.fields.forEach(f => {
-      const val = getFieldValue(data,f);
+      const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
       rows.push([record.date, dayName+'曜日', record.staffName, prop.name, f.label, val, f.unit]);
     });
@@ -2164,12 +2181,12 @@ function sendHistoryByMail(ri, event){
     if(!data) return;
     let hasVal = false;
     prop.fields.forEach(f => {
-      if(getFieldValue(data,f) !== '') hasVal = true;
+      if(getFieldValue(data,f,prop.name) !== '') hasVal = true;
     });
     if(!hasVal) return;
     body += `\n【${prop.name}】\n`;
     prop.fields.forEach(f => {
-      const val = getFieldValue(data,f);
+      const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
       body += `  ${f.label}：${val} ${f.unit}\n`;
     });
