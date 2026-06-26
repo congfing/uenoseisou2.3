@@ -129,13 +129,12 @@
   .combined-field-input { min-width: 0; }
   .combined-field-unit { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; white-space: nowrap; }
   .combined-field-row .auto-multiplier-row { margin: 0; }
-  #inputFields.sakakura-entry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  #inputFields.sakakura-entry-grid .field-group { margin-bottom: 0; }
+  #inputFields.sakakura-entry-grid { display: block; }
+  #inputFields.sakakura-entry-grid .field-group { margin-bottom: 10px; }
   .combined-field-row.horizontal-combined { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
   .horizontal-combined .auto-multiplier-row { align-self: end; flex-direction: column; gap: 3px; font-size: 11px; white-space: nowrap; }
   .horizontal-combined .auto-multiplier-row select { width: 58px; padding: 5px 6px; font-size: 13px; }
-  .sakakura-burnable-row { display: contents; }
-  .sakakura-nonburn-row { grid-column: 2; }
+  .sakakura-nonburn-line { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
   .last-val-hint { font-size: 12px; color: #aaa; margin-bottom: 4px; }
   .last-val-hint span { font-weight: bold; color: #777; }
 
@@ -1306,15 +1305,7 @@ function openEntry(idx,event,returnScreen){
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
               id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField)}">
           </div>
-          <div>
-            ${multiplierHtml}
-            <div class="combined-field-input sakakura-nonburn-row">
-              <div class="combined-field-unit">${nonburnField.label}<span class="field-unit">（kg）</span></div>
-              ${getLastValueHint(lastSaved,nonburnField)}
-              <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-                id="${nonburnInputId}" data-field-key="${nonburnKey}" placeholder="0" value="${getEntryValue(existing,nonburnField)}">
-            </div>
-          </div>
+          ${multiplierHtml}
           <div class="combined-field-input">
             <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span></div>
             ${getLastValueHint(lastSaved,kgField)}
@@ -1323,9 +1314,22 @@ function openEntry(idx,event,returnScreen){
           </div>
         </div>`;
       c.appendChild(div);
+      const nonburnDiv=document.createElement('div');
+      nonburnDiv.className='field-group card';
+      nonburnDiv.innerHTML=`<div class="sakakura-nonburn-line">
+          <div></div>
+          <div class="combined-field-input">
+            <div class="combined-field-unit">${nonburnField.label}<span class="field-unit">（kg）</span></div>
+            ${getLastValueHint(lastSaved,nonburnField)}
+            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+              id="${nonburnInputId}" data-field-key="${nonburnKey}" placeholder="0" value="${getEntryValue(existing,nonburnField)}">
+          </div>
+          <div></div>
+        </div>`;
+      c.appendChild(nonburnDiv);
       const bagInput=div.querySelector(`#${bagInputId}`);
       const kgInput=div.querySelector(`#${kgInputId}`);
-      const nonburnInput=div.querySelector(`#${nonburnInputId}`);
+      const nonburnInput=nonburnDiv.querySelector(`#${nonburnInputId}`);
       bindEntryInput(prop,bagInput,bagKey);
       bindEntryInput(prop,kgInput,kgKey);
       bindEntryInput(prop,nonburnInput,nonburnKey);
