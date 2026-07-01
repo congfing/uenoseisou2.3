@@ -648,6 +648,12 @@
       <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareButtonBorder"></label>
     </div>
     <div class="theme-section">
+      <span class="theme-section-name">入力済み</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="doneButtonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="doneButtonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="doneButtonBorder"></label>
+    </div>
+    <div class="theme-section">
       <span class="theme-section-name">文字効果</span>
       <label class="theme-group"><span class="theme-label">浮き上がり</span><input class="theme-check" id="textLift" type="checkbox"></label>
       <label class="theme-group"><span class="theme-label">背景グラデ</span><input class="theme-check" id="textGradient" type="checkbox"></label>
@@ -719,6 +725,9 @@
     softwareButtonBg: "#ffffff",
     softwareButtonText: "#000000",
     softwareButtonBorder: "#000000",
+    doneButtonBg: "#ffffff",
+    doneButtonText: "#000000",
+    doneButtonBorder: "#000000",
     textLift: false,
     textGradient: false,
     textGradientStart: "#ffffff",
@@ -1055,10 +1064,15 @@
         border: 2px solid ${theme.softwareButtonBorder} !important;
         border-radius: 10px !important;
       }
+      .property-list-a button:not(.done) {
+        background: ${theme.softwareButtonBg} !important;
+        color: ${theme.softwareButtonText} !important;
+        border: 2px solid ${theme.softwareButtonBorder} !important;
+      }
       .property-list-a button.done {
-        background: #fff !important;
-        color: #000 !important;
-        border: 3px double #000 !important;
+        background: ${theme.doneButtonBg} !important;
+        color: ${theme.doneButtonText} !important;
+        border: 3px double ${theme.doneButtonBorder} !important;
       }
     `;
     if (!style.parentNode) documentInFrame.head.appendChild(style);
