@@ -391,7 +391,7 @@
 <script>
 const DAYS_JP   = ['日','月','火','水','木','金','土'];
 const ORDERED_DAYS = ['月','火','水','木','金','土','日'];
-const FIELD_SUGGESTIONS = ['可燃','不燃','生ごみ','段ボール','アラ','ペット','白','青','黒','段紙','紙','缶','びん','その他','廃プラ'];
+const FIELD_SUGGESTIONS = ['可燃','不燃','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
 const LS_PROPERTIES    = 'keiryo_properties';
 const LS_STAFF         = 'keiryo_staff';
 const LS_ORDER_PREFIX  = 'keiryo_order_';
@@ -409,14 +409,14 @@ const DEFAULT_PROPERTIES = [
   { name:'いがっこ給食センター',       order:4,  days:[], fields:[{label:'可燃',unit:'kg'},{label:'不燃金属',unit:'kg'},{label:'ビン割れ物',unit:'kg'},{label:'硬質プラ',unit:'kg'}] },
   // ── すき家 ──
   { name:'すき家 伊賀上野店',             order:5,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'ビン缶PET',unit:'袋'},{label:'ビン缶PET',unit:'kg'}] },
-  // ── セブン 8店舗 ──
-  { name:'セブン伊賀四十九町北店',       order:6,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀緑ヶ丘東町店',   order:7,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀東条店',         order:8,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀平野北谷店',     order:9,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀緑ヶ丘本町店',         order:10, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀平野東町店',     order:11, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'セブン伊賀忍者市駅南店',         order:13, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  // ── セブン 7店舗 ──
+  { name:'セブン伊賀四十九町北店',       order:6,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀緑ヶ丘東町店',   order:7,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀東条店',         order:8,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀平野北谷店',     order:9,  days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀緑ヶ丘本町店',         order:10, days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀平野東町店',     order:11, days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+  { name:'セブン伊賀忍者市駅南店',         order:13, days:[], fields:[{label:'可燃',unit:'袋'},{label:'ビン',unit:'袋'},{label:'缶',unit:'袋'},{label:'PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
   // ── セカンドストリート ──
   { name:'セカンドストリート 伊賀小田店',  order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
   // ── ナフコ ──
@@ -613,6 +613,7 @@ function mergeDefaultProperty(savedProp,defaultProp){
   savedProp.fields.forEach(field=>{
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='可燃袋'&&field.unit==='袋') return;
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='生ごみ袋'&&field.unit==='袋') return;
+    if(savedProp.name.startsWith('セブン')&&field.label==='不燃ビン缶PET') return;
     if(!defaultKeys.has(`${field.label}__${field.unit}`)) fields.push(field);
   });
   return {...savedProp,order:savedProp.order||defaultProp.order,days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days,fields};
