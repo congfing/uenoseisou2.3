@@ -442,6 +442,86 @@
     color: #888;
   }
 
+  .calendar-picker {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .calendar-picker[hidden] {
+    display: none;
+  }
+
+  .calendar-panel {
+    width: min(560px, 100%);
+    max-height: min(620px, calc(100vh - 36px));
+    overflow-y: auto;
+    border: 2px solid var(--base-border);
+    border-radius: 12px;
+    background: var(--base-bg);
+    color: var(--base-text);
+    padding: 14px;
+  }
+
+  .calendar-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .calendar-panel-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .calendar-close {
+    width: 42px;
+    height: 36px;
+    border: 2px solid var(--button-border);
+    border-radius: 8px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .calendar-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .calendar-choice {
+    width: 100%;
+    border: 2px solid var(--button-border);
+    border-radius: 10px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    padding: 13px 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .calendar-choice-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .calendar-choice-detail {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #777;
+    overflow-wrap: anywhere;
+  }
+
   .phone-card.running .launch-btn {
     position: relative;
     z-index: 30;
@@ -670,16 +750,31 @@
     </section>
     <div class="frame-layer" id="frameLayer" aria-label="起動したソフト"></div>
   </main>
+  <section class="calendar-picker" id="calendarPicker" aria-label="収集カレンダー選択" hidden>
+    <div class="calendar-panel">
+      <div class="calendar-panel-head">
+        <div class="calendar-panel-title">収集カレンダー</div>
+        <button class="calendar-close" id="calendarClose" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div class="calendar-list" id="calendarList"></div>
+    </div>
+  </section>
 </div>
 
 <script>
+  const calendarFiles = [
+    { name: "縦通しカレンダー", detail: "年間表示", file: "令和8年度収集カレンダー（縦通し）.html" },
+    { name: "月別カレンダー", detail: "月間表示", file: "令和8年度収集カレンダー（月別）.html" },
+    { name: "資源ごみ日程表", detail: "検索ツール", file: "R8資源ごみ日程表_検索ツール.html" },
+    { name: "メタリックカレンダー", detail: "一覧表示", file: "収集カレンダー_メタリック_standalone.html" }
+  ];
+
   const software = [
     { name: "物件表", detail: "物件管理", file: "index_2-3_bukken.html" },
     { name: "列選択", detail: "表示設定", file: "index_2-4_colview.html" },
     { name: "計量データ入力", detail: "v３−19", file: "index_3-19.html" },
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
-    { name: "縦通しカレンダー", detail: "年間表示", file: "令和8年度収集カレンダー（縦通し）.html" },
-    { name: "月別カレンダー", detail: "月間表示", file: "令和8年度収集カレンダー（月別）.html" },
+    { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
     { name: "燃費管理", detail: "入力・履歴", file: "index_nenpi.html" },
     { name: "燃費読込", detail: "GDrive記録", file: "index_nenpi_shared.html" }
   ];
@@ -688,6 +783,9 @@
   const launcher = document.getElementById("launcher");
   const grid = document.getElementById("phoneGrid");
   const frameLayer = document.getElementById("frameLayer");
+  const calendarPicker = document.getElementById("calendarPicker");
+  const calendarList = document.getElementById("calendarList");
+  const calendarClose = document.getElementById("calendarClose");
   const currentFile = document.getElementById("currentFile");
   const currentApp = document.getElementById("currentApp");
   const zoomMenu = document.getElementById("zoomMenu");
@@ -704,7 +802,7 @@
   const themeStorageKey = "uenoseisou23_theme";
   const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
   const softwareThemeExcludes = new Set([
-    "令和8年度収集カレンダー（縦通し）.html"
+    ...calendarFiles.map((calendar) => calendar.file)
   ]);
   const defaultTheme = {
     titleBg: "#ffffff",
@@ -845,7 +943,10 @@
         </span>
       </button>
     `;
-    card.querySelector(".launch-btn").addEventListener("click", () => openSoftware(app));
+    card.querySelector(".launch-btn").addEventListener("click", () => {
+      if (app.calendarPicker) showCalendarPicker();
+      else openSoftware(app);
+    });
     card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app));
     card.querySelector(".running-preview").addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -873,8 +974,10 @@
     if (frame) frame.remove();
     frames.delete(app.file);
     savedZoom.delete(app.file);
-    setCardRunning(app, false);
-    cards.get(app.file).classList.remove("active");
+    if (cards.has(app.file)) {
+      setCardRunning(app, false);
+      cards.get(app.file).classList.remove("active");
+    }
     if (activeApp && activeApp.file === app.file) {
       activeApp = null;
       currentZoom = 100;
@@ -892,13 +995,38 @@
       const appToClose = activeApp;
       closeSoftwareApp(appToClose);
     } else if (activeApp) {
-      minimizeSoftware(activeApp);
+      if (cards.has(activeApp.file)) minimizeSoftware(activeApp);
+      else closeSoftwareApp(activeApp);
     }
     currentFile.textContent = "index.html";
     currentFile.title = "index.html";
     currentApp.textContent = "--";
     currentApp.setAttribute("aria-label", "ソフト未起動");
     closeZoomMenu();
+    closeCalendarPicker();
+  }
+
+  function showCalendarPicker() {
+    calendarList.innerHTML = "";
+    calendarFiles.forEach((calendar) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calendar-choice";
+      button.innerHTML = `
+        <span class="calendar-choice-title">${calendar.name}</span>
+        <span class="calendar-choice-detail">${calendar.file}</span>
+      `;
+      button.addEventListener("click", () => {
+        closeCalendarPicker();
+        openSoftware(calendar);
+      });
+      calendarList.appendChild(button);
+    });
+    calendarPicker.hidden = false;
+  }
+
+  function closeCalendarPicker() {
+    calendarPicker.hidden = true;
   }
 
   function createFrame(app) {
@@ -943,7 +1071,10 @@
       location.href = softwareRoot + encodeURI(app.file);
       return;
     }
-    if (activeApp && activeApp.file !== app.file) minimizeSoftware(activeApp);
+    if (activeApp && activeApp.file !== app.file) {
+      if (cards.has(activeApp.file)) minimizeSoftware(activeApp);
+      else closeSoftwareApp(activeApp);
+    }
     activeApp = app;
     currentZoom = savedZoom.get(app.file) || 100;
     const frame = frames.get(app.file) || createFrame(app);
@@ -952,15 +1083,17 @@
     frame.style.removeProperty("top");
     frame.style.removeProperty("visibility");
     frame.classList.add("active");
-    cards.get(app.file).classList.add("active");
+    const appCard = cards.get(app.file);
+    if (appCard) appCard.classList.add("active");
     applyZoom(frame);
-    setCardRunning(app, true);
+    if (appCard) setCardRunning(app, true);
     currentFile.textContent = app.file;
     currentFile.title = app.file;
     currentApp.textContent = currentZoom + "%";
     currentApp.setAttribute("aria-label", app.name + " の現在倍率 " + currentZoom + "%");
     launcher.hidden = true;
     closeZoomMenu();
+    closeCalendarPicker();
   }
 
   function applyZoom(frame) {
@@ -1125,6 +1258,10 @@
     theme = { ...defaultTheme };
     saveTheme();
     applyTheme();
+  });
+  calendarClose.addEventListener("click", closeCalendarPicker);
+  calendarPicker.addEventListener("click", (event) => {
+    if (event.target === calendarPicker) closeCalendarPicker();
   });
 
   document.getElementById("closeBtn").addEventListener("click", () => showLauncher(true));
