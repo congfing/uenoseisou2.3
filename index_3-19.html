@@ -1791,6 +1791,32 @@ function hideFieldDropdown(input){ setTimeout(()=>{input.parentElement.querySele
 // ===== HISTORY =====
 let displayedHistoryRecords=[];
 
+function isSevenPropertyName(name){
+  return typeof name==='string' && name.startsWith('セブン');
+}
+
+function getSevenPropertyOrder(name){
+  const idx=allProperties.findIndex(prop=>prop.name===name);
+  return idx===-1 ? 9999 : idx;
+}
+
+function groupSevenNames(names){
+  const result=[];
+  const sevenNames=[];
+  let sevenInserted=false;
+  names.forEach(name=>{
+    if(isSevenPropertyName(name)){
+      if(!sevenInserted){ result.push('__SEVEN_GROUP__'); sevenInserted=true; }
+      if(!sevenNames.includes(name)) sevenNames.push(name);
+      return;
+    }
+    if(!result.includes(name)) result.push(name);
+  });
+  if(!sevenNames.length) return result;
+  sevenNames.sort((a,b)=>getSevenPropertyOrder(a)-getSevenPropertyOrder(b)||PROPERTY_NAME_COLLATOR.compare(a,b));
+  return result.flatMap(name=>name==='__SEVEN_GROUP__' ? sevenNames : [name]);
+}
+
 function getHistoryPropertiesInEntryOrder(record){
   const names=Array.isArray(record.entryOrder)&&record.entryOrder.length
     ? [...record.entryOrder]
@@ -1798,7 +1824,7 @@ function getHistoryPropertiesInEntryOrder(record){
   Object.keys(record.entryData||{}).forEach(name=>{
     if(!names.includes(name)) names.push(name);
   });
-  return names.map(name=>allProperties.find(prop=>prop.name===name)).filter(Boolean);
+  return groupSevenNames(names).map(name=>allProperties.find(prop=>prop.name===name)).filter(Boolean);
 }
 
 function checkPastData(dateVal){
