@@ -539,8 +539,14 @@ function markHistoryMailSent(record){
   if(!record) return;
   saveJSON(LS_MAIL_SENT_PREFIX+historyKey(record),true);
 }
-function getSavedOrder(staff,day){ return loadJSON(LS_ORDER_PREFIX+staff+'_'+day,null); }
-function setSavedOrder(staff,day,arr){ saveJSON(LS_ORDER_PREFIX+staff+'_'+day,arr); }
+function savedOrderKey(staff,day){ return LS_ORDER_PREFIX+encodeURIComponent(staff||'')+'_'+encodeURIComponent(day||''); }
+function legacySavedOrderKey(staff,day){ return LS_ORDER_PREFIX+(staff||'')+'_'+(day||''); }
+function getSavedOrder(staff,day){
+  const saved=loadJSON(savedOrderKey(staff,day),null);
+  if(saved) return saved;
+  return loadJSON(legacySavedOrderKey(staff,day),null);
+}
+function setSavedOrder(staff,day,arr){ saveJSON(savedOrderKey(staff,day),arr); }
 function getLastData(name){ return loadJSON(LS_LASTDATA_PREFIX+name,null); }
 function setLastData(name,data,staff,date){ saveJSON(LS_LASTDATA_PREFIX+name,{data,staffName:staff,date}); }
 function fieldKey(field){ return `${field.label}__${field.unit}`; }
@@ -1947,7 +1953,8 @@ function deleteHistory(ri,event){
   localStorage.removeItem(LS_MAIL_SENT_PREFIX+key);
   const recordDate=new Date(record.date+'T00:00:00');
   const recordDayName=DAYS_JP[recordDate.getDay()];
-  localStorage.removeItem(LS_ORDER_PREFIX+record.staffName+'_'+recordDayName);
+  localStorage.removeItem(savedOrderKey(record.staffName,recordDayName));
+  localStorage.removeItem(legacySavedOrderKey(record.staffName,recordDayName));
   if(state.date===record.date&&state.selectedStaff===record.staffName){
     localStorage.removeItem(LS_SESSION);
     state.entryData={};
