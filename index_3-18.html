@@ -610,7 +610,11 @@ function mergeDefaultProperty(savedProp,defaultProp){
   };
   const savedByKey=new Map(savedProp.fields.map(field=>[legacyKey(field),field]));
   const defaultKeys=new Set(defaultProp.fields.map(field=>`${field.label}__${field.unit}`));
-  const fields=defaultProp.fields.map(field=>savedByKey.get(`${field.label}__${field.unit}`)||field);
+  const fields=defaultProp.fields.map(field=>{
+    const savedField=savedByKey.get(`${field.label}__${field.unit}`);
+    if(savedField&&['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)) return {...savedField,label:field.label,unit:field.unit};
+    return savedField||field;
+  });
   savedProp.fields.forEach(field=>{
     if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃') return;
     if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃袋'&&field.unit==='袋') return;
