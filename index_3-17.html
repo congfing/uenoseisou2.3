@@ -423,8 +423,8 @@ const DEFAULT_PROPERTIES = [
   // ── チョーヤ梅酒 ──
   { name:'チョーヤ梅酒',       order:28, days:[], fields:[{label:'可燃㎥',unit:'㎥'},{label:'可燃',unit:'kg'},{label:'第2収集㎥',unit:'㎥'},{label:'第2収集',unit:'kg'}] },
   // ── マックスバリュ ──
-  { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
-  { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'可燃',unit:'袋'},{label:'可燃',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
+  { name:'マックスバリュ 佐那具店',order:29, days:[], fields:[{label:'ごみ',unit:'袋'},{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'}] },
+  { name:'マックスバリュ 上野店',  order:30, days:[], fields:[{label:'ごみ',unit:'袋'},{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
   // ── やさいの戸島屋 ──
   { name:'㈱やさいの戸島屋',     order:31, days:[], fields:[{label:'可燃',unit:'袋'}] },
   // ── 古本市場・サイリス ──
@@ -519,7 +519,7 @@ function getAutoKgRule(prop,sourceKey){
   }
   if(prop.name==='マックスバリュ 佐那具店'){
     const defaults={
-      '可燃__袋':{target:'可燃__kg',multiplier:3},
+      'ごみ__袋':{target:'ごみ__kg',multiplier:3},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
     };
     const rule=defaults[sourceKey];
@@ -527,7 +527,7 @@ function getAutoKgRule(prop,sourceKey){
   }
   if(prop.name==='マックスバリュ 上野店'){
     const defaults={
-      '可燃__袋':{target:'可燃__kg',multiplier:2},
+      'ごみ__袋':{target:'ごみ__kg',multiplier:2},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
     };
     const rule=defaults[sourceKey];
@@ -557,7 +557,7 @@ function applyAutoKg(prop,sourceKey,sourceValue){
 }
 function getAutoKgNote(prop,field){
   if(!prop||!['マックスバリュ 佐那具店','マックスバリュ 上野店','イオンタウン伊賀'].includes(prop.name)) return '';
-  return ['可燃','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
+  return ['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
 }
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {date,staffName:staff,entryData});
@@ -577,7 +577,8 @@ function getAllHistory(){
 function mergeDefaultProperty(savedProp,defaultProp){
   if(!defaultProp||!Array.isArray(savedProp.fields)||!Array.isArray(defaultProp.fields)) return savedProp;
   const legacyKey=(field)=>{
-    if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='可燃袋'&&field.unit==='袋') return '可燃__袋';
+    if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃') return `ごみ__${field.unit}`;
+    if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃袋'&&field.unit==='袋') return 'ごみ__袋';
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='生ごみ袋'&&field.unit==='袋') return '生ごみ__袋';
     return `${field.label}__${field.unit}`;
   };
@@ -585,7 +586,8 @@ function mergeDefaultProperty(savedProp,defaultProp){
   const defaultKeys=new Set(defaultProp.fields.map(field=>`${field.label}__${field.unit}`));
   const fields=defaultProp.fields.map(field=>savedByKey.get(`${field.label}__${field.unit}`)||field);
   savedProp.fields.forEach(field=>{
-    if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='可燃袋'&&field.unit==='袋') return;
+    if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃') return;
+    if(['マックスバリュ 佐那具店','マックスバリュ 上野店'].includes(savedProp.name)&&field.label==='可燃袋'&&field.unit==='袋') return;
     if(savedProp.name==='マックスバリュ 佐那具店'&&field.label==='生ごみ袋'&&field.unit==='袋') return;
     if(!defaultKeys.has(`${field.label}__${field.unit}`)) fields.push(field);
   });
