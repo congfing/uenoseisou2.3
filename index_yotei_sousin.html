@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>予定の追加を送信</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:18px;background:#f4f6f8;color:#18232d;font-family:"Yu Gothic","Meiryo",sans-serif}main{max-width:640px;margin:auto}h1{font-size:23px;margin:0 0 18px}section,details{background:#fff;border:1px solid #aab4be;border-radius:12px;margin:12px 0;padding:16px}summary{cursor:pointer;font-weight:bold;padding:4px;touch-action:manipulation}label{display:block;font-weight:bold;margin:12px 0 6px}input,select,textarea,button{font:inherit}input:not([type=checkbox]),select,textarea{width:100%;padding:12px;border:1px solid #8a98a5;border-radius:7px;background:#fff;color:#18232d}textarea{resize:vertical}button{padding:11px 15px;border:1px solid #667b8d;border-radius:8px;background:#fff;color:#18232d;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.45;cursor:default}button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #347ac1;outline-offset:2px}.primary{background:#245e85;color:#fff;width:100%;font-weight:bold}.recipient{display:flex;align-items:center;gap:10px}.recipient label{margin:0;flex:none}.recipient input[type=checkbox]{width:22px;height:22px}.recipient input[type=email]{min-width:0}.recipient+.recipient{margin-top:10px}.hint{font-size:13px;line-height:1.7;color:#52616e}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.calendar-head{display:flex;justify-content:space-between;align-items:center;margin:12px 0}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}.calendar button{padding:10px 0}.calendar .selected{background:#245e85;color:#fff}.weekday{font-size:12px;padding:6px 0}.status{white-space:pre-wrap;line-height:1.7}.error{color:#a32323}#dateToggle{width:100%;text-align:left}#preview{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px}h2{font-size:17px;margin:0 0 10px}@media(max-width:400px){body{padding:10px}section,details{padding:12px}.recipient{gap:6px}}
+/* Touch layout, including narrow iPhones and landscape safe areas. */
+html{-webkit-text-size-adjust:100%;font-size:16px}
+body{padding:16px max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+main{min-width:0}input,select,textarea{font-size:16px!important;min-height:50px;max-width:100%}
+button,summary{min-height:48px}button{touch-action:manipulation}
+summary{padding:12px 4px;line-height:1.5}label{margin-top:20px}
+section,details{padding:14px}section> .actions:first-child{margin-top:0}
+.recipient{gap:6px}.recipient label{min-width:44px;min-height:48px;display:flex;align-items:center;justify-content:center}
+.recipient input[type=checkbox]{accent-color:#245e85;width:24px;height:24px;min-height:24px}
+.recipient+.recipient{margin-top:14px}.actions>button{flex:1 1 auto}
+.calendar{gap:2px}.calendar button{min-height:46px;border-radius:6px;font-size:16px}
+.calendar-head button{min-width:48px}.quick-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.quick-choices button{flex:1}.quick-choices button[aria-pressed=true]{background:#245e85;color:#fff}
+.primary{min-height:56px;font-size:18px}.hint{font-size:14px}.status:empty{display:none}
+#recipientSummary{font-size:14px;font-weight:normal;display:block;margin-top:4px}
+#dateToggle{min-height:54px}#datePanel{margin:8px -6px 0}#restore{width:100%}
+input[type=time]{min-width:0;display:block}textarea{line-height:1.6}
+@media(max-width:360px){section,details{padding:10px}h1{font-size:21px}.calendar{gap:1px}}
+</style>
+</head>
+<body>
+<main>
+<h1>予定の追加を送信</h1>
+<details id="mailSettings">
+<summary>送信先メール設定 <span id="recipientSummary"></span></summary>
+<p class="hint">5件まで登録できます。送信先にチェックを入れ、保存してください。見出しをタップすると閉じます。</p>
+<form id="recipientForm"><div id="recipients"></div><div class="actions"><button type="submit">保存</button></div></form>
+<p id="recipientStatus" class="status" role="status"></p>
+</details>
+<section>
+<div class="actions"><button id="restore" type="button" disabled>直前の履歴を呼び出す</button></div>
+<p id="historyHint" class="hint">メールソフトを開いた直前の入力を呼び出せます。</p>
+<form id="scheduleForm">
+<label for="person">名前</label>
+<select id="person" required><option value="">名前を選択してください</option></select>
+<label id="dateLabel">指定日</label>
+<button id="dateToggle" type="button" aria-labelledby="dateLabel dateText" aria-expanded="false" aria-controls="datePanel"><span id="dateText">日付を選択してください</span></button>
+<div id="datePanel" hidden>
+<div class="actions"><button id="today" type="button">今日を指定</button></div>
+<div class="calendar-head"><button id="prevMonth" type="button" aria-label="前の月">◀</button><strong id="monthLabel" aria-live="polite"></strong><button id="nextMonth" type="button" aria-label="次の月">▶</button></div>
+<div id="calendar" class="calendar" aria-label="指定日のカレンダー"></div>
+</div>
+<details id="timePanel"><summary>時間指定 <span id="timeSummary">（指定なし）</span></summary><label for="time">時間</label><input id="time" type="time"><div class="actions"><button id="clearTime" type="button">指定なし</button><button id="timeDone" type="button">決定して閉じる</button></div></details>
+<label for="contentChoice">予定内容</label>
+<select id="contentChoice"><option value="">候補を選択、または下に直接入力</option><option>有休</option><option>休み</option><option>片付け</option><option>追加業務</option></select>
+<div class="quick-choices" aria-label="予定内容をワンタップで選択"><button type="button" id="paidLeave" aria-pressed="false">有休</button><button type="button" id="dayOff" aria-pressed="false">休み</button><button type="button" id="cleanup" aria-pressed="false">片付け</button><button type="button" id="extraWork" aria-pressed="false">追加業務</button></div>
+<label for="content">予定内容（自由入力）</label>
+<textarea id="content" rows="3" required placeholder="有休・休み・片付け・追加業務、または直接入力"></textarea>
+<div class="actions"><button class="primary" type="submit">メールを送信</button></div>
+<p class="hint">メールソフトが開きます。内容を確認し、メールソフトの送信ボタンを押して完了してください。</p>
+</form>
+<p id="status" class="status" role="status"></p>
+</section>
+<details><summary>メール本文を確認</summary><pre id="preview"></pre></details>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const keys={recipients:'ueno_yotei_recipients_v1',draft:'ueno_yotei_draft_v1',history:'ueno_yotei_history_v1'};
+const names=['上島','萩野','南','千歳','谷森','大村','松宮','小林','川田','西山'];
+function read(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
+function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}}
+function message(id,text,error=false){$(id).textContent=text;$(id).classList.toggle('error',error)}
+for(const name of names){const option=document.createElement('option');option.value=name;option.textContent=name;$('person').append(option)}
+const saved=read(keys.recipients,[]);
+for(let i=0;i<5;i++){
+ const row=document.createElement('div');row.className='recipient';
+ const label=document.createElement('label');const check=document.createElement('input');check.type='checkbox';check.id='toCheck'+i;check.setAttribute('aria-label','送信先'+(i+1)+'を選択');check.checked=Array.isArray(saved)&&saved[i]?.selected===true;label.append(check);
+ const input=document.createElement('input');input.type='email';input.inputMode='email';input.autocomplete='email';input.setAttribute('autocapitalize','none');input.spellcheck=false;input.id='toEmail'+i;input.placeholder='メールアドレス '+(i+1);input.setAttribute('aria-label','送信先メールアドレス '+(i+1));input.value=Array.isArray(saved)&&typeof saved[i]?.email==='string'?saved[i].email:'';
+ row.append(label,input);$('recipients').append(row);
+}
+function recipients(){return Array.from({length:5},(_,i)=>({email:$('toEmail'+i).value.trim(),selected:$('toCheck'+i).checked}))}
+function updateRecipients(){const count=recipients().filter(item=>item.selected&&item.email).length;$('recipientSummary').textContent=count?'送信先 '+count+'件を選択中':'送信先を選択してください'}
+function validRecipients(){for(let i=0;i<5;i++){const input=$('toEmail'+i);input.value=input.value.trim();input.required=$('toCheck'+i).checked;if(!input.reportValidity())return false}return true}
+$('recipientForm').addEventListener('submit',event=>{event.preventDefault();if(!validRecipients())return;const ok=write(keys.recipients,recipients());message('recipientStatus',ok?'送信先とチェック状態を保存しました。':'保存できませんでした。ブラウザーの保存設定を確認してください。',!ok)});
+$('recipientForm').addEventListener('input',()=>{for(let i=0;i<5;i++)$('toEmail'+i).required=$('toCheck'+i).checked;updateRecipients();message('recipientStatus','変更を保存するには「保存」を押してください。')});
+let selectedDate='';const now=new Date();let month=new Date(now.getFullYear(),now.getMonth(),1);
+function dateKey(date){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0')}
+function validDate(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;return dateKey(new Date(value+'T12:00:00'))===value}
+function dateLabel(value){return value?value.replace(/^(\d+)-(\d+)-(\d+)$/,'$1年$2月$3日'):''}
+function renderCalendar(){
+ $('monthLabel').textContent=month.getFullYear()+'年'+(month.getMonth()+1)+'月';$('calendar').replaceChildren();
+ for(const day of ['日','月','火','水','木','金','土']){const el=document.createElement('span');el.className='weekday';el.textContent=day;$('calendar').append(el)}
+ for(let i=0;i<month.getDay();i++)$('calendar').append(document.createElement('span'));
+ const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
+ for(let day=1;day<=count;day++){const value=dateKey(new Date(month.getFullYear(),month.getMonth(),day));const button=document.createElement('button');button.type='button';button.textContent=day;button.setAttribute('aria-label',dateLabel(value));button.setAttribute('aria-pressed',String(value===selectedDate));if(value===selectedDate)button.className='selected';button.addEventListener('click',()=>{selectedDate=value;update();renderCalendar();saveDraft();$('datePanel').hidden=true;$('dateToggle').setAttribute('aria-expanded','false');$('dateToggle').focus()});$('calendar').append(button)}
+}
+$('dateToggle').addEventListener('click',()=>{const open=$('datePanel').hidden;$('datePanel').hidden=!open;$('dateToggle').setAttribute('aria-expanded',String(open));renderCalendar()});
+$('prevMonth').addEventListener('click',()=>{month.setMonth(month.getMonth()-1);renderCalendar()});$('nextMonth').addEventListener('click',()=>{month.setMonth(month.getMonth()+1);renderCalendar()});
+function data(){return {person:$('person').value,date:selectedDate,time:$('time').value,content:$('content').value.trim()}}
+function body(value){return ['【予定の追加】','名前：'+value.person,'指定日：'+dateLabel(value.date),'時間指定：'+(value.time||'指定なし'),'予定内容：'+value.content].join('\n')}
+function contentCandidate(){const match=$('content').value.match(/^(片付け|追加業務)(?:：[0-2]\d:[0-5]\d)?(?=$|\s)/);return match?match[1]:(['有休','休み'].includes($('content').value)?$('content').value:'')}
+function syncContentTime(){
+ const text=$('content').value;
+ const match=text.match(/^(片付け|追加業務)(?:：[0-2]\d:[0-5]\d)?(?=$|\s)/);
+ if(match)$('content').value=match[1]+($('time').value?'：'+$('time').value:'')+text.slice(match[0].length);
+}
+function update(){$('dateText').textContent=dateLabel(selectedDate)||'日付を選択してください';$('timeSummary').textContent=$('time').value||'（指定なし）';$('preview').textContent=body(data());for(const [id,value] of [['paidLeave','有休'],['dayOff','休み'],['cleanup','片付け'],['extraWork','追加業務']])$(id).setAttribute('aria-pressed',String(contentCandidate()===value))}
+function saveDraft(){if(!write(keys.draft,data()))message('status','入力内容をこのブラウザーに保存できませんでした。',true)}
+function fill(value){if(!value||typeof value!=='object')return;$('person').value=names.includes(value.person)?value.person:'';selectedDate=validDate(value.date)?value.date:'';$('time').value=typeof value.time==='string'?value.time:'';$('content').value=typeof value.content==='string'?value.content:'';$('contentChoice').value=contentCandidate();if(selectedDate){const date=new Date(selectedDate+'T12:00:00');month=new Date(date.getFullYear(),date.getMonth(),1)}update();renderCalendar()}
+$('contentChoice').addEventListener('change',()=>{if($('contentChoice').value){$('content').value=$('contentChoice').value;syncContentTime()}update();saveDraft()});
+$('content').addEventListener('input',()=>{$('contentChoice').value=contentCandidate()});
+$('scheduleForm').addEventListener('input',()=>{update();saveDraft()});$('scheduleForm').addEventListener('change',()=>{update();saveDraft()});
+$('time').addEventListener('input',syncContentTime);$('time').addEventListener('change',syncContentTime);
+$('clearTime').addEventListener('click',()=>{$('time').value='';syncContentTime();update();saveDraft()});
+let history=read(keys.history,null);$('restore').disabled=!history;
+$('restore').addEventListener('click',()=>{fill(history);saveDraft();message('status','直前にメールソフトへ渡した入力を呼び出しました。')});
+$('scheduleForm').addEventListener('submit',event=>{
+ event.preventDefault();message('status','');
+ if(!selectedDate){$('datePanel').hidden=false;$('dateToggle').setAttribute('aria-expanded','true');renderCalendar();$('dateToggle').focus();message('status','指定日を選択してください。',true);return}
+ if(!$('content').value.trim()){message('status','予定内容を入力してください。',true);$('content').focus();return}
+ const targets=recipients();if(!targets.some(item=>item.selected)){ $('mailSettings').open=true;message('status','送信先メール設定で送信先をチェックしてください。',true);return }
+ $('mailSettings').open=true;if(!validRecipients())return;$('mailSettings').open=false;
+ const value=data();const stored=write(keys.history,value);history=value;$('restore').disabled=false;saveDraft();
+ const to=[...new Set(targets.filter(item=>item.selected).map(item=>item.email))].map(encodeURIComponent).join(',');
+ const link=document.createElement('a');link.href='mailto:'+to+'?subject='+encodeURIComponent('【予定の追加】'+value.person+' '+value.date)+'&body='+encodeURIComponent(body(value));document.body.append(link);link.click();link.remove();
+ message('status','メールソフトで内容を確認し、送信してください。開かない場合は、このPCの既定のメールアプリを確認してください。'+(stored?'':'\n履歴を保存できませんでした。'),!stored);
+});
+$('today').addEventListener('click',()=>{const today=new Date();selectedDate=dateKey(today);month=new Date(today.getFullYear(),today.getMonth(),1);$('datePanel').hidden=true;$('dateToggle').setAttribute('aria-expanded','false');update();saveDraft();$('dateToggle').focus()});
+$('timeDone').addEventListener('click',()=>{$('timePanel').open=false;update();saveDraft()});
+for(const [id,value] of [['paidLeave','有休'],['dayOff','休み'],['cleanup','片付け'],['extraWork','追加業務']]){$(id).addEventListener('click',()=>{$('content').value=value;$('contentChoice').value=value;syncContentTime();update();saveDraft()})}
+fill(read(keys.draft,{}));update();updateRecipients();
+</script>
+</body>
+</html>
