@@ -772,7 +772,7 @@
   const software = [
     { name: "物件表", detail: "物件管理", file: "index_2-3_bukken.html" },
     { name: "列選択", detail: "表示設定", file: "index_2-4_colview.html" },
-    { name: "計量データ入力", detail: "v３−19", file: "index_3-19.html" },
+    { name: "計量データ入力", detail: "v３−19", file: "index_3-19.html", revision: "20260913-mail4" },
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
     { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
     { name: "燃費管理", detail: "入力・履歴", file: "index_nenpi.html" },
@@ -1035,7 +1035,8 @@
     frame.className = "software-frame";
     frame.title = app.name;
     frame.dataset.file = app.file;
-    frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3";
+    const revision = app.revision ? "&revision=" + encodeURIComponent(app.revision) : "";
+    frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3" + revision;
     frame.addEventListener("load", () => {
       applySoftwareTheme(frame);
       applyZoom(frame);
