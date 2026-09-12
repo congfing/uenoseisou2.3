@@ -15,6 +15,7 @@ summary{padding:12px 4px;line-height:1.5}label{margin-top:20px}
 section,details{padding:14px}section> .actions:first-child{margin-top:0}
 .recipient{gap:6px}.recipient label{min-width:44px;min-height:48px;display:flex;align-items:center;justify-content:center}
 .recipient input[type=checkbox]{accent-color:#245e85;width:24px;height:24px;min-height:24px}
+.recipient input[type=email]{flex:1 1 auto}.delete-recipient{flex:0 0 64px;padding:8px 6px;color:#a32323;border-color:#a32323}
 .recipient+.recipient{margin-top:14px}.actions>button{flex:1 1 auto}
 .calendar{gap:2px}.calendar button{min-height:46px;border-radius:6px;font-size:16px}
 .calendar-head button{min-width:48px}.quick-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
@@ -75,7 +76,9 @@ for(let i=0;i<5;i++){
  const row=document.createElement('div');row.className='recipient';
  const label=document.createElement('label');const check=document.createElement('input');check.type='checkbox';check.id='toCheck'+i;check.setAttribute('aria-label','送信先'+(i+1)+'を選択');check.checked=Array.isArray(saved)&&saved[i]?.selected===true;label.append(check);
  const input=document.createElement('input');input.type='email';input.inputMode='email';input.autocomplete='email';input.setAttribute('autocapitalize','none');input.spellcheck=false;input.id='toEmail'+i;input.placeholder='メールアドレス '+(i+1);input.setAttribute('aria-label','送信先メールアドレス '+(i+1));input.value=Array.isArray(saved)&&typeof saved[i]?.email==='string'?saved[i].email:'';
- row.append(label,input);$('recipients').append(row);
+ const remove=document.createElement('button');remove.type='button';remove.className='delete-recipient';remove.textContent='削除';remove.setAttribute('aria-label','メールアドレス '+(i+1)+'を削除');
+ remove.addEventListener('click',()=>{input.value='';input.required=false;check.checked=false;const ok=write(keys.recipients,recipients());updateRecipients();message('recipientStatus',ok?'メールアドレス '+(i+1)+'を削除しました。':'削除内容を保存できませんでした。',!ok);input.focus()});
+ row.append(label,input,remove);$('recipients').append(row);
 }
 function recipients(){return Array.from({length:5},(_,i)=>({email:$('toEmail'+i).value.trim(),selected:$('toCheck'+i).checked}))}
 function selectedRecipients(){return recipients().filter(item=>item.selected&&item.email)}
