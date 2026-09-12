@@ -78,7 +78,8 @@ for(let i=0;i<5;i++){
  row.append(label,input);$('recipients').append(row);
 }
 function recipients(){return Array.from({length:5},(_,i)=>({email:$('toEmail'+i).value.trim(),selected:$('toCheck'+i).checked}))}
-function updateRecipients(){const count=recipients().filter(item=>item.selected&&item.email).length;$('recipientSummary').textContent=count?'送信先 '+count+'件を選択中':'送信先を選択してください'}
+function selectedRecipients(){return recipients().filter(item=>item.selected&&item.email)}
+function updateRecipients(){const count=selectedRecipients().length;$('recipientSummary').textContent=count?'チェック済み '+count+'件だけに送信':'送信先を選択してください'}
 function validRecipients(){for(let i=0;i<5;i++){const input=$('toEmail'+i);input.value=input.value.trim();input.required=$('toCheck'+i).checked;if(!input.reportValidity())return false}return true}
 $('recipientForm').addEventListener('submit',event=>{event.preventDefault();if(!validRecipients())return;const ok=write(keys.recipients,recipients());message('recipientStatus',ok?'送信先とチェック状態を保存しました。':'保存できませんでした。ブラウザーの保存設定を確認してください。',!ok)});
 $('recipientForm').addEventListener('input',()=>{for(let i=0;i<5;i++)$('toEmail'+i).required=$('toCheck'+i).checked;updateRecipients();message('recipientStatus','変更を保存するには「保存」を押してください。')});
@@ -117,12 +118,13 @@ $('scheduleForm').addEventListener('submit',event=>{
  event.preventDefault();message('status','');
  if(!selectedDate){$('datePanel').hidden=false;$('dateToggle').setAttribute('aria-expanded','true');renderCalendar();$('dateToggle').focus();message('status','指定日を選択してください。',true);return}
  if(!$('content').value.trim()){message('status','予定内容を入力してください。',true);$('content').focus();return}
- const targets=recipients();if(!targets.some(item=>item.selected)){ $('mailSettings').open=true;message('status','送信先メール設定で送信先をチェックしてください。',true);return }
+ if(!recipients().some(item=>item.selected)){ $('mailSettings').open=true;message('status','送信先メール設定で送信先をチェックしてください。',true);return }
  $('mailSettings').open=true;if(!validRecipients())return;$('mailSettings').open=false;
  const value=data();const stored=write(keys.history,value);history=value;$('restore').disabled=false;saveDraft();
- const to=[...new Set(targets.filter(item=>item.selected).map(item=>item.email))].map(encodeURIComponent).join(',');
+ const targets=selectedRecipients();
+ const to=[...new Set(targets.map(item=>item.email))].map(encodeURIComponent).join(',');
  const link=document.createElement('a');link.href='mailto:'+to+'?subject='+encodeURIComponent('【予定の追加】'+value.person+' '+value.date)+'&body='+encodeURIComponent(body(value));document.body.append(link);link.click();link.remove();
- message('status','メールソフトで内容を確認し、送信してください。開かない場合は、このPCの既定のメールアプリを確認してください。'+(stored?'':'\n履歴を保存できませんでした。'),!stored);
+ message('status','チェックを入れた送信先 '+targets.length+'件だけを宛先にしました。メールソフトで内容を確認し、送信してください。開かない場合は、このPCの既定のメールアプリを確認してください。'+(stored?'':'\n履歴を保存できませんでした。'),!stored);
 });
 $('today').addEventListener('click',()=>{const today=new Date();selectedDate=dateKey(today);month=new Date(today.getFullYear(),today.getMonth(),1);$('datePanel').hidden=true;$('dateToggle').setAttribute('aria-expanded','false');update();saveDraft();$('dateToggle').focus()});
 $('timeDone').addEventListener('click',()=>{$('timePanel').open=false;update();saveDraft()});
