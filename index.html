@@ -3,2532 +3,1281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>計量データ入力_3-20</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>上野清掃2.3 v2-3</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { overscroll-behavior-x: contain; font-family: 'Hiragino Sans', 'Meiryo', sans-serif; min-height: 100vh; }
-
-  /* ===== HEADER ===== */
-  #app-header { padding: 6px 14px 8px; position: sticky; top: 0; z-index: 101; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: flex-start; min-height: 44px; }
-  #app-header h1 { margin: 0; font-size: 15px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-  #app-header #headerDateLabel { font-size: 11px; color: #555; margin-top: 1px; }
-  #nav-tabs-bar { padding: 0 14px; position: sticky; top: var(--app-header-height, 52px); z-index: 100; }
-  .nav-tabs { display: flex; gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .nav-tab { flex-shrink: 0; padding: 7px 10px; font-size: 12px; font-weight: bold;
-    background: #fff !important; color: #000 !important; border: 2px solid #000 !important;
-    border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-  .nav-tab.active { background: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
-  .nav-tab.disabled { cursor: default; }
-
-  /* ===== SCREENS ===== */
-  .screen { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
-  .screen.active { display: block; }
-  .card { border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-
-  /* ===== BUTTONS ===== */
-  .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
-  .btn-primary { background: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
-  .btn-secondary { background: #ddd; color: #444; }
-  .btn-success { background: #fff; color: #000; border: 2px solid #000; }
-  .btn-warning { background: #fff; color: #000; border: 2px solid #000; }
-  .btn-danger { background: #fff; color: #000; border: 2px solid #000; }
-  .btn-enter { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 12px; }
-  .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 8px; display: inline-block; width: auto; }
-
-  /* ===== INPUTS ===== */
-  input[type="date"], input[type="text"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
-  input:focus { border-color: #000; }
-  .num-input { width: 100%; font-size: 22px; text-align: center; padding: 14px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
-  .num-input:focus { border-color: #000; }
-
-  /* ===== STAFF ===== */
-  .staff-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px;
-    border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    cursor: pointer; border: 2px solid transparent; }
-  .staff-item.selected { border-color: #000; }
-  .staff-check { color: #000; font-size: 20px; display: none; }
-  .staff-item.selected .staff-check { display: block; }
-  .order-saved-badge { display: inline-block; background: #fff; color: #000; border: 1px solid #000; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
-
-
-  /* ===== 曜日保存ボタン ===== */
-  .day-save-single { border-radius: 10px; padding: 8px 12px;
-    margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    border: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
-  .day-save-single button { flex: 1; padding: 9px 8px; border-radius: 8px;
-    border: 2px solid #000; background: #fff; color: #000;
-    font-size: 14px; font-weight: bold; cursor: pointer;
-    -webkit-tap-highlight-color: transparent; }
-  .day-save-single button:active { transform: scale(0.96); }
-  .day-save-single .saved-note { font-size: 11px; color: #000; }
-
-  /* ===== COMBINED PROPERTY LIST+SETTINGS ===== */
-  .prop-card { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
-  .prop-card.done { border-color: #000; }
-  .prop-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
-  .prop-order-input { width: 40px !important; max-width: 40px !important; min-width: 40px !important;
-    padding: 5px 3px; text-align: center; font-size: 15px; font-weight: bold;
-    border: 2px solid #ddd; border-radius: 8px; color: #000;
-    flex-shrink: 0; outline: none; }
-  .prop-order-input:focus { border-color: #000; }
-  .prop-seq-num { width: 30px; min-width: 30px; text-align: center; font-size: 15px; font-weight: bold;
-    color: #000; flex-shrink: 0; }
-  .drag-handle { color: #bbb; font-size: 20px; cursor: grab; padding: 0 6px; user-select: none;
-    touch-action: none; flex-shrink: 0; line-height: 1; border: none; background: none; }
-  .drag-handle:active { cursor: grabbing; color: #888; }
-  .prop-card.drag-dragging { opacity: 0.35; }
-  .prop-card.drag-over-top { border-top: 3px solid #000; }
-  .prop-card.drag-over-bottom { border-bottom: 3px solid #000; }
-  #drag-ghost { position: fixed; z-index: 9999; pointer-events: none; background: white;
-    border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.25); padding: 10px 14px;
-    font-size: 15px; font-weight: 600; color: #333; display: none; max-width: 320px;
-    border: 2px solid #000; }
-  .prop-info { flex: 1; min-width: 0; overflow: hidden; }
-  .prop-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .prop-days { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
-  .day-dot { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: bold; background: #ddd; color: #777; }
-  .day-dot.today { background: #fff; color: #000; border: 1px solid #000; }
-  .prop-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .prop-status-icon { font-size: 20px; }
-  .prop-toggle { color: #aaa; font-size: 14px; }
-
-  .prop-card-body { overscroll-behavior-x: contain; padding: 12px 14px; border-top: 1px solid #f0f0f0; display: none; }
-  .prop-card-body.open { display: block; }
-
-  /* Day checkboxes */
-  .day-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .day-check-label { display: flex; align-items: center; gap: 3px; background: #ddd;
-    padding: 5px 10px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold;
-    transition: all 0.15s; user-select: none; }
-  .day-check-label input { display: none; }
-  .day-check-label.checked { background: #fff; color: #000; border: 1px solid #000; }
-  .day-check-label.today-day { outline: 2px solid #000; outline-offset: 1px; }
-
-  /* Field editor */
-  .fields-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 600; }
-  .field-edit-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
-  .field-name-wrap { flex: 1; position: relative; }
-  .field-name-wrap input { padding: 7px; font-size: 14px; border: 1px solid #ddd; border-radius: 6px; width: 100%; outline: none; }
-  .field-name-wrap input:focus { border-color: #000; }
-  .field-dropdown { position: absolute; top: 100%; left: 0; right: 0;
-    border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    z-index: 300; max-height: 180px; overflow-y: auto; display: none; }
-  .field-dropdown.open { display: block; }
-  .field-dropdown-item { padding: 9px 12px; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
-  .field-dropdown-item:last-child { border-bottom: none; }
-  .field-dropdown-item:active { background: #fff; }
-  .field-edit-row select { padding: 7px 4px; font-size: 13px; border: 1px solid #ddd; border-radius: 6px; width: 54px; }
-
-  /* Data entry */
-  .field-group { margin-bottom: 14px; }
-  .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
-  .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
-  .auto-multiplier-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 600; color: #555; }
-  .auto-multiplier-row select { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; color: #000; }
-  .combined-field-row { display: flex; flex-direction: column; gap: 10px; }
-  .combined-field-input { min-width: 0; }
-  .combined-field-unit { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; white-space: nowrap; }
-  .combined-field-row .auto-multiplier-row { margin: 0; }
-  #inputFields.sakakura-entry-grid { display: block; }
-  #inputFields.sakakura-entry-grid .field-group { margin-bottom: 10px; }
-  .combined-field-row.horizontal-combined { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
-  .horizontal-combined .auto-multiplier-row { align-self: end; flex-direction: column; gap: 3px; font-size: 11px; white-space: nowrap; }
-  .horizontal-combined .auto-multiplier-row select { width: 58px; padding: 5px 6px; font-size: 13px; }
-  .sakakura-nonburn-line { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
-  .last-val-hint { font-size: 12px; color: #aaa; margin-bottom: 4px; }
-  .last-val-hint span { font-weight: bold; color: #777; }
-
-  /* ===== SIMPLE PROPERTY LIST A ===== */
-  .property-list-a { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .property-list-a button { min-height: 58px; padding: 9px 8px; border: 2px solid #ddd;
-    border-radius: 8px; background: #fff !important; color: #222 !important; font-size: 14px; font-weight: 600;
-    line-height: 1.35; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
-  .property-list-a button.done {
-    background: #fff !important;
-    color: #000 !important;
-    border: 3px double #000 !important;
+  :root {
+    --ink: #000000;
+    --paper: #ffffff;
+    --title-height: 5mm;
+    --title-bg: #ffffff;
+    --title-text: #000000;
+    --title-border: #000000;
+    --base-bg: #ffffff;
+    --base-text: #000000;
+    --base-border: #000000;
+    --card-bg: #ffffff;
+    --card-border: #000000;
+    --button-bg: #ffffff;
+    --button-text: #000000;
+    --button-border: #000000;
+    --software-bg: #ffffff;
+    --software-text: #000000;
+    --software-border: #000000;
+    --text-lift-shadow: none;
+    --text-gradient-bg: transparent;
   }
-  .property-list-a button:active { background: #fff; }
 
-  /* Summary */
-  .summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .summary-table th { background: #fff; color: #000; padding: 8px; text-align: left; border-bottom: 2px solid #000; }
-  .summary-table td { padding: 8px; border-bottom: 1px solid #ddd; }
-  .summary-table tr:nth-child(even) td { background: #f8f8f8; }
+  * {
+    box-sizing: border-box;
+  }
 
-  /* Misc */
-  .section-title { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #000; border-radius: 12px; padding: 8px 12px; }
-  .section-sub { font-size: 13px; color: #888; margin-bottom: 16px; }
-  .count-badge { display: inline-block; background: #fff; color: #000; border: 1px solid #000; border-radius: 20px; padding: 2px 10px; font-size: 13px; font-weight: bold; margin-left: 8px; }
-  .add-row { display: flex; gap: 8px; margin-top: 8px; }
-  .add-row input { flex: 1; }
-  .empty-state { text-align: center; padding: 32px 16px; color: #aaa; }
-  .save-order-banner { background: #fff; border: 1px solid #000; border-radius: 10px;
-    padding: 10px 12px; margin-bottom: 10px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
-  .save-order-banner span { font-size: 13px; color: #000; flex: 1; }
-  .sort-hint { font-size: 12px; color: #aaa; text-align: center; padding: 2px 0 8px; }
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--base-bg);
+    color: var(--base-text);
+    font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
 
-  /* History */
-  .history-item { border-radius: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); overflow: hidden; }
-  .history-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
-  .history-date { font-size: 15px; font-weight: 700; color: #000; }
-  .history-staff { font-size: 13px; color: #888; margin-top: 2px; }
-  .history-body { overscroll-behavior-x: contain; padding: 10px 14px; border-top: 1px solid #f0f0f0; display: none; }
-  .history-body.open { display: block; }
-  .past-data-banner { background: #fff; border: 1px solid #000; border-radius: 10px;
-    padding: 12px; margin-top: 12px; display: none; }
-  .past-data-banner .banner-title { font-size: 14px; font-weight: 600; color: #000; margin-bottom: 6px; }
-  .past-data-banner .banner-entries { font-size: 13px; color: #555; margin-bottom: 8px; }
+  body {
+    overflow: hidden;
+  }
 
-  /* 誤操作防止: 旧ホーム/戻るボタンは非表示 */
-  #backBtn,
-  button[onclick*="index.html"] { display:none !important; }
+  button {
+    color: inherit;
+    background: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--button-border);
+    border-radius: 8px;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
 
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100%;
+    background: var(--base-bg);
+  }
+
+  .titlebar {
+    flex: 0 0 var(--title-height);
+    height: var(--title-height);
+    min-height: var(--title-height);
+    display: grid;
+    grid-template-columns: 78px 1fr minmax(138px, 248px);
+    align-items: center;
+    border: 1px solid var(--title-border);
+    background: var(--title-bg);
+    color: var(--title-text);
+    line-height: 1;
+    position: relative;
+    z-index: 30;
+  }
+
+  .window-controls {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 7px;
+    border-right: 1px solid var(--title-border);
+    position: relative;
+  }
+
+  .window-control {
+    width: 11px;
+    height: 11px;
+    padding: 0;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    position: relative;
+    background: var(--paper);
+  }
+
+  .window-control.close {
+    background: #ff5f57;
+    border-color: #e0443e;
+  }
+
+  .window-control.home {
+    background: #febc2e;
+    border-color: #d89e24;
+  }
+
+  .window-control.expand {
+    background: #28c840;
+    border-color: #1eab33;
+  }
+
+  .window-control::before,
+  .window-control::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 4px;
+    height: 1px;
+    background: var(--ink);
+    opacity: 0;
+  }
+
+  .window-control.close:hover::before,
+  .window-control.close:hover::after {
+    opacity: 1;
+  }
+
+  .window-control.close:hover::before {
+    transform: rotate(45deg);
+  }
+
+  .window-control.close:hover::after {
+    transform: rotate(-45deg);
+  }
+
+  .window-control.home:hover::before {
+    opacity: 1;
+  }
+
+  .window-control.expand:hover::before,
+  .window-control.expand:hover::after {
+    opacity: 1;
+  }
+
+  .window-control.expand:hover::before {
+    top: 2px;
+  }
+
+  .window-control.expand:hover::after {
+    top: auto;
+    bottom: 2px;
+  }
+
+  .app-title {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-right: 1px solid var(--title-border);
+    border-radius: 0;
+    padding: 0;
+    background: var(--title-bg);
+    color: var(--title-text);
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-status {
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    color: var(--title-text);
+  }
+
+  .current-file {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    border-right: 1px solid var(--title-border);
+    padding: 0 7px;
+    background: var(--title-bg);
+    color: var(--title-text);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .current-app {
+    flex: 0 0 47px;
+    overflow: hidden;
+    margin-right: 4px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--title-bg);
+    color: var(--title-text);
+    padding: 3px 3px;
+    font-size: 9px;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .current-app:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  .zoom-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 38px;
+    z-index: 50;
+    width: 72px;
+    display: grid;
+    gap: 3px;
+    padding: 5px;
+    border: 1px solid var(--base-border);
+    background: var(--base-bg);
+  }
+
+  .zoom-menu[hidden] {
+    display: none;
+  }
+
+  .zoom-option {
+    min-height: 25px;
+    border: 1px solid var(--base-border);
+    background: var(--base-bg);
+    color: var(--base-text);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .zoom-option.selected {
+    border: 3px double var(--base-border);
+    background: var(--base-bg);
+    color: var(--base-text);
+  }
+
+  .theme-panel {
+    position: fixed;
+    top: var(--title-height);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-height: min(46vh, 290px);
+    overflow-y: auto;
+    padding: 10px 12px 11px;
+    border: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.24);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    background: var(--title-bg);
+    color: var(--title-text);
+  }
+
+  .theme-panel[hidden] {
+    display: none;
+  }
+
+  .theme-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 46px;
+    border: 1px solid rgba(0, 0, 0, 0.34);
+    border-radius: 11px;
+    padding: 5px 6px 5px 8px;
+    background: rgba(255, 255, 255, 0.30);
+  }
+
+  .theme-section-name {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid rgba(0, 0, 0, 0.18);
+    padding-right: 8px;
+    margin-right: 2px;
+    color: var(--title-text);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .theme-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 8px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.45);
+  }
+
+  .theme-label {
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .theme-color {
+    width: 32px;
+    height: 26px;
+    border: 1px solid rgba(0, 0, 0, 0.34);
+    border-radius: 6px;
+    padding: 2px;
+    background: var(--title-bg);
+  }
+
+  .theme-check {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--title-text);
+  }
+
+  .theme-reset {
+    min-height: 37px;
+    border: 1px solid rgba(0, 0, 0, 0.22);
+    border-radius: 9px;
+    padding: 3px 13px;
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--title-text);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .theme-panel button,
+  .theme-panel input {
+    border-color: rgba(0, 0, 0, 0.32);
+  }
+
+  .theme-reset:hover,
+  .theme-group:focus-within,
+  .theme-section:focus-within {
+    border-color: rgba(0, 0, 0, 0.46);
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    border: 1px solid var(--base-border);
+    border-top: 0;
+    background: var(--base-bg);
+    overflow: hidden;
+  }
+
+  .launcher {
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    padding: clamp(14px, 3vw, 25px);
+    background: var(--base-bg);
+    color: var(--base-text);
+  }
+
+  .frame-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .launcher[hidden] {
+    display: none;
+  }
+
+  .launcher-heading {
+    display: none;
+    margin: 0 auto 14px;
+    max-width: 690px;
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .phone-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(148px, 320px));
+    gap: clamp(10px, 2vw, 16px);
+    justify-content: center;
+    max-width: 690px;
+    margin: 0 auto;
+    padding-bottom: 24px;
+  }
+
+  .phone-card {
+    min-height: 0;
+    background: transparent;
+    position: relative;
+  }
+
+  .launch-btn {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    border: 2px solid var(--button-border);
+    border-radius: 12px;
+    padding: clamp(16px, 3vw, 23px) 10px;
+    text-align: center;
+    background: var(--button-bg);
+    color: var(--button-text);
+  }
+
+  .launch-title {
+    font-size: clamp(14px, 2.8vw, 19px);
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 7px;
+    text-shadow: var(--text-lift-shadow);
+    background: var(--text-gradient-bg);
+  }
+
+  .launch-detail {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+  }
+
+  .calendar-picker {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .calendar-picker[hidden] {
+    display: none;
+  }
+
+  .calendar-panel {
+    width: min(560px, 100%);
+    max-height: min(620px, calc(100vh - 36px));
+    overflow-y: auto;
+    border: 2px solid var(--base-border);
+    border-radius: 12px;
+    background: var(--base-bg);
+    color: var(--base-text);
+    padding: 14px;
+  }
+
+  .calendar-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .calendar-panel-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .calendar-close {
+    width: 42px;
+    height: 36px;
+    border: 2px solid var(--button-border);
+    border-radius: 8px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .calendar-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .calendar-choice {
+    width: 100%;
+    border: 2px solid var(--button-border);
+    border-radius: 10px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    padding: 13px 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .calendar-choice-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .calendar-choice-detail {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #777;
+    overflow-wrap: anywhere;
+  }
+
+  .phone-card.running .launch-btn {
+    position: relative;
+    z-index: 30;
+    margin-top: 248px;
+    padding: 8px 10px;
+    border-style: solid;
+  }
+
+  .phone-card.running {
+    min-height: 298px;
+  }
+
+  .running-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 242px;
+    z-index: 25;
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .running-preview[hidden] {
+    display: none;
+  }
+
+  .running-close {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    z-index: 35;
+    width: 25px;
+    height: 25px;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    padding: 0;
+    background: rgba(33, 37, 41, 0.84);
+    color: #fff;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .running-close[hidden] {
+    display: none;
+  }
+
+  .launch-btn:active,
+  .launch-btn:focus-visible,
+  .window-control:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .software-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: var(--preview-width, 100%);
+    height: var(--preview-height, 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: var(--software-bg);
+    pointer-events: none;
+    transform: scale(var(--preview-scale, 1));
+    transform-origin: top left;
+    visibility: hidden;
+    z-index: 2;
+  }
+
+  .running-preview .software-frame {
+    position: absolute;
+    inset: 0;
+    width: var(--preview-width, 100%);
+    height: var(--preview-height, 100%);
+    border: 0;
+    border-radius: 0;
+    visibility: visible;
+    z-index: 1;
+  }
+
+  .software-frame.active {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    pointer-events: auto;
+    transform: none;
+    visibility: visible;
+    z-index: 20;
+  }
+
+  @media (max-width: 430px) {
+    .titlebar {
+      grid-template-columns: 68px 1fr minmax(112px, 42vw);
+    }
+
+    .launcher {
+      padding: 12px 9px;
+    }
+
+    .phone-grid {
+      gap: 9px;
+    }
+
+    .phone-card {
+      min-height: 0;
+    }
+
+    .phone-card.running {
+      min-height: 270px;
+    }
+
+    .phone-card.running .launch-btn {
+      margin-top: 220px;
+    }
+
+    .running-preview {
+      height: 214px;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .phone-grid {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 100%;
+    }
+
+    .phone-card.running {
+      min-height: 292px;
+    }
+
+    .phone-card.running .launch-btn {
+      margin-top: 238px;
+    }
+
+    .running-preview {
+      height: 232px;
+    }
+  }
 </style>
-
 </head>
 <body>
-
-<div id="app-header">
-  <h1 id="headerTitle">計量データ入力</h1>
-  <div id="headerDateLabel" style="font-size:12px;color:#555;margin-top:2px;white-space:nowrap;"></div>
-</div>
-<div id="nav-tabs-bar">
-  <div class="nav-tabs">
-    <button class="nav-tab active" id="navDate" onclick="navTo(1)">📅 日付選択</button>
-    <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
-    <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
-    <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
-    <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
-    <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
-    <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
-    <button class="nav-tab" id="navConvert" onclick="navTo(8)">🔄 変換</button>
-  </div>
-</div>
-<!-- Screen 1: Date -->
-<div class="screen active" id="screen1">
-  <div style="padding-top:16px">
-    <div class="section-title">📅 日付選択</div>
-    <div class="section-sub">作業日を選択してください</div>
-    <div class="card"><input type="date" id="dateInput" onchange="checkPastData(this.value)"></div>
-    <div class="past-data-banner" id="pastDataBanner">
-      <div class="banner-title">📋 この日付のデータが保存されています</div>
-      <div class="banner-entries" id="pastDataEntries"></div>
-      <button class="btn btn-secondary btn-sm" onclick="goToHistoryForDate()">データを確認する</button>
+<div class="app-shell">
+  <header class="titlebar">
+    <div class="window-controls" aria-label="画面操作">
+      <button class="window-control close" id="closeBtn" type="button" aria-label="ソフトを閉じて起動画面に戻る" title="閉じる"></button>
+      <button class="window-control home" id="homeBtn" type="button" aria-label="ソフトを縮小して起動カードに戻る" title="縮小して一覧へ"></button>
+      <button class="window-control expand" id="expandBtn" type="button" aria-label="倍率を選択する" aria-expanded="false" title="倍率"></button>
+      <div class="zoom-menu" id="zoomMenu" aria-label="倍率選択" hidden></div>
     </div>
-    <div style="height:12px"></div>
-    <button class="btn btn-primary" onclick="goToScreen2()">新規入力 →</button>
-    <div style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">index_3-20.html</div>
-  </div>
-</div>
-
-<!-- Screen 2: Staff -->
-<div class="screen" id="screen2">
-  <div style="padding-top:16px">
-    <div class="section-title">👤 担当者選択</div>
-    <div class="section-sub" id="screen2sub"></div>
-    <div id="staffList"></div>
-    <div class="add-row">
-      <input type="text" id="newStaffName" placeholder="担当者名を追加" maxlength="20">
-      <button class="btn btn-secondary btn-sm" onclick="addStaff()">追加</button>
+    <button class="app-title" id="themeToggle" type="button" aria-expanded="false" aria-controls="themePanel" title="配色設定を開く">上野清掃2.3 v2-3</button>
+    <div class="title-status">
+      <div class="current-file" id="currentFile" aria-label="現在のファイル" title="index.html">index.html</div>
+      <div class="current-app" id="currentApp" aria-label="現在の倍率">--</div>
     </div>
-    <div style="height:12px"></div>
-    <button class="btn btn-primary" onclick="goToScreen3()">次へ →</button>
-  </div>
-</div>
-
-<!-- Screen 3: Combined property list + inline settings -->
-<div class="screen" id="screen3">
-  <div style="padding-top:16px">
-    <div class="section-title">🏢 物件リスト<span class="count-badge" id="propCount"></span></div>
-    <div class="section-sub" id="screen3sub"></div>
-    <div class="sort-hint" id="sortHint"></div>
-    <div class="day-save-single" id="daySaveSingle" style="display:none">
-      <button onclick="saveTodayOrder()" id="daySaveBtn">📌 月の順番として保存</button>
-      <span class="saved-note" id="daySavedNote"></span>
+  </header>
+  <section class="theme-panel" id="themePanel" aria-label="配色設定" hidden>
+    <div class="theme-section">
+      <span class="theme-section-name">標準</span>
+      <label class="theme-group"><span class="theme-label">DefaultTheme</span><input class="theme-check" id="defaultThemeCheck" type="checkbox" checked></label>
     </div>
-    <div id="propertyList"></div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-success" style="flex:1" onclick="exportText()">📄 TEXT保存</button>
-      <button class="btn btn-primary" style="flex:2" onclick="goToScreen5()">確認・保存 →</button>
+    <div class="theme-section">
+      <span class="theme-section-name">タイトル</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="titleBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="titleText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="titleBorder"></label>
     </div>
-  </div>
-</div>
-
-<!-- Screen 9: Simple property list A -->
-<div class="screen" id="screen9">
-  <div style="padding-top:16px">
-    <div class="section-title">物件リスト２列<span class="count-badge" id="propCountA"></span></div>
-    <div class="section-sub" id="screen9sub"></div>
-    <div class="property-list-a" id="propertyListA"></div>
-  </div>
-</div>
-
-<!-- Screen 4: Data entry -->
-<div class="screen" id="screen4">
-  <div style="padding-top:16px">
-    <div class="section-title" id="propEntryTitle"></div>
-    <div class="section-sub">各項目に数値を入力してください</div>
-    <div id="inputFields"></div>
-    <div style="display:flex;gap:10px;margin-top:0">
-      <button class="btn btn-primary" style="flex:2" onclick="savePropertyData()">保存 ✓</button>
-      <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去して戻る</button>
+    <div class="theme-section">
+      <span class="theme-section-name">下地</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="baseBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="baseText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="baseBorder"></label>
     </div>
-  </div>
-</div>
-
-<!-- Screen 5: Confirm -->
-<div class="screen" id="screen5">
-  <div style="padding-top:16px">
-    <div class="section-title">✅ 確認・保存</div>
-    <div class="section-sub" id="screen5sub"></div>
-    <div id="summaryContent"></div>
-    <div style="display:flex;gap:10px;margin-bottom:10px">
-      <button class="btn btn-success" style="flex:1" onclick="exportText()">📄 TEXT保存</button>
-      <button class="btn btn-primary" style="flex:1" onclick="exportXlsx()">📥 Excel保存</button>
+    <div class="theme-section">
+      <span class="theme-section-name">カード</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="cardBg"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="cardBorder"></label>
     </div>
-    <button class="btn btn-secondary" onclick="navTo(3)">← 入力に戻る</button>
-  </div>
-</div>
-
-<!-- Screen 6: History -->
-<div class="screen" id="screen6">
-  <div style="padding-top:16px">
-    <div class="section-title">📋 履歴</div>
-    <div class="section-sub">過去の入力データを確認できます</div>
-    <div id="historyList"></div>
-  </div>
-</div>
-
-<!-- Screen 7: Mail Settings -->
-<div class="screen" id="screen7">
-  <div style="padding-top:16px">
-    <div class="section-title">✉️ メール設定</div>
-    <div class="section-sub">送信先アドレスを最大4件登録できます</div>
-
-    <div class="card">
-      <div style="font-size:15px;font-weight:700;margin-bottom:14px">📮 送信先アドレス</div>
-      <div id="mailAddressList"></div>
-      <button class="btn btn-success" style="margin-top:8px" onclick="saveMailSettings()">保存する</button>
+    <div class="theme-section">
+      <span class="theme-section-name">起動ボタン</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="buttonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="buttonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="buttonBorder"></label>
     </div>
+    <div class="theme-section">
+      <span class="theme-section-name">ソフト</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareBorder"></label>
+      <label class="theme-group"><span class="theme-label">見出し枠線</span><input class="theme-color" type="color" data-theme="softwareHeadingBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">ソフトボタン</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="softwareButtonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="softwareButtonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="softwareButtonBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">入力済み</span>
+      <label class="theme-group"><span class="theme-label">背景</span><input class="theme-color" type="color" data-theme="doneButtonBg"></label>
+      <label class="theme-group"><span class="theme-label">文字</span><input class="theme-color" type="color" data-theme="doneButtonText"></label>
+      <label class="theme-group"><span class="theme-label">枠線</span><input class="theme-color" type="color" data-theme="doneButtonBorder"></label>
+    </div>
+    <div class="theme-section">
+      <span class="theme-section-name">文字効果</span>
+      <label class="theme-group"><span class="theme-label">浮き上がり</span><input class="theme-check" id="textLift" type="checkbox"></label>
+      <label class="theme-group"><span class="theme-label">背景グラデ</span><input class="theme-check" id="textGradient" type="checkbox"></label>
+      <label class="theme-group"><span class="theme-label">色1</span><input class="theme-color" type="color" data-theme="textGradientStart"></label>
+      <label class="theme-group"><span class="theme-label">色2</span><input class="theme-color" type="color" data-theme="textGradientEnd"></label>
+    </div>
+    <button class="theme-reset" id="themeReset" type="button">白黒に戻す</button>
+  </section>
 
-    <div class="card" style="margin-top:12px">
-      <div style="font-size:13px;color:#666;line-height:1.7">
-        送信時にチェックが入っているアドレスに送信されます。<br>
-        アドレスを空にするとその行は無視されます。
+  <main class="workspace">
+    <section class="launcher" id="launcher" aria-label="ソフト起動画面">
+      <h1 class="launcher-heading">ソフト一覧</h1>
+      <div class="phone-grid" id="phoneGrid"></div>
+    </section>
+    <div class="frame-layer" id="frameLayer" aria-label="起動したソフト"></div>
+  </main>
+  <section class="calendar-picker" id="calendarPicker" aria-label="収集カレンダー選択" hidden>
+    <div class="calendar-panel">
+      <div class="calendar-panel-head">
+        <div class="calendar-panel-title">収集カレンダー</div>
+        <button class="calendar-close" id="calendarClose" type="button" aria-label="閉じる">×</button>
       </div>
+      <div class="calendar-list" id="calendarList"></div>
     </div>
-  </div>
-</div>
-
-<!-- Screen 8: Text → Excel 変換 -->
-<div class="screen" id="screen8">
-  <div style="padding-top:16px">
-    <div class="section-title">🔄 Excel 変換</div>
-    <div class="section-sub">履歴または保存テキストからExcelを作成します</div>
-
-    <!-- 履歴から変換 -->
-    <div class="card">
-      <div style="font-size:15px;font-weight:700;margin-bottom:12px">📅 履歴から変換</div>
-      <input type="date" id="convertDateInput" onchange="loadConvertFromHistory(this.value)" style="margin-bottom:10px">
-      <div id="convertHistResult" style="margin-top:4px"></div>
-    </div>
-
-    <!-- テキストファイルから変換（バックアップ用） -->
-    <div class="card" style="margin-top:4px">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#555">📂 テキストファイルから変換（バックアップ用）</div>
-      <input type="file" id="txtFileInput" accept=".txt" style="width:100%;padding:10px;border:2px dashed #ccc;border-radius:8px;font-size:14px;background:#f8f8f8" onchange="loadTxtFile(event)">
-      <div id="txtPreview" style="margin-top:14px;display:none">
-        <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#000">📋 読み込み内容</div>
-        <div id="txtPreviewTable" style="overflow-x:auto"></div>
-        <button class="btn btn-primary" style="margin-top:14px" onclick="convertTxtToXlsx()">📥 Excelで保存（.xlsx）</button>
-      </div>
-      <div id="txtError" style="margin-top:10px;color:#000;font-size:13px;display:none"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Screen 0: Settings -->
-<div class="screen" id="screen0">
-  <div style="padding-top:16px">
-    <div class="section-title">⚙️ 設定</div>
-    <div class="section-sub">物件の追加・担当者の管理</div>
-
-    <!-- Add property -->
-    <div class="card">
-      <div style="font-size:15px;font-weight:700;margin-bottom:12px">＋ 物件を追加</div>
-      <div class="field-group">
-        <div class="fields-label">物件名</div>
-        <input type="text" id="newPropertyName" placeholder="例：セブン〇〇店">
-      </div>
-      <div class="field-group">
-        <div class="fields-label">収集曜日</div>
-        <div class="day-checkboxes" id="newPropertyDays">
-          <label class="day-check-label" onclick="toggleNewDay(this,'月',event)"><input type="checkbox">月</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'火',event)"><input type="checkbox">火</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'水',event)"><input type="checkbox">水</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'木',event)"><input type="checkbox">木</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'金',event)"><input type="checkbox">金</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'土',event)"><input type="checkbox">土</label>
-          <label class="day-check-label" onclick="toggleNewDay(this,'日',event)"><input type="checkbox">日</label>
-        </div>
-      </div>
-      <div class="fields-label">入力項目</div>
-      <div id="newPropertyFields">
-        <div class="field-edit-row">
-          <div class="field-name-wrap">
-            <input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)">
-            <div class="field-dropdown"></div>
-          </div>
-          <select><option value="袋">袋</option><option value="kg">kg</option></select>
-          <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button>
-        </div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="addFieldRow()" style="margin-top:6px;margin-bottom:12px">＋ 項目を追加</button>
-      <button class="btn btn-success" onclick="addNewProperty()">物件を登録</button>
-    </div>
-
-    <!-- Staff management -->
-    <div class="card">
-      <div style="font-size:15px;font-weight:700;margin-bottom:12px">👤 担当者管理</div>
-      <div id="settingsStaffList"></div>
-      <div class="add-row">
-        <input type="text" id="settingsNewStaff" placeholder="担当者名を追加" maxlength="20">
-        <button class="btn btn-secondary btn-sm" onclick="addStaffFromSettings()">追加</button>
-      </div>
-    </div>
-  </div>
+  </section>
 </div>
 
 <script>
-const DAYS_JP   = ['日','月','火','水','木','金','土'];
-const ORDERED_DAYS = ['月','火','水','木','金','土','日'];
-const FIELD_SUGGESTIONS = ['可燃','不燃','可燃ごみ','不燃ごみ','生活ゴミ（可燃）','生活ゴミ（不燃）','産業廃棄物','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
-const LS_PROPERTIES    = 'keiryo_properties';
-const LS_STAFF         = 'keiryo_staff';
-const LS_ORDER_PREFIX  = 'keiryo_order_';
-const LS_LASTDATA_PREFIX = 'keiryo_last_';
-const LS_HISTORY_PREFIX  = 'keiryo_hist_'; // + date_staffName
-const LS_MAIL_SENT_PREFIX = 'keiryo_mail_sent_';
-const LS_AUTO_MULTIPLIER_PREFIX = 'keiryo_auto_multiplier_';
-const PROPERTY_NAME_ALIASES={
-  'ほっともっと 伊賀白鳳通り店':'ほっともっと 伊賀白鳳店',
-  'いがっこ給食センター':'伊賀市小学校給食センター',
-  'すき家 伊賀上野店':'すき家',
-  'セブン伊賀緑ヶ丘東町店':'7.11 伊賀緑ヶ丘東町店',
-  'セブン伊賀東条店':'7.11 伊賀東条店',
-  'セブン伊賀平野北谷店':'7.11 伊賀平野北谷店',
-  'セブン伊賀四十九町北店':'7.11 伊賀四十九町北店',
-  'セブン伊賀緑ヶ丘本町店':'7.11 伊賀緑ヶ丘本町店',
-  'セブン伊賀平野東町店':'7.11 伊賀平野東町店',
-  'セブン伊賀忍者市駅南店':'7.11 伊賀忍者市駅南店',
-  'セカンドストリート 伊賀小田店':'セカンドストリート伊賀小田店',
-  'ナフコ 伊賀店':'ナフコ伊賀店（㈱アレックス）',
-  '創価学会 伊賀上野文化会館':'創価学会',
-  '農業屋 伊賀上野店':'クラギ（株）農業屋 伊賀上野店',
-  '津地方裁判所':'津地方裁判所伊賀支部',
-  '西松屋 伊賀上野店':'（株）西松屋チェーン 伊賀上野店',
-  '伊賀神戸駅':'近鉄日本鉄道伊賀神戸駅',
-  'びっくりドンキー 伊賀上野店':'びっくりドンキー 伊賀上野店',
-  'コカ・コーラボトラーズ':'コカ・コーラボトラーズ',
-  'チョーヤ梅酒':'チョーヤ梅酒伊賀上野工場',
-  'マックスバリュ 佐那具店':'マックスバリュ佐那具店',
-  'マックスバリュ 上野店':'マックスバリュ上野店',
-  '㈱やさいの戸島屋':'やさいの戸島屋',
-  '魚民 上野市駅前店':'魚民（㈱モンテローザ）',
-  '厚板プレス工業':'厚板プレス工業 伊賀工場',
-  'あみやき亭':'あみやき亭 伊賀上野店',
-  'クスリのアオキ 伊賀上野店':'株式会社クスリのアオキ 伊賀上野店',
-  'クスリのアオキ 平野東店':'株式会社クスリのアオキ 平野東店',
-  'コメリ ＨＣ上野店':'コメリ',
-  '検察庁':'上野法務合同庁舎',
-  '法務局':'上野法務合同庁舎'
-};
-const SOURCE_ALIGNED_PROPERTY_NAMES=new Set(Object.values(PROPERTY_NAME_ALIASES));
-function canonicalPropertyName(name){ return PROPERTY_NAME_ALIASES[name]||name; }
-function legacyPropertyNames(name){
-  return Object.keys(PROPERTY_NAME_ALIASES).filter(oldName=>PROPERTY_NAME_ALIASES[oldName]===name&&oldName!==name);
-}
-function canonicalizePropertyNames(names){
-  return Array.isArray(names) ? [...new Set(names.map(canonicalPropertyName))] : [];
-}
-function canonicalizePropertyData(data){
-  const result={};
-  Object.entries(data||{}).forEach(([name,value])=>{
-    const canonical=canonicalPropertyName(name);
-    result[canonical]={...(result[canonical]||{}),...(value||{})};
-  });
-  return result;
-}
-const SAKAKURA_PROPERTY_NAME='旧上野庁舎 SAKAKURA BASE';
-const SAKAKURA_AUTO_PAIRS=[
-  {bag:'ホテル（白）可燃ごみ__袋',kg:'ホテル（白）可燃ごみ__kg',nonburn:'ホテル（白）不燃ごみ__kg'},
-  {bag:'図書館（青）可燃ごみ__袋',kg:'図書館（青）可燃ごみ__kg',nonburn:'図書館（青）不燃ごみ__kg'},
-  {bag:'物販（透明）可燃ごみ__袋',kg:'物販（透明）可燃ごみ__kg',nonburn:'物販（透明）不燃ごみ__kg'},
-  {bag:'カフェ（黒）可燃ごみ__袋',kg:'カフェ（黒）可燃ごみ__kg',nonburn:'カフェ（黒）不燃ごみ__kg'}
-];
-const LEGACY_MULTIPLIER_SOURCE_KEYS={
-  'イオンタウン伊賀::ごみ__袋':'可燃__袋',
-  [`${SAKAKURA_PROPERTY_NAME}::ホテル（白）可燃ごみ__袋`]:'ホテル可燃 白__袋',
-  [`${SAKAKURA_PROPERTY_NAME}::図書館（青）可燃ごみ__袋`]:'図書館可燃 青__袋',
-  [`${SAKAKURA_PROPERTY_NAME}::物販（透明）可燃ごみ__袋`]:'物販可燃 透明__袋',
-  [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）可燃ごみ__袋`]:'カフェ可燃 黒__袋'
-};
-const SAKAKURA_OBSOLETE_FIELD_KEYS=new Set([
-  '白袋__袋','青袋__袋','黒袋__袋',
-  'ホテル可燃白__袋','ホテル不燃__kg','ホテル不燃白__kg',
-  '図書館可燃青__袋','図書館不燃__kg','図書館不燃青__kg',
-  '物販可燃透明__袋','物販不燃__kg','物販不燃透明__kg',
-  'カフェ可燃__袋','カフェ可燃黒__袋','カフェ不燃__kg','カフェ不燃黒__kg'
-]);
-const LEGACY_FIELD_VALUE_KEYS={
-  ['ほっともっと 伊賀桑町店::厨芥（生ごみ）__kg']:['生ごみ__kg'],
-  ['ほっともっと 伊賀白鳳店::厨芥（生ごみ）__kg']:['生ごみ__kg'],
-  ['LA・MU::可燃ごみ__kg']:['可燃__kg'],
-  ['LA・MU::不燃ごみ__kg']:['不燃__kg'],
-  ['伊賀市小学校給食センター::可燃ごみ__kg']:['可燃__kg'],
-  ['伊賀市小学校給食センター::金属__kg']:['不燃金属__kg'],
-  ['伊賀市小学校給食センター::ビン・割れ物__kg']:['ビン割れ物__kg'],
-  ['伊賀市小学校給食センター::硬質プラスチック__kg']:['硬質プラ__kg'],
-  ['すき家::可燃物__袋']:['可燃__袋'],
-  ['すき家::可燃物__kg']:['可燃__kg'],
-  ['すき家::ビン・缶・PET__袋']:['ビン缶PET__袋'],
-  ['すき家::ビン・缶・PET__kg']:['ビン缶PET__kg'],
-  ['セカンドストリート伊賀小田店::不燃（ビン・缶・PET）__袋']:['不燃ビン缶PET__袋'],
-  ['ナフコ伊賀店（㈱アレックス）::可燃物__kg']:['可燃__kg'],
-  ['ナフコ伊賀店（㈱アレックス）::発砲スチロール__kg']:['発泡スチロール__kg'],
-  ['伊賀の街::可燃ごみ__袋']:['可燃__袋'],
-  ['ライフテクノサービス::可燃ごみ__kg']:['可燃__kg'],
-  ['ライフテクノサービス::不燃ごみ__kg']:['不燃__kg'],
-  ['創価学会::可燃ごみ__kg']:['可燃__kg'],
-  ['クラギ（株）農業屋 伊賀上野店::可燃ごみ__袋']:['可燃__袋'],
-  ['クラギ（株）農業屋 伊賀上野店::その他（苗木等）__袋']:['その他__袋','苗__袋'],
-  ['津地方裁判所伊賀支部::シュレッダーごみ__kg']:['シュレッダー__kg'],
-  ['津地方裁判所伊賀支部::新聞・雑誌・段ボール__kg']:['新聞段ボール__kg'],
-  ['津地方裁判所伊賀支部::可燃ごみ__kg']:['可燃__kg'],
-  ['津地方裁判所伊賀支部::不燃ごみ__kg']:['不燃__kg'],
-  ['（株）西松屋チェーン 伊賀上野店::可燃物__袋']:['可燃__袋'],
-  ['（株）西松屋チェーン 伊賀上野店::可燃物__kg']:['可燃__kg'],
-  ['（株）西松屋チェーン 伊賀上野店::不燃物__袋']:['不燃__袋'],
-  ['（株）西松屋チェーン 伊賀上野店::不燃物__kg']:['不燃__kg'],
-  ['近鉄日本鉄道伊賀神戸駅::可燃ごみ（ダンボール含む）__袋']:['可燃__袋'],
-  ['近鉄日本鉄道伊賀神戸駅::不燃ごみ（カン）__袋']:['カン__袋'],
-  ['近鉄日本鉄道伊賀神戸駅::不燃ごみ（ビン）__袋']:['ビン__袋'],
-  ['近鉄日本鉄道伊賀神戸駅::その他（ガラス・蛍光灯）__袋']:['その他__袋'],
-  ['イオンタウン伊賀::ごみ__袋']:['可燃__袋'],
-  ['イオンタウン伊賀::ごみ__kg']:['可燃__kg'],
-  ['びっくりドンキー 伊賀上野店::ごみ__kg']:['可燃__kg'],
-  ['KFC イオンタウン伊賀上野店::ごみ__kg']:['可燃__kg'],
-  ['コカ・コーラボトラーズ::袋数__袋']:['収集__袋'],
-  ['チョーヤ梅酒伊賀上野工場::可燃物収集__㎥']:['可燃㎥__㎥'],
-  ['チョーヤ梅酒伊賀上野工場::フィルター紙収集__㎥']:['第2収集㎥__㎥'],
-  ['やさいの戸島屋::可燃ごみ__袋']:['可燃__袋'],
-  ['古本市場 上野店::可燃物__袋']:['可燃__袋'],
-  ['古本市場 上野店::資源物__袋']:['資源__袋'],
-  [`${SAKAKURA_PROPERTY_NAME}::ホテル（白）可燃ごみ__袋`]:['ホテル可燃 白__袋','ホテル可燃白__袋'],
-  [`${SAKAKURA_PROPERTY_NAME}::ホテル（白）可燃ごみ__kg`]:['ホテル可燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::ホテル（白）不燃ごみ__kg`]:['ホテル不燃 白__kg','ホテル不燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::図書館（青）可燃ごみ__袋`]:['図書館可燃 青__袋','図書館可燃青__袋'],
-  [`${SAKAKURA_PROPERTY_NAME}::図書館（青）可燃ごみ__kg`]:['図書館可燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::図書館（青）不燃ごみ__kg`]:['図書館不燃 青__kg','図書館不燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::物販（透明）可燃ごみ__袋`]:['物販可燃 透明__袋','物販可燃透明__袋'],
-  [`${SAKAKURA_PROPERTY_NAME}::物販（透明）可燃ごみ__kg`]:['物販可燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::物販（透明）不燃ごみ__kg`]:['物販不燃 透明__kg','物販不燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）可燃ごみ__袋`]:['カフェ可燃 黒__袋','カフェ可燃黒__袋','カフェ可燃__袋'],
-  [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）可燃ごみ__kg`]:['カフェ可燃__kg'],
-  [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）不燃ごみ__kg`]:['カフェ不燃 黒__kg','カフェ不燃__kg'],
-  ['魚民（㈱モンテローザ）::生ゴミ__kg']:['生ごみ__kg'],
-  ['魚民（㈱モンテローザ）::紙類__kg']:['紙__kg'],
-  ['魚民（㈱モンテローザ）::不燃(ビニール等)__kg']:['不燃ビニ__kg'],
-  ['魚民（㈱モンテローザ）::ダンボール__kg']:['段ボール__kg'],
-  ['厚板プレス工業 伊賀工場::可燃ごみ__kg']:['可燃__kg'],
-  ['厚板プレス工業 伊賀工場::不燃ごみ（カン・ビン）__kg']:['不燃__kg'],
-  ['三重県伊賀庁舎::ダンボール__kg']:['段ボール__kg'],
-  ['上野法務合同庁舎::可燃物__kg']:['可燃__kg'],
-  ['上野法務合同庁舎::不燃物__kg']:['不燃__kg','不燃ごみ__kg'],
-  ['上野法務合同庁舎::資源ごみ__kg']:['古紙__kg','シュレッダー__kg'],
-  ['飯田金属::kg数__kg']:['収集__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::産業廃棄物__kg']:['廃業廃棄物__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
-  ['株式会社クスリのアオキ 平野東店::産業廃棄物__kg']:['廃業廃棄物__kg']
-};
-const LEGACY_FIELD_VALUE_SUM_KEYS={
-  ['7.11 伊賀緑ヶ丘東町店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀東条店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀平野北谷店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀四十九町北店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀緑ヶ丘本町店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀平野東町店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋'],
-  ['7.11 伊賀忍者市駅南店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋']
-};
-const DEFAULT_PROPERTIES = [
-  { name:'ほっともっと 伊賀桑町店', order:1, days:[], fields:[{label:'紙屑',unit:'kg'},{label:'厨芥（生ごみ）',unit:'kg'},{label:'木屑',unit:'kg'},{label:'金属缶',unit:'kg'},{label:'ビン・ガラス',unit:'kg'},{label:'廃プラ',unit:'kg'},{label:'ハッポウ',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'段ボール',unit:'kg'}] },
-  { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg'},{label:'厨芥（生ごみ）',unit:'kg'},{label:'木屑',unit:'kg'},{label:'金属缶',unit:'kg'},{label:'ビン・ガラス',unit:'kg'},{label:'廃プラ',unit:'kg'},{label:'ハッポウ',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'段ボール',unit:'kg'}] },
-  { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
-  { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'金属',unit:'kg'},{label:'ビン・割れ物',unit:'kg'},{label:'硬質プラスチック',unit:'kg'}] },
-  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'可燃物',unit:'kg'},{label:'ビン・缶・PET',unit:'袋'},{label:'ビン・缶・PET',unit:'kg'},{label:'ダンボール',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
-  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋'},{label:'ﾀﾞﾝﾎﾞｰﾙ',unit:'kg'}] },
-  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃（ビン・缶・PET）',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'発砲スチロール',unit:'kg'},{label:'木くず',unit:'kg'},{label:'その他',unit:'kg'}] },
-  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'袋'}] },
-  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
-  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg'},{label:'可燃ごみ',unit:'kg'},{label:'その他',unit:'kg'}] },
-  { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋'},{label:'不燃ごみ',unit:'袋'},{label:'その他（苗木等）',unit:'袋'},{label:'段ボール',unit:'kg'}] },
-  { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg'},{label:'新聞・雑誌・段ボール',unit:'kg'},{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
-  { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'可燃物',unit:'kg'},{label:'不燃物',unit:'袋'},{label:'不燃物',unit:'kg'},{label:'ダンボール',unit:'kg'},{label:'ビン',unit:'kg'},{label:'カン',unit:'kg'},{label:'ペットボトル',unit:'kg'}] },
-  { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋'},{label:'不燃ごみ（カン）',unit:'袋'},{label:'不燃ごみ（ビン）',unit:'袋'},{label:'その他（ガラス・蛍光灯）',unit:'袋'}] },
-  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'袋'},{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'蛍光灯',unit:'kg'},{label:'ハンガー',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'新聞・雑誌・雑古紙',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
-  { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
-  { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'kg'},{label:'段ボール',unit:'kg'}] },
-  { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋'}] },
-  { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥'},{label:'フィルター紙収集',unit:'㎥'}] },
-  { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'袋'},{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'新聞・雑誌・雑古紙',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
-  { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'袋'},{label:'ごみ',unit:'kg'},{label:'生ごみ',unit:'袋'},{label:'生ごみ',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'われもの',unit:'kg'},{label:'アラ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'新聞・雑誌・雑古紙',unit:'kg'},{label:'アルミ缶',unit:'kg'},{label:'ペットボトル',unit:'kg'},{label:'牛乳パック',unit:'kg'},{label:'発泡スチロール',unit:'kg'}] },
-  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋'}] },
-  { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'古紙',unit:'kg'},{label:'資源物',unit:'袋'}] },
-  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋'},{label:'ホテル（白）可燃ごみ',unit:'kg'},{label:'ホテル（白）不燃ごみ',unit:'kg'},{label:'図書館（青）可燃ごみ',unit:'袋'},{label:'図書館（青）可燃ごみ',unit:'kg'},{label:'図書館（青）不燃ごみ',unit:'kg'},{label:'物販（透明）可燃ごみ',unit:'袋'},{label:'物販（透明）可燃ごみ',unit:'kg'},{label:'物販（透明）不燃ごみ',unit:'kg'},{label:'カフェ（黒）可燃ごみ',unit:'袋'},{label:'カフェ（黒）可燃ごみ',unit:'kg'},{label:'カフェ（黒）不燃ごみ',unit:'kg'}] },
-  { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg'},{label:'紙類',unit:'kg'},{label:'他可燃ゴミ',unit:'kg'},{label:'不燃(ビニール等)',unit:'kg'},{label:'カン',unit:'kg'},{label:'ビン',unit:'kg'},{label:'ダンボール',unit:'kg'},{label:'割れ物',unit:'kg'},{label:'発泡',unit:'kg'},{label:'食品リサイクル',unit:'kg'}] },
-  { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ（カン・ビン）',unit:'kg'},{label:'その他',unit:'kg'}] },
-  { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg'},{label:'ダンボール',unit:'kg'},{label:'その他',unit:'kg'}] },
-  { name:'上野法務合同庁舎', order:37, days:[], fields:[{label:'可燃物',unit:'kg'},{label:'資源ごみ',unit:'kg'},{label:'不燃物',unit:'kg'}] },
-  { name:'飯田金属', order:40, days:[], fields:[{label:'kg数',unit:'kg'}] },
-  { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'ペットボトル',unit:'kg'}] },
-  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'袋'},{label:'生活ゴミ（可燃）',unit:'kg'},{label:'生活ゴミ（不燃）',unit:'袋'},{label:'生活ゴミ（不燃）',unit:'kg'},{label:'産業廃棄物',unit:'kg'}] },
-  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'袋'},{label:'生活ゴミ（可燃）',unit:'kg'},{label:'生活ゴミ（不燃）',unit:'袋'},{label:'生活ゴミ（不燃）',unit:'kg'},{label:'産業廃棄物',unit:'kg'}] },
-  { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'可燃物',unit:'kg'},{label:'不燃物 1（ビン・缶・PET）',unit:'袋'},{label:'不燃物 1（ビン・缶・PET）',unit:'kg'},{label:'不燃物 2（容器包装系）',unit:'袋'},{label:'不燃物 2（容器包装系）',unit:'kg'},{label:'粗大ごみ／その他',unit:'袋'},{label:'粗大ごみ／その他',unit:'kg'}] }
-];
-const DEFAULT_STAFF = ['担当者A','担当者B'];
-
-function loadJSON(key,def){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
-function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
-function historyKey(record){ return record ? record.date+'_'+record.staffName : ''; }
-function isHistoryMailSent(record){ return !!loadJSON(LS_MAIL_SENT_PREFIX+historyKey(record),false); }
-function markHistoryMailSent(record){
-  if(!record) return;
-  saveJSON(LS_MAIL_SENT_PREFIX+historyKey(record),true);
-}
-function savedOrderKey(staff,day){ return LS_ORDER_PREFIX+encodeURIComponent(staff||'')+'_'+encodeURIComponent(day||''); }
-function legacySavedOrderKey(staff,day){ return LS_ORDER_PREFIX+(staff||'')+'_'+(day||''); }
-function getSavedOrder(staff,day){
-  const saved=loadJSON(savedOrderKey(staff,day),null);
-  if(saved) return canonicalizePropertyNames(saved);
-  return canonicalizePropertyNames(loadJSON(legacySavedOrderKey(staff,day),null));
-}
-function setSavedOrder(staff,day,arr){ saveJSON(savedOrderKey(staff,day),canonicalizePropertyNames(arr)); }
-function getLastData(name){
-  const current=loadJSON(LS_LASTDATA_PREFIX+name,null);
-  if(current) return current;
-  for(const legacyName of legacyPropertyNames(name)){
-    const legacy=loadJSON(LS_LASTDATA_PREFIX+legacyName,null);
-    if(legacy) return legacy;
-  }
-  return null;
-}
-function setLastData(name,data,staff,date){ saveJSON(LS_LASTDATA_PREFIX+name,{data,staffName:staff,date}); }
-function fieldKey(field){ return `${field.label}__${field.unit}`; }
-function getFieldValue(data,field,propName=''){
-  if(!data) return '';
-  const key=fieldKey(field);
-  if(data[key]!==undefined) return data[key];
-  if(['マックスバリュ佐那具店','マックスバリュ上野店'].includes(propName)&&key.startsWith('ごみ__')){
-    for(const legacyKey of [`可燃__${field.unit}`,`可燃袋__${field.unit}`]){
-      if(data[legacyKey]!==undefined) return data[legacyKey];
-    }
-  }
-  const legacyKeys=LEGACY_FIELD_VALUE_KEYS[`${propName}::${key}`]||[];
-  for(const legacyKey of legacyKeys){
-    if(data[legacyKey]!==undefined) return data[legacyKey];
-  }
-  const sumKeys=LEGACY_FIELD_VALUE_SUM_KEYS[`${propName}::${key}`]||[];
-  const values=sumKeys.map(legacyKey=>data[legacyKey]).filter(value=>value!==''&&value!==undefined&&value!==null);
-  if(values.length) return values.reduce((total,value)=>total+(parseFloat(value)||0),0);
-  return data[field.label]!==undefined ? data[field.label] : '';
-}
-function formatAutoKg(value){
-  const rounded=Math.round(value*1000)/1000;
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/,'');
-}
-function autoMultiplierStorageKey(prop,sourceKey){ return LS_AUTO_MULTIPLIER_PREFIX+prop.name+'_'+sourceKey; }
-function getAutoMultiplier(prop,sourceKey,fallback){
-  const candidates=[[prop.name,sourceKey]];
-  legacyPropertyNames(prop.name).forEach(name=>candidates.push([name,sourceKey]));
-  const legacySourceKey=LEGACY_MULTIPLIER_SOURCE_KEYS[`${prop.name}::${sourceKey}`];
-  if(legacySourceKey){
-    candidates.push([prop.name,legacySourceKey]);
-    legacyPropertyNames(prop.name).forEach(name=>candidates.push([name,legacySourceKey]));
-  }
-  let value;
-  for(const [name,key] of candidates){
-    value=loadJSON(LS_AUTO_MULTIPLIER_PREFIX+name+'_'+key,undefined);
-    if(value!==undefined) break;
-  }
-  if(value===undefined) value=fallback;
-  if(value===''||value===null||value==='none') return null;
-  const numeric=parseFloat(value);
-  return Number.isNaN(numeric) ? fallback : numeric;
-}
-function setAutoMultiplier(prop,sourceKey,value){
-  if(value===''||value==='none'){
-    saveJSON(autoMultiplierStorageKey(prop,sourceKey),'');
-    return;
-  }
-  const numeric=parseFloat(value);
-  saveJSON(autoMultiplierStorageKey(prop,sourceKey),Number.isNaN(numeric)?1:numeric);
-}
-function getAutoKgRule(prop,sourceKey){
-  if(!prop) return;
-  const propertyRules={};
-  if(prop.name==='イオンタウン伊賀'){
-    const targets={
-      'ごみ__袋':'ごみ__kg',
-      '生ごみ__袋':'生ごみ__kg'
-    };
-    if(targets[sourceKey]) return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,1),selectable:true};
-  }
-  if(prop.name==='マックスバリュ佐那具店'){
-    const defaults={
-      'ごみ__袋':{target:'ごみ__kg',multiplier:3},
-      '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
-    };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name==='マックスバリュ上野店'){
-    const defaults={
-      'ごみ__袋':{target:'ごみ__kg',multiplier:2},
-      '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
-    };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name===SAKAKURA_PROPERTY_NAME){
-    const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===sourceKey);
-    if(pair) return {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
-  }
-  return propertyRules[prop.name]?.[sourceKey];
-}
-function getAutoMultiplierControl(prop,sourceKey){
-  const rule=getAutoKgRule(prop,sourceKey);
-  if(!rule||!rule.selectable) return '';
-  const multiplier=getAutoMultiplier(prop,sourceKey,rule.multiplier);
-  const selected=multiplier===null ? '' : String(multiplier);
-  const options=['',...Array.from({length:10},(_,i)=>String(i+1))]
-    .map(value=>`<option value="${value}" ${value===selected?'selected':''}>${value===''?'なし':value}</option>`)
-    .join('');
-  return `<div class="auto-multiplier-row"><span>倍率</span><select class="auto-multiplier-select" data-source-key="${sourceKey}">${options}</select></div>`;
-}
-function applyAutoKg(prop,sourceKey,sourceValue){
-  const rule=getAutoKgRule(prop,sourceKey);
-  if(!rule) return;
-  const targetInput=document.querySelector(`input.num-input[data-field-key="${rule.target}"]`);
-  if(!targetInput) return;
-  if(rule.multiplier===null) return;
-  const numeric=parseFloat(sourceValue);
-  const nextValue=sourceValue!==''&&!Number.isNaN(numeric) ? formatAutoKg(numeric*rule.multiplier) : '';
-  targetInput.value=nextValue;
-  if(!state.entryDraft[prop.name]) state.entryDraft[prop.name]={};
-  state.entryDraft[prop.name][rule.target]=nextValue;
-}
-function getAutoKgNote(prop,field){
-  if(!prop||!['マックスバリュ佐那具店','マックスバリュ上野店','イオンタウン伊賀'].includes(prop.name)) return '';
-  return ['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
-}
-function saveHistory(date,staff,entryData){
-  saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {
-    date,
-    staffName:staff,
-    entryData,
-    entryOrder:[...state.entryOrder],
-    updatedAt:Date.now()
-  });
-  // keep index of all history keys
-  let idx=loadJSON('keiryo_hist_index',[]);
-  const key=date+'_'+staff;
-  if(!idx.includes(key)) idx.push(key);
-  saveJSON('keiryo_hist_index',idx);
-}
-function getAllHistory(){
-  const idx=loadJSON('keiryo_hist_index',[]);
-  return idx.map(k=>loadJSON(LS_HISTORY_PREFIX+k,null)).filter(Boolean)
-    .map(record=>({...record,
-      entryData:canonicalizePropertyData(record.entryData),
-      entryOrder:canonicalizePropertyNames(record.entryOrder)
-    }))
-    .sort((a,b)=>b.date.localeCompare(a.date)||((b.updatedAt||0)-(a.updatedAt||0)));
-}
-
-// 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
-function mergeDefaultProperty(savedProp,defaultProp){
-  if(!defaultProp) return savedProp;
-  return {...defaultProp,
-    order:savedProp.order||defaultProp.order,
-    days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days
-  };
-}
-
-let allProperties = (() => {
-  const saved = loadJSON(LS_PROPERTIES, null);
-  if (!Array.isArray(saved)) return DEFAULT_PROPERTIES.slice();
-  const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
-  const defaultByName = new Map(DEFAULT_PROPERTIES.map(p => [p.name,p]));
-  const retainedByName = new Map();
-  saved.forEach(prop => {
-    if(!prop||!prop.name) return;
-    const canonicalName=canonicalPropertyName(prop.name);
-    const normalizedProp=canonicalName===prop.name ? prop : {...prop,name:canonicalName};
-    if(defaultNames.has(canonicalName)) retainedByName.set(canonicalName,mergeDefaultProperty(normalizedProp,defaultByName.get(canonicalName)));
-    else if(prop.isCustom===true) retainedByName.set(canonicalName,normalizedProp);
-  });
-  const retained = [...retainedByName.values()];
-  const retainedNames = new Set(retained.map(p => p.name));
-  const newProps = DEFAULT_PROPERTIES.filter(p => !retainedNames.has(p.name));
-  const merged = [...retained, ...newProps];
-  saveJSON(LS_PROPERTIES,merged);
-  return merged;
-})();
-let staffList     = loadJSON(LS_STAFF, DEFAULT_STAFF);
-
-let state = {
-  date:'', dayName:'', selectedStaff:'',
-  currentPropertyIndex:-1,
-  entryData:{}, entryOrder:[],
-  entryDraft:{},
-  currentScreen:1, prevScreen:1,
-  customOrder: null,
-  entryReturnScreen: 9
-};
-
-const LS_SESSION = 'keiryo_session';
-const LS_ORDER_CLEANUP = 'keiryo_order_cleanup_3_18_v1';
-
-function clearLegacySavedOrdersOnce(){
-  if(localStorage.getItem(LS_ORDER_CLEANUP)==='done') return;
-  const keys=[];
-  for(let i=0;i<localStorage.length;i++){
-    const key=localStorage.key(i);
-    if(key&&key.startsWith(LS_ORDER_PREFIX)) keys.push(key);
-  }
-  keys.forEach(key=>localStorage.removeItem(key));
-  localStorage.setItem(LS_ORDER_CLEANUP,'done');
-}
-
-function saveSession(){
-  saveJSON(LS_SESSION, {
-    date: state.date, dayName: state.dayName,
-    selectedStaff: state.selectedStaff,
-    entryData: state.entryData,
-    entryDraft: state.entryDraft,
-    entryOrder: state.entryOrder,
-    currentScreen: state.currentScreen,
-    currentPropertyIndex: state.currentPropertyIndex,
-    customOrder: state.customOrder,
-    entryReturnScreen: state.entryReturnScreen
-  });
-}
-
-function restoreSession(){
-  const s = loadJSON(LS_SESSION, null);
-  if(!s || !s.date) return false;
-  // 日付が今日と一致する場合のみ復元
-  const today = new Date();
-  const ty = today.getFullYear();
-  const tm = String(today.getMonth()+1).padStart(2,'0');
-  const td = String(today.getDate()).padStart(2,'0');
-  const todayStr = `${ty}-${tm}-${td}`;
-  if(s.date !== todayStr) return false;
-  state.date = s.date; state.dayName = s.dayName;
-  state.selectedStaff = s.selectedStaff || '';
-  state.entryData = canonicalizePropertyData(s.entryData);
-  state.entryDraft = canonicalizePropertyData(s.entryDraft);
-  state.entryOrder = canonicalizePropertyNames(s.entryOrder);
-  state.customOrder = s.customOrder ? canonicalizePropertyNames(s.customOrder) : null;
-  state.entryReturnScreen = s.entryReturnScreen || 9;
-  state.currentPropertyIndex = (s.currentPropertyIndex !== undefined) ? s.currentPropertyIndex : -1;
-  document.getElementById('dateInput').value = state.date;
-  return true;
-}
-
-function restoreLatestHistory(date){
-  const record=getAllHistory().find(item=>item.date===date);
-  if(!record||!record.staffName||!record.entryData) return false;
-  state.date=record.date;
-  const d=new Date(record.date+'T00:00:00');
-  state.dayName=DAYS_JP[d.getDay()];
-  state.selectedStaff=record.staffName;
-  state.entryData={...record.entryData};
-  state.entryDraft={};
-  state.entryOrder=Array.isArray(record.entryOrder)&&record.entryOrder.length
-    ? [...record.entryOrder]
-    : Object.keys(record.entryData);
-  state.currentPropertyIndex=-1;
-  state.currentScreen=9;
-  state.entryReturnScreen=9;
-  document.getElementById('dateInput').value=record.date;
-  return true;
-}
-
-let stickyHeaderObserver=null;
-function syncStickyHeaderHeight(){
-  const header=document.getElementById('app-header');
-  if(!header) return;
-  const height=Math.ceil(header.getBoundingClientRect().height);
-  document.documentElement.style.setProperty('--app-header-height',height+'px');
-}
-
-function initStickyHeaderSync(){
-  syncStickyHeaderHeight();
-  const header=document.getElementById('app-header');
-  if(header&&typeof ResizeObserver!=='undefined'){
-    stickyHeaderObserver=new ResizeObserver(syncStickyHeaderHeight);
-    stickyHeaderObserver.observe(header);
-  }
-  window.addEventListener('resize',syncStickyHeaderHeight,{passive:true});
-  setTimeout(syncStickyHeaderHeight,200);
-  setTimeout(syncStickyHeaderHeight,800);
-}
-
-// ===== INIT =====
-window.onload = function(){
-  initStickyHeaderSync();
-  clearLegacySavedOrdersOnce();
-  const t=new Date();
-  const y=t.getFullYear();
-  const m=String(t.getMonth()+1).padStart(2,'0');
-  const d=String(t.getDate()).padStart(2,'0');
-  const todayStr=`${y}-${m}-${d}`;
-  document.getElementById('dateInput').value=todayStr;
-
-  const sessionRestored=restoreSession();
-  const hasSessionWork=sessionRestored&&state.selectedStaff&&
-    (Object.keys(state.entryData).length>0||Object.keys(state.entryDraft).length>0);
-  const historyRestored=hasSessionWork?false:restoreLatestHistory(todayStr);
-
-  if((hasSessionWork||historyRestored)&&state.selectedStaff){
-    document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
-    document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
-    if(hasSessionWork&&state.currentScreen===4&&state.currentPropertyIndex>=0&&state.currentPropertyIndex<allProperties.length){
-      openEntry(state.currentPropertyIndex, {stopPropagation:()=>{}}, state.entryReturnScreen);
-    } else {
-      renderPropertyListA();
-      showScreen(9);
-    }
-  } else {
-    updateNav(1);
-  }
-};
-
-// ===== NAVIGATION =====
-function updateNav(n){
-  state.currentScreen=n;
-  const backBtn=document.getElementById('backBtn');
-  if(backBtn) backBtn.style.display='flex';
-  const titles={0:'設定',1:'計量データ入力',2:'担当者選択',3:'物件リスト',4:'データ入力',5:'確認・保存',6:'履歴',7:'メール設定',8:'変換',9:'物件リスト２列'};
-  document.getElementById('headerTitle').textContent=titles[n]||'';
-  const dl=document.getElementById('headerDateLabel');
-  dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
-  // tabs active
-  ['navDate','navStaff','navProps','navPropsA','navHistory','navSettings','navMail','navConvert'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  if(n===0) document.getElementById('navSettings').classList.add('active');
-  else if(n===1) document.getElementById('navDate').classList.add('active');
-  else if(n===2) document.getElementById('navStaff').classList.add('active');
-  else if(n===3||n===5) document.getElementById('navProps').classList.add('active');
-  else if(n===4||n===9) document.getElementById('navPropsA').classList.add('active');
-  else if(n===6) document.getElementById('navHistory').classList.add('active');
-  else if(n===7){ document.getElementById('navMail').classList.add('active'); loadMailSettings(); }
-  else if(n===8) document.getElementById('navConvert').classList.add('active');
-  // enabled/disabled
-  document.getElementById('navStaff').className='nav-tab'+(n===2?' active':'')+(state.date?'':' disabled');
-  document.getElementById('navProps').className='nav-tab'+((n===3||n===5)?' active':'')+(state.selectedStaff?'':' disabled');
-  document.getElementById('navPropsA').className='nav-tab'+((n===4||n===9)?' active':'')+(state.selectedStaff?'':' disabled');
-}
-
-function showScreen(n){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(`screen${n}`).classList.add('active');
-  updateNav(n);
-  saveSession();
-  window.scrollTo(0,0);
-
-  // メール設定画面が表示されたらアドレス一覧を必ず描画（復旧用）
-  if (n === 7) {
-    setTimeout(() => {
-      if (typeof loadMailSettings === 'function') {
-        loadMailSettings();
-      }
-    }, 50);
-  }
-}
-
-function goBack(){
-  if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
-  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7){ showScreen(state.prevScreen||1); return; }
-  if(state.currentScreen===4){ showScreen(state.entryReturnScreen||9); return; }
-  if(state.currentScreen>1) showScreen(state.currentScreen-1);
-}
-
-function navTo(n){
-  if(n===2&&!state.date) return;
-  if((n===3||n===9)&&!state.selectedStaff) return;
-  if(n===0){ state.prevScreen=state.currentScreen; renderSettingsStaff(); showScreen(0); return; }
-  if(n===1){ showScreen(1); return; }
-  if(n===2){ renderStaffList(); showScreen(2); return; }
-  if(n===3){ renderPropertyList(); showScreen(3); return; }
-  if(n===9){ renderPropertyListA(); showScreen(9); return; }
-  if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
-  if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
-  if(n===8){ showScreen(8); initConvertScreen(); return; }
-}
-
-// ===== SCREEN 1→2 =====
-function goToScreen2(){
-  const val=document.getElementById('dateInput').value;
-  if(!val){alert('日付を選択してください');return;}
-  const d=new Date(val+'T00:00:00');
-  state.date=val; state.dayName=DAYS_JP[d.getDay()];
-  saveSession();
-  document.getElementById('screen2sub').textContent=`${val}（${state.dayName}曜日）の担当者を選んでください`;
-  renderStaffList(); showScreen(2);
-}
-
-function renderStaffList(){
-  const c=document.getElementById('staffList'); c.innerHTML='';
-  staffList.forEach(name=>{
-    const saved=getSavedOrder(name,state.dayName);
-    const badge=saved?`<span class="order-saved-badge">順番保存済み</span>`:'';
-    const div=document.createElement('div');
-    div.className='staff-item'+(state.selectedStaff===name?' selected':'');
-    div.innerHTML=`<div><span class="staff-name" style="font-size:16px;font-weight:500">${name}</span>${badge}</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="staff-check">✓</span>
-        <button class="btn btn-danger btn-sm" onclick="removeStaff('${name}',event)">削除</button>
-      </div>`;
-    div.onclick=e=>{if(e.target.tagName!=='BUTTON'){state.selectedStaff=name;saveSession();renderStaffList();}};
-    c.appendChild(div);
-  });
-}
-
-function addStaff(){
-  const inp=document.getElementById('newStaffName');const name=inp.value.trim();
-  if(!name||staffList.includes(name)){alert(name?'同じ名前が既に登録されています':'名前を入力してください');return;}
-  staffList.push(name);saveJSON(LS_STAFF,staffList);inp.value='';renderStaffList();
-}
-function removeStaff(name,e){
-  e.stopPropagation();if(!confirm(`「${name}」を削除しますか？`))return;
-  staffList=staffList.filter(s=>s!==name);saveJSON(LS_STAFF,staffList);
-  if(state.selectedStaff===name)state.selectedStaff='';renderStaffList();
-}
-
-// ===== SCREEN 2→3 =====
-function goToScreen3(){
-  if(!state.selectedStaff){alert('担当者を選択してください');return;}
-  state.entryData={};state.entryDraft={};state.entryOrder=[];state.customOrder=null;
-  saveSession();
-  document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
-  document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
-  renderPropertyListA();showScreen(9);
-}
-
-const PROPERTY_NAME_READINGS={
-  'あみやき亭 伊賀上野店':'あみやきていいがうえのてん',
-  '厚板プレス工業 伊賀工場':'あついたぷれすこうぎょういがこうじょう',
-  '飯田金属':'いいだきんぞく','伊賀市小学校給食センター':'いがししょうがっこうきゅうしょくせんたー',
-  '近鉄日本鉄道伊賀神戸駅':'きんてつにほんてつどういがかんべえき','伊賀の街':'いがのまち',
-  'イオンタウン伊賀':'いおんたうんいが','魚民（㈱モンテローザ）':'うおたみもんてろーざ',
-  '上野法務合同庁舎':'うえのほうむごうどうちょうしゃ','KFC イオンタウン伊賀上野店':'けーえふしーいおんたうんいがうえのてん',
-  '旧上野庁舎 SAKAKURA BASE':'きゅううえのちょうしゃさかくらべーす',
-  '株式会社クスリのアオキ 伊賀上野店':'くすりのあおきいがうえのてん','株式会社クスリのアオキ 平野東店':'くすりのあおきひらのひがしてん',
-  'コカ・コーラボトラーズ':'こかこーらぼとらーず','コメリ':'こめり',
-  '古本市場 上野店':'ふるほんいちばうえのてん','三重県伊賀庁舎':'みえけんいがちょうしゃ','すき家':'すきや',
-  'セカンドストリート伊賀小田店':'せかんどすとりーといがおたてん','創価学会':'そうかがっかい',
-  'チョーヤ梅酒伊賀上野工場':'ちょーやうめしゅいがうえのこうじょう','津地方裁判所伊賀支部':'つちほうさいばんしょいがしぶ',
-  'ナフコ伊賀店（㈱アレックス）':'なふこいがてんあれっくす','（株）西松屋チェーン 伊賀上野店':'にしまつやちぇーんいがうえのてん',
-  'クラギ（株）農業屋 伊賀上野店':'のうぎょうやいがうえのてん','びっくりドンキー 伊賀上野店':'びっくりどんきーいがうえのてん',
-  'ほっともっと 伊賀桑町店':'ほっともっといがくわまちてん','ほっともっと 伊賀白鳳店':'ほっともっといがはくほうてん',
-  'マックスバリュ上野店':'まっくすばりゅうえのてん','マックスバリュ佐那具店':'まっくすばりゅさなぐてん',
-  'やさいの戸島屋':'やさいのとじまや','ライフテクノサービス':'らいふてくのさーびす','LA・MU':'らむー',
-  '7.11 伊賀忍者市駅南店':'せぶんいがにんじゃしえきみなみてん','7.11 伊賀東条店':'せぶんいがとうじょうてん',
-  '7.11 伊賀平野北谷店':'せぶんいがひらのきただにてん','7.11 伊賀平野東町店':'せぶんいがひらのひがしまちてん',
-  '7.11 伊賀緑ヶ丘東町店':'せぶんいがみどりがおかひがしまちてん','7.11 伊賀緑ヶ丘本町店':'せぶんいがみどりがおかほんまちてん',
-  '7.11 伊賀四十九町北店':'せぶんいがしじゅくちょうきたてん'
-};
-const PROPERTY_NAME_COLLATOR=new Intl.Collator('ja',{sensitivity:'base',numeric:true});
-
-function sortPropertiesByReading(props){
-  return props.sort((a,b)=>PROPERTY_NAME_COLLATOR.compare(
-    PROPERTY_NAME_READINGS[a.name]||a.name,
-    PROPERTY_NAME_READINGS[b.name]||b.name
-  ));
-}
-
-function getPropertyListABase(){
-  const saved=getSavedOrder(state.selectedStaff,state.dayName);
-  const props=[...allProperties];
-  if(saved&&saved.length){
-    const names=[...saved,...props.map(prop=>prop.name).filter(name=>!saved.includes(name))];
-    return props.sort((a,b)=>names.indexOf(a.name)-names.indexOf(b.name));
-  }
-  return sortPropertiesByReading(props);
-}
-
-function getSortedProps(){
-  const saved=getSavedOrder(state.selectedStaff,state.dayName);
-  let props=[...allProperties];
-  if(saved&&saved.length){
-    const names=[...saved,...props.map(p=>p.name).filter(n=>!saved.includes(n))];
-    props.sort((a,b)=>names.indexOf(a.name)-names.indexOf(b.name));
-  } else {
-    sortPropertiesByReading(props);
-  }
-  return props;
-}
-
-function renderPropertyListA(){
-  const c=document.getElementById('propertyListA');
-  if(!c) return;
-  c.innerHTML='';
-  const baseProps=getPropertyListABase();
-  const entered=state.entryOrder.map(name=>baseProps.find(prop=>prop.name===name)).filter(Boolean);
-  const remaining=baseProps.filter(prop=>!state.entryOrder.includes(prop.name));
-  const props=[...entered,...remaining];
-  const enteredCount=Object.keys(state.entryData).length;
-  document.getElementById('propCountA').textContent=props.length+'件';
-  document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}　入力済み ${enteredCount}件`;
-  const badge=document.getElementById('entryCountBadgeA');
-  if(enteredCount){
-    badge.textContent='✓ '+enteredCount+' / '+props.length;
-    badge.style.display='inline-block';
-  } else {
-    badge.style.display='none';
-  }
-  props.forEach(prop=>{
-    const idx=allProperties.indexOf(prop);
-    const done=!!state.entryData[prop.name];
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.className=done?'done':'';
-    btn.textContent=prop.name;
-    btn.onclick=event=>openEntry(idx,event,9);
-    c.appendChild(btn);
-  });
-}
-
-function autoSavePropertyListAOrder(){
-  if(!state.selectedStaff||!state.dayName) return;
-  const baseProps=getPropertyListABase();
-  const enteredNames=state.entryOrder.filter(name=>baseProps.some(prop=>prop.name===name));
-  const remainingNames=baseProps.map(prop=>prop.name).filter(name=>!enteredNames.includes(name));
-  setSavedOrder(state.selectedStaff,state.dayName,[...enteredNames,...remainingNames]);
-}
-
-function renderPropertyList(){
-  const c=document.getElementById('propertyList'); c.innerHTML='';
-  const hint=document.getElementById('sortHint');
-
-  let displayList;
-  if(state.customOrder){
-    displayList=state.customOrder.map(n=>allProperties.find(p=>p.name===n)).filter(Boolean);
-    const missing=allProperties.filter(p=>!state.customOrder.includes(p.name));
-    displayList=[...displayList,...missing];
-  } else {
-    const baseProps=getSortedProps();
-    const entered=state.entryOrder.map(n=>baseProps.find(p=>p.name===n)).filter(Boolean);
-    const remaining=baseProps.filter(p=>!state.entryOrder.includes(p.name));
-    displayList=[...entered,...remaining];
-  }
-
-  const hasSaved=!!getSavedOrder(state.selectedStaff,state.dayName);
-  if(state.customOrder){
-    hint.textContent='↕ ドラッグで並び替え中';
-  } else if(state.entryOrder.length>0){
-    hint.textContent='✅ 入力済みが上に並んでいます';
-  } else if(hasSaved){
-    hint.textContent='📌 前回の入力順で表示中';
-  } else {
-    hint.textContent='五十音順で表示中';
-  }
-  renderDaySaveSingle();
-
-  // Update entry count badge
-  const enteredCount = Object.keys(state.entryData).length;
-  document.getElementById('propCount').textContent = allProperties.length + '件';
-  const badge = document.getElementById('entryCountBadge');
-  if(enteredCount > 0){
-    badge.textContent = '✅ ' + enteredCount + ' / ' + allProperties.length;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-
-  displayList.forEach((prop,di)=>{
-    const done=!!state.entryData[prop.name];
-    const idx=allProperties.indexOf(prop);
-    const div=document.createElement('div');
-    div.className='prop-card'+(done?' done':'');
-    div.id=`propcard_${idx}`;
-    div.dataset.propname=prop.name;
-
-    // Day dots
-    const dayDots=ORDERED_DAYS.map(d=>{
-      const assigned=prop.days.includes(d);
-      const isToday=d===state.dayName;
-      if(!assigned) return `<span class="day-dot" style="opacity:0.25">${d}</span>`;
-      return `<span class="day-dot${isToday?' today':''}">${d}</span>`;
-    }).join('');
-
-    // Field editor rows for body
-    const fieldRows=prop.fields.map((f,fi)=>`
-      <div class="field-edit-row">
-        <div class="field-name-wrap">
-          <input type="text" value="${f.label}" placeholder="項目名" onfocus="showFieldDropdown(this)"
-            oninput="filterFieldDropdown(this);updateFL(${idx},${fi},this.value)"
-            onchange="updateFL(${idx},${fi},this.value)" onblur="hideFieldDropdown(this)">
-          <div class="field-dropdown"></div>
-        </div>
-        <select onchange="updateFU(${idx},${fi},this.value)">
-          <option value="袋" ${f.unit==='袋'?'selected':''}>袋</option>
-          <option value="kg" ${f.unit==='kg'?'selected':''}>kg</option>
-        </select>
-        <button class="btn btn-danger btn-sm" onclick="removeFieldInline(${idx},${fi},event)">✕</button>
-      </div>`).join('');
-
-    // Day checkboxes for body
-    const dayCBs=ORDERED_DAYS.map(d=>{
-      const ch=prop.days.includes(d);
-      const isToday=d===state.dayName;
-      return `<label class="day-check-label${ch?' checked':''}${isToday?' today-day':''}" onclick="toggleDayInline(${idx},'${d}',this,event)">
-        <input type="checkbox" ${ch?'checked':''}>${d}</label>`;
-    }).join('');
-
-    div.innerHTML=`
-      <div class="prop-card-header" onclick="togglePropCard(${idx})">
-        <button class="drag-handle" data-propname="${prop.name.replace(/"/g,'&quot;')}" ontouchstart="dragHandleStart(event,this)" onmousedown="dragHandleStart(event,this)">≡</button>
-        <input type="number" class="prop-order-input" value="${di+1}" min="1" max="${displayList.length}"
-          onclick="event.stopPropagation()"
-          onkeydown="if(event.key==='Enter'){event.stopPropagation();movePropToPos(${di},this);this.blur();}"
-          onblur="resetPropOrderInput(${di},this)"
-          onfocus="event.stopPropagation();this.select()">
-        <div class="prop-info">
-          <div class="prop-name">${prop.name}</div>
-          <div class="prop-days">${dayDots}</div>
-        </div>
-        <div class="prop-right">
-          <span class="prop-status-icon">${done?'✅':'▶'}</span>
-          <span class="prop-toggle" id="ptoggle_${idx}">▼</span>
-        </div>
-      </div>
-      <div class="prop-card-body" id="pbody_${idx}">
-        <div class="fields-label">収集曜日（今日の曜日が青）</div>
-        <div class="day-checkboxes">${dayCBs}</div>
-        <div class="fields-label">入力項目</div>
-        <div id="pfields_${idx}">${fieldRows}</div>
-        <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="margin-top:4px">＋ 項目追加</button>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="openEntry(${idx},event)">${done?'✏️ 修正する':'📝 入力する'}</button>
-        </div>
-        <div style="margin-top:8px">
-          <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
-        </div>
-      </div>`;
-    c.appendChild(div);
-  });
-}
-
-function focusPropCard(idx){
-  // フォーカス機能：指定した物件カードを開いた状態で、表示領域の上部に来るようにスクロール
-  const card = document.getElementById(`propcard_${idx}`);
-  if(!card) return;
-  const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
-  const top = card.getBoundingClientRect().top + window.scrollY - headerH - 8;
-  window.scrollTo({ top, behavior: 'smooth' });
-}
-
-function togglePropCard(idx){
-  const body=document.getElementById(`pbody_${idx}`);
-  const arrow=document.getElementById(`ptoggle_${idx}`);
-  const open=body.classList.contains('open');
-  body.classList.toggle('open',!open);
-  arrow.textContent=open?'▼':'▲';
-
-  if(!open){
-    // 開いたらフォーカス（表示領域上部へスクロール）
-    setTimeout(() => focusPropCard(idx), 60);
-  }
-}
-
-function updatePropOrder(idx,val){
-  allProperties[idx].order=val?parseInt(val):999;
-  saveJSON(LS_PROPERTIES,allProperties);
-}
-
-function toggleDayInline(idx,day,label,event){
-  event.preventDefault(); event.stopPropagation();
-  const prop=allProperties[idx];
-  if(prop.days.includes(day)){prop.days=prop.days.filter(d=>d!==day);label.classList.remove('checked');}
-  else{prop.days.push(day);label.classList.add('checked');}
-  prop.days.sort((a,b)=>ORDERED_DAYS.indexOf(a)-ORDERED_DAYS.indexOf(b));
-  saveJSON(LS_PROPERTIES,allProperties);
-  // Update dots in header
-  const card=document.getElementById(`propcard_${idx}`);
-  if(card){
-    const dotsEl=card.querySelector('.prop-days');
-    if(dotsEl){
-      dotsEl.innerHTML=ORDERED_DAYS.map(d=>{
-        const assigned=allProperties[idx].days.includes(d);
-        const isToday=d===state.dayName;
-        if(!assigned) return `<span class="day-dot" style="opacity:0.25">${d}</span>`;
-        return `<span class="day-dot${isToday?' today':''}">${d}</span>`;
-      }).join('');
-    }
-  }
-}
-
-function updateFL(propIdx,fieldIdx,val){allProperties[propIdx].fields[fieldIdx].label=val;saveJSON(LS_PROPERTIES,allProperties);}
-function updateFU(propIdx,fieldIdx,val){allProperties[propIdx].fields[fieldIdx].unit=val;saveJSON(LS_PROPERTIES,allProperties);}
-
-function removeFieldInline(propIdx,fieldIdx,event){
-  event.stopPropagation();
-  allProperties[propIdx].fields.splice(fieldIdx,1);
-  saveJSON(LS_PROPERTIES,allProperties);
-  renderPropertyList();
-  document.getElementById(`pbody_${propIdx}`).classList.add('open');
-  document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
-  setTimeout(() => focusPropCard(propIdx), 80);
-}
-
-function addFieldInline(propIdx,event){
-  event.stopPropagation();
-  allProperties[propIdx].fields.push({label:'',unit:'袋'});
-  saveJSON(LS_PROPERTIES,allProperties);
-  renderPropertyList();
-  document.getElementById(`pbody_${propIdx}`).classList.add('open');
-  document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
-  setTimeout(() => focusPropCard(propIdx), 80);
-}
-
-function deleteProp(idx,event){
-  event.stopPropagation();
-  if(!confirm(`「${allProperties[idx].name}」を削除しますか？`))return;
-  allProperties.splice(idx,1);
-  saveJSON(LS_PROPERTIES,allProperties);
-  renderPropertyList();
-}
-
-// ===== OPEN ENTRY =====
-function findFieldIndexByLabelUnit(prop,label,unit){
-  return prop.fields.findIndex(field=>field.label===label&&field.unit===unit);
-}
-
-function findFieldIndexByKey(prop,key){
-  return prop.fields.findIndex(field=>fieldKey(field)===key);
-}
-
-function getSakakuraPair(prop,fieldIdx){
-  if(prop.name!==SAKAKURA_PROPERTY_NAME) return null;
-  const currentKey=fieldKey(prop.fields[fieldIdx]);
-  const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===currentKey||item.kg===currentKey||item.nonburn===currentKey);
-  if(!pair) return null;
-  const bagIdx=findFieldIndexByKey(prop,pair.bag);
-  const kgIdx=findFieldIndexByKey(prop,pair.kg);
-  const nonburnIdx=findFieldIndexByKey(prop,pair.nonburn);
-  if(bagIdx===-1||kgIdx===-1||nonburnIdx===-1) return null;
-  return {pairKey:`sakakura_${pair.bag}_${pair.kg}_${pair.nonburn}`,bagIdx,kgIdx,nonburnIdx,horizontal:true};
-}
-
-function getEntryValue(existing,field,propName=''){
-  const key=fieldKey(field);
-  return existing[key]!==undefined ? existing[key] : getFieldValue(existing,field,propName);
-}
-
-function getLastValueHint(lastSaved,field,propName=''){
-  const lastValue=lastSaved&&lastSaved.data ? getFieldValue(lastSaved.data,field,propName) : '';
-  if(lastValue==='') return '';
-  return `<div class="last-val-hint">前回（${lastSaved.date}・${lastSaved.staffName}）：<span>${lastValue} ${field.unit}</span></div>`;
-}
-
-function bindEntryInput(prop,input,key){
-  input.addEventListener('input', () => {
-    if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
-    state.entryDraft[prop.name][key] = input.value;
-    applyAutoKg(prop,key,input.value);
-    saveSession();
-  });
-}
-
-function bindMultiplierControl(prop,container,input,key){
-  const multiplierSelect=container.querySelector(`select.auto-multiplier-select[data-source-key="${key}"]`);
-  if(multiplierSelect){
-    multiplierSelect.addEventListener('change', () => {
-      setAutoMultiplier(prop,key,multiplierSelect.value);
-      applyAutoKg(prop,key,input.value);
-      saveSession();
-    });
-  }
-}
-
-function openEntry(idx,event,returnScreen){
-  if(event) event.stopPropagation();
-  state.entryReturnScreen=returnScreen||3;
-  state.currentPropertyIndex=idx;
-  const prop=allProperties[idx];
-  document.getElementById('propEntryTitle').textContent=prop.name;
-  document.getElementById('clearPropertyButton').style.display=state.entryReturnScreen===9?'none':'block';
-  const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
-  const lastSaved=getLastData(prop.name);
-  const c=document.getElementById('inputFields'); c.innerHTML='';
-  c.classList.toggle('sakakura-entry-grid',prop.name===SAKAKURA_PROPERTY_NAME);
-  const renderedPairs=new Set();
-  prop.fields.forEach((field,fieldIdx)=>{
-    const specialPair=getSakakuraPair(prop,fieldIdx);
-    if(specialPair){
-      if(renderedPairs.has(specialPair.pairKey)) return;
-      renderedPairs.add(specialPair.pairKey);
-
-      const bagField=prop.fields[specialPair.bagIdx];
-      const kgField=prop.fields[specialPair.kgIdx];
-      const nonburnField=prop.fields[specialPair.nonburnIdx];
-      const bagKey=fieldKey(bagField);
-      const kgKey=fieldKey(kgField);
-      const nonburnKey=fieldKey(nonburnField);
-      const bagInputId=`ef_${specialPair.bagIdx}`;
-      const kgInputId=`ef_${specialPair.kgIdx}`;
-      const nonburnInputId=`ef_${specialPair.nonburnIdx}`;
-      const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
-      const div=document.createElement('div');
-      div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row horizontal-combined">
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
-          </div>
-          ${multiplierHtml}
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span></div>
-            ${getLastValueHint(lastSaved,kgField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
-          </div>
-        </div>
-        <div class="sakakura-nonburn-line">
-          <div></div>
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${nonburnField.label}<span class="field-unit">（kg）</span></div>
-            ${getLastValueHint(lastSaved,nonburnField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${nonburnInputId}" data-field-key="${nonburnKey}" placeholder="0" value="${getEntryValue(existing,nonburnField,prop.name)}">
-          </div>
-          <div></div>
-        </div>`;
-      c.appendChild(div);
-      const bagInput=div.querySelector(`#${bagInputId}`);
-      const kgInput=div.querySelector(`#${kgInputId}`);
-      const nonburnInput=div.querySelector(`#${nonburnInputId}`);
-      bindEntryInput(prop,bagInput,bagKey);
-      bindEntryInput(prop,kgInput,kgKey);
-      bindEntryInput(prop,nonburnInput,nonburnKey);
-      bindMultiplierControl(prop,div,bagInput,bagKey);
-      return;
-    }
-
-    const bagIdx=findFieldIndexByLabelUnit(prop,field.label,'袋');
-    const kgIdx=findFieldIndexByLabelUnit(prop,field.label,'kg');
-    if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
-      const pairKey=`${field.label}__袋kg`;
-      if(renderedPairs.has(pairKey)) return;
-      renderedPairs.add(pairKey);
-
-      const bagField=prop.fields[bagIdx];
-      const kgField=prop.fields[kgIdx];
-      const bagKey=fieldKey(bagField);
-      const kgKey=fieldKey(kgField);
-      const bagInputId=`ef_${bagIdx}`;
-      const kgInputId=`ef_${kgIdx}`;
-      const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
-      const kgNote=getAutoKgNote(prop,kgField);
-      const kgNoteHtml=kgNote ? `<span class="field-unit">${kgNote}</span>` : '';
-      const div=document.createElement('div');
-      div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row${multiplierHtml?'':' no-multiplier'}">
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
-          </div>
-          ${multiplierHtml}
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
-            ${getLastValueHint(lastSaved,kgField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
-          </div>
-        </div>`;
-      c.appendChild(div);
-      const bagInput=div.querySelector(`#${bagInputId}`);
-      const kgInput=div.querySelector(`#${kgInputId}`);
-      bindEntryInput(prop,bagInput,bagKey);
-      bindEntryInput(prop,kgInput,kgKey);
-      bindMultiplierControl(prop,div,bagInput,bagKey);
-      return;
-    }
-
-    const key=fieldKey(field);
-    const inputId=`ef_${fieldIdx}`;
-    const div=document.createElement('div');
-    div.className='field-group card';
-    const autoKgNote=getAutoKgNote(prop,field);
-    const noteHtml=autoKgNote ? `<span class="field-unit">${autoKgNote}</span>` : '';
-    div.innerHTML=`<div class="field-label">${field.label}<span class="field-unit">（${field.unit}）</span>${noteHtml}</div>
-      ${getLastValueHint(lastSaved,field,prop.name)}
-      <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-        id="${inputId}" data-field-key="${key}" placeholder="0" value="${getEntryValue(existing,field,prop.name)}">
-      ${getAutoMultiplierControl(prop,key)}`;
-    c.appendChild(div);
-    const input = div.querySelector('input.num-input');
-    bindEntryInput(prop,input,key);
-    bindMultiplierControl(prop,div,input,key);
-  });
-  showScreen(4);
-}
-
-function savePropertyData(){
-  const prop=allProperties[state.currentPropertyIndex];
-  const data={}; let hasVal=false;
-  prop.fields.forEach((f,fi)=>{
-    const v=document.getElementById(`ef_${fi}`).value;
-    data[fieldKey(f)]=v!==''?parseFloat(v):'';
-    if(v!=='')hasVal=true;
-  });
-  if(!hasVal&&!confirm('値が入力されていません。空のまま保存しますか？'))return;
-  state.entryData[prop.name]=data;
-  if(state.entryDraft) delete state.entryDraft[prop.name];
-  setLastData(prop.name,data,state.selectedStaff,state.date);
-  if(!state.entryOrder.includes(prop.name)) state.entryOrder.push(prop.name);
-  const returnScreen=state.entryReturnScreen||9;
-  if(returnScreen===9) autoSavePropertyListAOrder();
-  saveSession();
-  saveHistory(state.date, state.selectedStaff, state.entryData);
-  const savedName = prop.name;
-  if(returnScreen===9){
-    renderPropertyListA();showScreen(9);
-  } else {
-    renderPropertyList();showScreen(3);
-  }
-  if(returnScreen===3) setTimeout(()=>{
-    const cards = document.querySelectorAll('.prop-card');
-    let savedCard = null;
-    cards.forEach(c=>{ if(c.dataset.propname===savedName) savedCard=c; });
-    if(savedCard){
-      const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
-      const top = savedCard.getBoundingClientRect().top + window.scrollY - headerH - 8;
-      window.scrollTo({ top, behavior:'instant' });
-      const inp = savedCard.querySelector('.prop-order-input');
-      if(inp){ inp.focus(); inp.select(); }
-    }
-  }, 80);
-}
-
-function clearPropertyData(){
-  const prop=allProperties[state.currentPropertyIndex];
-  if(!state.entryData[prop.name]&&!confirm('入力データがありません。戻りますか？'))return;
-  if(state.entryData[prop.name]&&!confirm(`「${prop.name}」の入力データを消去して戻りますか？`))return;
-  delete state.entryData[prop.name];
-  if(state.entryDraft) delete state.entryDraft[prop.name];
-  state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
-  saveSession();
-  if((state.entryReturnScreen||9)===9){ renderPropertyListA();showScreen(9); }
-  else { renderPropertyList();showScreen(3); }
-}
-
-// ===== 曜日別・保存（シングルボタン） =====
-function renderDaySaveSingle(){
-  const panel = document.getElementById('daySaveSingle');
-  const btn   = document.getElementById('daySaveBtn');
-  const note  = document.getElementById('daySavedNote');
-  if(!panel||!btn) return;
-  if(!state.selectedStaff || !state.dayName){ panel.style.display='none'; return; }
-  panel.style.display='flex';
-  btn.textContent = '📌 ' + state.dayName + '曜日の順番として保存';
-  const saved = !!getSavedOrder(state.selectedStaff, state.dayName);
-  note.textContent = saved ? '（保存済み・上書き）' : '';
-}
-
-function saveTodayOrder(){
-  if(!state.selectedStaff){ alert('担当者が選択されていません'); return; }
-  const day = state.dayName;
-  const base = getSortedProps();
-  const ordered = [...state.entryOrder,
-    ...base.filter(p=>!state.entryOrder.includes(p.name)).map(p=>p.name)];
-  setSavedOrder(state.selectedStaff, day, ordered);
-  const note = document.getElementById('daySavedNote');
-  if(note){ note.textContent='✓ 保存しました'; setTimeout(()=>{ note.textContent='（保存済み・上書き）'; },1500); }
-}
-
-// ===== SAVE ORDER =====
-
-
-
-// ===== SCREEN 3→5 =====
-function goToScreen5(){
-  // Auto-save to history when reaching confirm screen
-  if(Object.keys(state.entryData).length>0){
-    saveHistory(state.date, state.selectedStaff, state.entryData);
-  }
-  const entered=Object.keys(state.entryData).length;
-  document.getElementById('screen5sub').textContent=`${state.date}（${state.dayName}曜日）　担当：${state.selectedStaff}　${entered}/${allProperties.length}件入力済み`;
-  const c=document.getElementById('summaryContent'); c.innerHTML='';
-  if(!entered){c.innerHTML='<div class="empty-state"><div>まだ入力データがありません</div></div>';return;}
-  let html='<div class="card"><table class="summary-table"><thead><tr><th>物件</th><th>項目</th><th>値</th><th>単位</th></tr></thead><tbody>';
-  const sorted=getSortedProps();
-  sorted.forEach(prop=>{
-    const data=state.entryData[prop.name];if(!data)return;
-    let nameShown=false;
-    prop.fields.forEach((f,fi)=>{
-      const val=getFieldValue(data,f,prop.name);
-      const display=val!==''&&val!==undefined?val:'-';
-      const nameCell=nameShown?'':`<b>${prop.name}</b>`;
-      nameShown=true;
-      html+=`<tr><td style="padding:4px 6px;vertical-align:top">${nameCell}</td><td style="padding:4px 6px">${f.label}</td><td style="text-align:right;font-weight:600;padding:4px 6px">${display}</td><td style="padding:4px 6px">${f.unit}</td></tr>`;
-    });
-  });
-  html+='</tbody></table></div>';
-  c.innerHTML=html;
-  showScreen(5);
-}
-
-function exportText(){
-  const props = getSortedProps();
-  const entered = props.filter(p => state.entryData[p.name]);
-  if(entered.length === 0){
-    alert('まだ入力データがありません。');
-    return;
-  }
-  const d = state.date ? state.date.replace(/-/g,'/') : '日付未設定';
-  let lines = [];
-  lines.push('■ 計量データ　' + d + '　' + (state.dayName||'') );
-  lines.push('　担当：' + (state.selectedStaff||'未設定'));
-  lines.push('');
-  entered.forEach((prop, idx) => {
-    const data = state.entryData[prop.name];
-    lines.push((idx+1) + '．' + prop.name);
-    prop.fields.forEach(f => {
-      const fieldValue=getFieldValue(data,f,prop.name);
-      const val = fieldValue !== '' ? fieldValue : '－';
-      lines.push('　　' + f.label + '：' + val + ' ' + f.unit);
-    });
-    lines.push('');
-  });
-  lines.push('━━━━━━━━━━━━━━━━━');
-  lines.push('入力件数：' + entered.length + '件　/ 全' + props.length + '件');
-  lines.push('出力：' + new Date().toLocaleString('ja-JP'));
-  const text = lines.join('\n');
-  const fname = '計量データ_' + (state.date||'').replace(/-/g,'') + '_' + (state.selectedStaff||'未設定') + '.txt';
-  const blob = new Blob(['\uFEFF' + text], {type:'text/plain;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fname;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
-}
-
-function exportXlsx(){
-  const wb=XLSX.utils.book_new();
-  const rows=[['物件名','項目','値','単位','日付','担当者']];
-  getSortedProps().forEach(prop=>{
-    const data=state.entryData[prop.name];if(!data)return;
-    prop.fields.forEach(f=>rows.push([prop.name,f.label,getFieldValue(data,f,prop.name)!==''?getFieldValue(data,f,prop.name):'',f.unit,state.date||'',state.selectedStaff||'']));
-  });
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws,'計量データ');
-  const safeDate = (state.date || 'nodate').replace(/-/g,'');
-  const safeStaff = state.selectedStaff || '未設定';
-  XLSX.writeFile(wb,`計量データ_${safeDate}_${safeStaff}.xlsx`);
-}
-
-// ===== CONVERT SCREEN =====
-function initConvertScreen(){
-  const t = new Date();
-  const today = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-  const inp = document.getElementById('convertDateInput');
-  inp.value = today;
-  loadConvertFromHistory(today);
-}
-
-function loadConvertFromHistory(dateVal){
-  const resultEl = document.getElementById('convertHistResult');
-  if(!dateVal){ resultEl.innerHTML=''; return; }
-  const records = getAllHistory().filter(h=>h.date===dateVal);
-  if(records.length===0){
-    resultEl.innerHTML=`<div style="color:#888;font-size:13px;padding:6px 0">この日付の履歴はありません。<br>テキストファイルから変換してください。</div>`;
-    return;
-  }
-  // 複数担当がある場合はセレクタ表示
-  let html='';
-  if(records.length>1){
-    html+=`<div style="font-size:13px;margin-bottom:8px;color:#555">担当者を選択：</div>`;
-    html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
-    records.forEach((r,i)=>{
-      const cnt=Object.keys(r.entryData).length;
-      html+=`<button class="btn btn-secondary btn-sm" onclick="showConvertPreview(${i})" id="convBtn_${i}">${r.staffName}（${cnt}件）</button>`;
-    });
-    html+=`</div>`;
-  }
-  html+=`<div id="convertPreviewWrap"></div>`;
-  resultEl.innerHTML=html;
-  // 1件だけなら自動表示
-  window._convertRecords=records;
-  if(records.length===1) showConvertPreview(0);
-}
-
-function showConvertPreview(idx){
-  const records=window._convertRecords||[];
-  const rec=records[idx]; if(!rec) return;
-  // ボタンのハイライト
-  records.forEach((_,i)=>{
-    const b=document.getElementById(`convBtn_${i}`);
-    if(b) b.style.background=i===idx?'#000':''  ;
-    if(b) b.style.color=i===idx?'white':'';
-  });
-  const propNames=Object.keys(rec.entryData);
-  let html=`<div style="font-size:13px;margin-bottom:8px;color:#555">📋 ${rec.date}　${rec.staffName}　${propNames.length}件</div>`;
-  html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html+='<tr style="background:#ddd"><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #ccc">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">単位</th></tr>';
-  propNames.forEach(name=>{
-    const data=rec.entryData[name];
-    const prop=allProperties.find(p=>p.name===name);
-    if(!prop) return;
-    prop.fields.forEach((f,fi)=>{
-      const fieldValue=getFieldValue(data,f,name);
-      const val=fieldValue!==''?fieldValue:'－';
-      html+=`<tr style="background:${fi%2===0?'#fff':'#f8f8f8'}">`;
-      if(fi===0) html+=`<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #ddd;font-weight:700;vertical-align:top">${name}</td>`;
-      html+=`<td style="padding:5px 8px;border:1px solid #ddd">${f.label}</td><td style="padding:5px 8px;border:1px solid #ddd;text-align:right">${val}</td><td style="padding:5px 8px;border:1px solid #ddd">${f.unit}</td></tr>`;
-    });
-  });
-  html+='</table></div>';
-  html+=`<button class="btn btn-primary" style="margin-top:12px" onclick="convertHistToXlsx(${idx})">📥 Excelで保存（.xlsx）</button>`;
-  document.getElementById('convertPreviewWrap').innerHTML=html;
-}
-
-function convertHistToXlsx(idx){
-  const records=window._convertRecords||[];
-  const rec=records[idx]; if(!rec) return;
-  const wb=XLSX.utils.book_new();
-  const rows=[['物件名','項目','値','単位','日付','担当者']];
-  Object.keys(rec.entryData).forEach(name=>{
-    const data=rec.entryData[name];
-    const prop=allProperties.find(p=>p.name===name);
-    if(!prop) return;
-    prop.fields.forEach(f=>rows.push([name,f.label,getFieldValue(data,f,name)!==''?getFieldValue(data,f,name):'',f.unit,rec.date,rec.staffName]));
-  });
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws,'計量データ');
-  const safeDate = (rec.date || 'nodate').replace(/-/g,'');
-  const safeStaff = rec.staffName || '未設定';
-  XLSX.writeFile(wb,`計量データ_${safeDate}_${safeStaff}.xlsx`);
-}
-
-// ===== TEXT → EXCEL 変換 =====
-let _parsedTxt = null; // {date, staff, props:[{name, fields:[{label,value,unit}]}]}
-
-function loadTxtFile(event){
-  const file = event.target.files[0];
-  const errEl = document.getElementById('txtError');
-  const prevEl = document.getElementById('txtPreview');
-  errEl.style.display='none'; prevEl.style.display='none';
-  _parsedTxt = null;
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      _parsedTxt = parseTxtData(e.target.result);
-      renderTxtPreview(_parsedTxt);
-      prevEl.style.display='block';
-    } catch(err){
-      errEl.textContent = '読み込みエラー：' + err.message;
-      errEl.style.display='block';
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
-}
-
-function parseTxtData(text){
-  // BOM除去
-  text = text.replace(/^\uFEFF/, '');
-  const lines = text.split('\n').map(l=>l.replace(/\r$/,''));
-  let date='', staff='', props=[], curProp=null;
-
-  for(let i=0; i<lines.length; i++){
-    const line = lines[i];
-
-    // 日付行: ■ 計量データ　2026/04/16　木
-    if(line.startsWith('■')){
-      const m = line.match(/(\d{4}\/\d{2}\/\d{2})/);
-      if(m) date = m[1].replace(/\//g,'-');
-      continue;
-    }
-    // 担当行: 　担当：田中
-    if(line.match(/担当[：:]/)){
-      const m = line.match(/担当[：:](.+)/);
-      if(m) staff = m[1].trim();
-      continue;
-    }
-    // 物件行: 1．LA・MU  or 1.LA・MU
-    const propMatch = line.match(/^\d+[．.]\s*(.+)/);
-    if(propMatch){
-      curProp = { name: propMatch[1].trim(), fields: [] };
-      props.push(curProp);
-      continue;
-    }
-    // フィールド行: 　　可燃ごみ：123 kg  or 　　可燃ごみ：－ kg
-    if(curProp && line.match(/[：:]/)){
-      const m = line.match(/^\s+(.+?)[：:](.+?)\s+(\S+)\s*$/);
-      if(m){
-        const label = m[1].trim();
-        const rawVal = m[2].trim();
-        const unit = m[3].trim();
-        // 「－」は空値
-        const value = (rawVal==='－'||rawVal==='-') ? '' : rawVal;
-        curProp.fields.push({label, value, unit});
-      }
-      continue;
-    }
-  }
-  if(!date) throw new Error('日付が見つかりません。正しいテキストファイルか確認してください。');
-  if(props.length===0) throw new Error('物件データが見つかりません。');
-  return {date, staff, props};
-}
-
-function renderTxtPreview(parsed){
-  const tbl = document.getElementById('txtPreviewTable');
-  let html = `<div style="font-size:13px;margin-bottom:8px;color:#555">
-    📅 ${parsed.date}　👤 ${parsed.staff}　🏢 ${parsed.props.length}件
-  </div>`;
-  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<tr style="background:#ddd"><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">物件名</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">項目</th><th style="padding:5px 8px;text-align:right;border:1px solid #ccc">値</th><th style="padding:5px 8px;text-align:left;border:1px solid #ccc">単位</th></tr>';
-  parsed.props.forEach(prop=>{
-    prop.fields.forEach((f, fi)=>{
-      html += `<tr style="background:${fi%2===0?'#fff':'#f8f8f8'}">`;
-      html += fi===0 ? `<td rowspan="${prop.fields.length}" style="padding:5px 8px;border:1px solid #ddd;font-weight:700;vertical-align:top">${prop.name}</td>` : '';
-      html += `<td style="padding:5px 8px;border:1px solid #ddd">${f.label}</td>`;
-      html += `<td style="padding:5px 8px;border:1px solid #ddd;text-align:right">${f.value!==''?f.value:'－'}</td>`;
-      html += `<td style="padding:5px 8px;border:1px solid #ddd">${f.unit}</td></tr>`;
-    });
-  });
-  html += '</table>';
-  tbl.innerHTML = html;
-}
-
-function convertTxtToXlsx(){
-  if(!_parsedTxt){ alert('テキストファイルを先に選択してください。'); return; }
-  const p = _parsedTxt;
-  const wb = XLSX.utils.book_new();
-  const rows = [['物件名','項目','値','単位','日付','担当者']];
-  p.props.forEach(prop=>{
-    prop.fields.forEach(f=>{
-      rows.push([prop.name, f.label, f.value!==''?parseFloat(f.value)||f.value:'', f.unit, p.date, p.staff]);
-    });
-  });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:20},{wch:12},{wch:10},{wch:8},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, ws, '計量データ');
-  const safeDate = (p.date || 'nodate').replace(/-/g,'');
-  const safeStaff = p.staff || '未設定';
-  XLSX.writeFile(wb, `計量データ_${safeDate}_${safeStaff}.xlsx`);
-}
-
-// ===== FIELD DROPDOWN =====
-function showFieldDropdown(input){ renderDropdown(input.parentElement.querySelector('.field-dropdown'),input.value); }
-function filterFieldDropdown(input){ renderDropdown(input.parentElement.querySelector('.field-dropdown'),input.value); }
-function renderDropdown(dd,q){
-  const f=FIELD_SUGGESTIONS.filter(s=>s.includes(q)||q==='');
-  dd.innerHTML=f.map(s=>`<div class="field-dropdown-item" onmousedown="selectSug(event,'${s}')">${s}</div>`).join('');
-  dd.classList.toggle('open',f.length>0);
-}
-function selectSug(event,val){
-  event.preventDefault();
-  const dd=event.target.closest('.field-dropdown');
-  dd.previousElementSibling.value=val;
-  dd.previousElementSibling.dispatchEvent(new Event('change'));
-  dd.classList.remove('open');
-}
-function hideFieldDropdown(input){ setTimeout(()=>{input.parentElement.querySelector('.field-dropdown').classList.remove('open');},200); }
-
-// ===== HISTORY =====
-let displayedHistoryRecords=[];
-
-function isSevenPropertyName(name){
-  return typeof name==='string' && name.startsWith('7.11 伊賀');
-}
-
-function getSevenPropertyOrder(name){
-  const idx=allProperties.findIndex(prop=>prop.name===name);
-  return idx===-1 ? 9999 : idx;
-}
-
-function groupSevenNames(names){
-  const result=[];
-  const sevenNames=[];
-  let sevenInserted=false;
-  names.forEach(name=>{
-    if(isSevenPropertyName(name)){
-      if(!sevenInserted){ result.push('__SEVEN_GROUP__'); sevenInserted=true; }
-      if(!sevenNames.includes(name)) sevenNames.push(name);
-      return;
-    }
-    if(!result.includes(name)) result.push(name);
-  });
-  if(!sevenNames.length) return result;
-  sevenNames.sort((a,b)=>getSevenPropertyOrder(a)-getSevenPropertyOrder(b)||PROPERTY_NAME_COLLATOR.compare(a,b));
-  return result.flatMap(name=>name==='__SEVEN_GROUP__' ? sevenNames : [name]);
-}
-
-function getHistoryPropertiesInEntryOrder(record){
-  const names=Array.isArray(record.entryOrder)&&record.entryOrder.length
-    ? [...record.entryOrder]
-    : Object.keys(record.entryData||{});
-  Object.keys(record.entryData||{}).forEach(name=>{
-    if(!names.includes(name)) names.push(name);
-  });
-  return groupSevenNames(names).map(name=>allProperties.find(prop=>prop.name===name)).filter(Boolean);
-}
-
-function checkPastData(dateVal){
-  const banner=document.getElementById('pastDataBanner');
-  const entries=document.getElementById('pastDataEntries');
-  if(!dateVal){ banner.style.display='none'; return; }
-  const hist=getAllHistory().filter(h=>h.date===dateVal);
-  if(!hist.length){ banner.style.display='none'; return; }
-  const names=hist.map(h=>`${h.staffName}（${Object.keys(h.entryData).length}件）`).join('、');
-  entries.textContent=`担当：${names}`;
-  banner.style.display='block';
-  state._histFilterDate=dateVal;
-}
-
-function goToHistoryForDate(){
-  state._histFilterDate=document.getElementById('dateInput').value;
-  renderHistory(state._histFilterDate);
-  showScreen(6);
-}
-
-function renderHistory(filterDate){
-  const c=document.getElementById('historyList'); c.innerHTML='';
-  let hist=getAllHistory();
-  if(filterDate) hist=hist.filter(h=>h.date===filterDate);
-  displayedHistoryRecords=hist;
-  if(!hist.length){
-    c.innerHTML='<div class="empty-state"><div class="icon">📭</div><div>履歴がありません</div></div>';
-    return;
-  }
-  hist.forEach((record,ri)=>{
-    const d=new Date(record.date+'T00:00:00');
-    const dayName=DAYS_JP[d.getDay()];
-    const enteredCount=Object.keys(record.entryData).length;
-    const mailButtonLabel=isHistoryMailSent(record)?'✉️ 送信済み':'✉️ メールで送信';
-    const div=document.createElement('div');
-    div.className='history-item';
-    // Build detail table
-    let tableRows='';
-    const sorted=getHistoryPropertiesInEntryOrder(record);
-    sorted.forEach(prop=>{
-      const data=record.entryData[prop.name]; if(!data)return;
-      let nameShown=false;
-      prop.fields.forEach((f,fi)=>{
-        const val=getFieldValue(data,f,prop.name);
-        if(val===''||val===undefined)return;
-        const nameCell=nameShown?'':`<b>${prop.name}</b>`;
-        nameShown=true;
-        tableRows+=`<tr><td style="padding:4px 6px;vertical-align:top">${nameCell}</td><td style="padding:4px 6px">${f.label}</td><td style="text-align:right;font-weight:600;padding:4px 6px">${val}</td><td style="padding:4px 6px">${f.unit}</td></tr>`;
-      });
-    });
-    div.innerHTML=`
-      <div class="history-header" onclick="toggleHist(${ri})">
-        <div>
-          <div class="history-date">${record.date}（${dayName}曜日）</div>
-          <div class="history-staff">担当：${record.staffName}　${enteredCount}件</div>
-        </div>
-        <span style="color:#aaa;font-size:16px" id="harrow_${ri}">▼</span>
-      </div>
-      <div class="history-body" id="hbody_${ri}">
-        ${tableRows?`<table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:#f0f0f0"><th style="padding:6px;text-align:left">物件</th><th style="padding:6px;text-align:left">項目</th><th style="padding:6px;text-align:right">値</th><th style="padding:6px">単位</th></tr></thead>
-          <tbody>${tableRows}</tbody></table>`:'<div style="color:#aaa;font-size:13px">データなし</div>'}
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="reloadHistoryEntry(${ri},event)">このデータで再入力</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteHistory(${ri},event)">削除</button>
-        </div>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn btn-success" style="flex:1" onclick="shareHistoryAsExcel(${ri},event)">📊 Excelで共有</button>
-          <button class="btn btn-secondary" style="flex:1" id="histMailBtn_${ri}" onclick="sendHistoryByMail(${ri},event)">${mailButtonLabel}</button>
-        </div>
-      </div>`;
-    c.appendChild(div);
-  });
-}
-
-function toggleHist(ri){
-  const body=document.getElementById(`hbody_${ri}`);
-  const arrow=document.getElementById(`harrow_${ri}`);
-  const open=body.classList.contains('open');
-  body.classList.toggle('open',!open);
-  arrow.textContent=open?'▼':'▲';
-}
-
-function reloadHistoryEntry(ri,event){
-  event.stopPropagation();
-  const record=displayedHistoryRecords[ri];
-  if(!record)return;
-  // Set state from history
-  state.date=record.date;
-  const d=new Date(record.date+'T00:00:00');
-  state.dayName=DAYS_JP[d.getDay()];
-  state.selectedStaff=record.staffName;
-  state.entryData={...record.entryData};
-  state.entryDraft={};
-  state.entryOrder=Array.isArray(record.entryOrder)&&record.entryOrder.length
-    ? [...record.entryOrder]
-    : Object.keys(record.entryData);
-  state.currentPropertyIndex=-1;
-  document.getElementById('dateInput').value=record.date;
-  document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
-  document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
-  renderPropertyListA();
-  showScreen(9);
-}
-
-function deleteHistory(ri,event){
-  event.stopPropagation();
-  if(!confirm('この履歴を削除しますか？'))return;
-  let hist=getAllHistory();
-  const filterDate=state._histFilterDate||null;
-  let displayed=filterDate?hist.filter(h=>h.date===filterDate):hist;
-  const record=displayed[ri];
-  if(!record)return;
-  // Remove from index
-  let idx=loadJSON('keiryo_hist_index',[]);
-  const key=record.date+'_'+record.staffName;
-  idx=idx.filter(k=>k!==key);
-  saveJSON('keiryo_hist_index',idx);
-  localStorage.removeItem(LS_HISTORY_PREFIX+key);
-  localStorage.removeItem(LS_MAIL_SENT_PREFIX+key);
-  const recordDate=new Date(record.date+'T00:00:00');
-  const recordDayName=DAYS_JP[recordDate.getDay()];
-  localStorage.removeItem(savedOrderKey(record.staffName,recordDayName));
-  localStorage.removeItem(legacySavedOrderKey(record.staffName,recordDayName));
-  if(state.date===record.date&&state.selectedStaff===record.staffName){
-    localStorage.removeItem(LS_SESSION);
-    state.entryData={};
-    state.entryDraft={};
-    state.entryOrder=[];
-    state.customOrder=null;
-    state.currentPropertyIndex=-1;
-  }
-  state._histFilterDate=filterDate;
-  renderHistory(filterDate);
-}
-
-// ===== SETTINGS SCREEN =====
-function renderSettingsStaff(){
-  const c=document.getElementById('settingsStaffList'); c.innerHTML='';
-  staffList.forEach(name=>{
-    const div=document.createElement('div');
-    div.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;';
-    div.innerHTML=`<span style="font-size:15px">${name}</span>
-      <button class="btn btn-danger btn-sm" onclick="removeStaffSettings('${name}')">削除</button>`;
-    c.appendChild(div);
-  });
-}
-function removeStaffSettings(name){
-  if(!confirm(`「${name}」を削除しますか？`))return;
-  staffList=staffList.filter(s=>s!==name);saveJSON(LS_STAFF,staffList);
-  if(state.selectedStaff===name)state.selectedStaff='';
-  renderSettingsStaff();
-}
-function addStaffFromSettings(){
-  const inp=document.getElementById('settingsNewStaff');const name=inp.value.trim();
-  if(!name||staffList.includes(name)){alert(name?'同じ名前が既に登録されています':'名前を入力してください');return;}
-  staffList.push(name);saveJSON(LS_STAFF,staffList);inp.value='';renderSettingsStaff();
-}
-
-// ===== DRAG AND DROP =====
-function dragHandleStart(e, el){
-  const propName = el.dataset.propname;
-  dragStart(e, propName, el);
-}
-
-const _drag = {
-  active: false, propName: null, srcEl: null,
-  ghost: null, overEl: null, startY: 0, startX: 0
-};
-
-function dragStart(e, propName, handle){
-  e.stopPropagation();
-  e.preventDefault();
-  const card = handle.closest('.prop-card');
-  const ghost = document.getElementById('drag-ghost');
-  ghost.textContent = propName;
-  ghost.style.display = 'block';
-
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  ghost.style.left = (clientX + 12) + 'px';
-  ghost.style.top  = (clientY - 20) + 'px';
-
-  _drag.active = true;
-  _drag.propName = propName;
-  _drag.srcEl = card;
-  _drag.ghost = ghost;
-  _drag.overEl = null;
-  card.classList.add('drag-dragging');
-
-  // Init customOrder if not set
-  if(!state.customOrder){
-    const c = document.getElementById('propertyList');
-    state.customOrder = [...c.querySelectorAll('.prop-card')].map(el=>el.dataset.propname);
-  }
-
-  if(e.touches){
-    document.addEventListener('touchmove', dragMove, {passive:false});
-    document.addEventListener('touchend',  dragEnd,  {once:true});
-  } else {
-    document.addEventListener('mousemove', dragMove);
-    document.addEventListener('mouseup',   dragEnd,  {once:true});
-  }
-}
-
-function dragMove(e){
-  if(!_drag.active) return;
-  e.preventDefault();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  _drag.ghost.style.left = (clientX + 12) + 'px';
-  _drag.ghost.style.top  = (clientY - 20) + 'px';
-
-  // Find card under pointer
-  _drag.ghost.style.display = 'none';
-  const el = document.elementFromPoint(clientX, clientY);
-  _drag.ghost.style.display = 'block';
-  const targetCard = el ? el.closest('.prop-card') : null;
-
-  // Clear previous highlight
-  if(_drag.overEl && _drag.overEl !== targetCard){
-    _drag.overEl.classList.remove('drag-over-top','drag-over-bottom');
-  }
-  if(targetCard && targetCard !== _drag.srcEl){
-    const rect = targetCard.getBoundingClientRect();
-    const half = rect.top + rect.height / 2;
-    targetCard.classList.remove('drag-over-top','drag-over-bottom');
-    targetCard.classList.add(clientY < half ? 'drag-over-top' : 'drag-over-bottom');
-    _drag.overEl = targetCard;
-  }
-}
-
-function dragEnd(e){
-  if(!_drag.active) return;
-  document.removeEventListener('touchmove', dragMove);
-  document.removeEventListener('mousemove', dragMove);
-
-  _drag.ghost.style.display = 'none';
-  _drag.srcEl.classList.remove('drag-dragging');
-  if(_drag.overEl){
-    _drag.overEl.classList.remove('drag-over-top','drag-over-bottom');
-    // マウス/タッチ両対応の安全な座標取得
-    let clientX, clientY;
-    if (e.changedTouches && e.changedTouches.length > 0) {
-      clientX = e.changedTouches[0].clientX;
-      clientY = e.changedTouches[0].clientY;
-    } else if (e.clientX !== undefined) {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      clientX = 0; clientY = 0;
-    }
-    const rect = _drag.overEl.getBoundingClientRect();
-    const insertBefore = clientY < rect.top + rect.height / 2;
-
-    // Reorder customOrder
-    const order = [...state.customOrder];
-    const fromIdx = order.indexOf(_drag.propName);
-    const toName = _drag.overEl.dataset.propname;
-    let toIdx = order.indexOf(toName);
-    if(fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx){
-      order.splice(fromIdx, 1);
-      toIdx = order.indexOf(toName);
-      order.splice(insertBefore ? toIdx : toIdx + 1, 0, _drag.propName);
-      state.customOrder = order;
-      renderPropertyList();
-    }
-  }
-  _drag.active = false; _drag.propName = null; _drag.srcEl = null; _drag.overEl = null;
-}
-
-// ===== NUMBER REORDER =====
-function movePropToPos(fromIdx, input){
-  const toPos = parseInt(input.value);
-  if(isNaN(toPos)) return;
-  // Build current displayList
-  let displayList;
-  if(state.customOrder){
-    displayList = state.customOrder.map(n=>allProperties.find(p=>p.name===n)).filter(Boolean);
-    const missing = allProperties.filter(p=>!state.customOrder.includes(p.name));
-    displayList = [...displayList, ...missing];
-  } else {
-    const baseProps = getSortedProps();
-    const entered = state.entryOrder.map(n=>baseProps.find(p=>p.name===n)).filter(Boolean);
-    const remaining = baseProps.filter(p=>!state.entryOrder.includes(p.name));
-    displayList = [...entered, ...remaining];
-  }
-  const toIdx = Math.max(0, Math.min(toPos-1, displayList.length-1));
-  if(toIdx === fromIdx){ input.value = fromIdx+1; return; }
-  // Initialize customOrder from current display if needed
-  if(!state.customOrder){
-    state.customOrder = displayList.map(p=>p.name);
-  }
-  const order = [...state.customOrder];
-  const propName = displayList[fromIdx].name;
-  const fi = order.indexOf(propName);
-  if(fi !== -1){
-    const item = order.splice(fi, 1)[0];
-    // toIdx references displayList positions; find corresponding customOrder index
-    const toName = displayList[toIdx].name;
-    let ti = order.indexOf(toName);
-    if(ti === -1) ti = order.length;
-    order.splice(ti, 0, item);
-  }
-  state.customOrder = order;
-  saveSession();
-  renderPropertyList();
-  setTimeout(()=>{
-    const cards = document.querySelectorAll('.prop-card');
-    if(cards[toIdx]){
-      const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
-      const top = cards[toIdx].getBoundingClientRect().top + window.scrollY - headerH - 8;
-      window.scrollTo({ top, behavior:'smooth' });
-      cards[toIdx].style.background = '#fff';
-      setTimeout(()=>{ cards[toIdx].style.background = ''; }, 800);
-    }
-  }, 50);
-}
-
-function resetPropOrderInput(fromIdx, input){
-  // On blur without Enter: reset display value
-  input.value = fromIdx + 1;
-}
-
-// ===== SHARE HISTORY AS EXCEL =====
-function shareHistoryAsExcel(ri, event){
-  event.stopPropagation();
-  let hist = getAllHistory();
-  const filterDate = state._histFilterDate || null;
-  if(filterDate) hist = hist.filter(h => h.date === filterDate);
-  const record = hist[ri];
-  if(!record){ alert('データが見つかりません'); return; }
-
-  const d = new Date(record.date + 'T00:00:00');
-  const dayName = DAYS_JP[d.getDay()];
-
-  // Build Excel rows
-  const rows = [['日付', '曜日', '担当者', '物件名', '項目', '値', '単位']];
-  const sorted = getHistoryPropertiesInEntryOrder(record);
-  sorted.forEach(prop => {
-    const data = record.entryData[prop.name];
-    if(!data) return;
-    prop.fields.forEach(f => {
-      const val = getFieldValue(data,f,prop.name);
-      if(val === '' || val === undefined) return;
-      rows.push([record.date, dayName+'曜日', record.staffName, prop.name, f.label, val, f.unit]);
-    });
-  });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:20},{wch:14},{wch:8},{wch:6}];
-  XLSX.utils.book_append_sheet(wb, ws, '計量データ');
-
-  const safeDate = (record.date || 'nodate').replace(/-/g,'');
-  const safeStaff = record.staffName || '未設定';
-  const filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
-
-  // ダウンロード → iPhoneでは「ファイル」アプリのDownloadsに保存される
-  XLSX.writeFile(wb, filename);
-  setTimeout(()=>alert('📂 「ファイル」アプリのDownloadsフォルダに保存されました。\nそこからGoogle DriveやメールへAttachできます。'), 500);
-}
-
-// ===== SEND HISTORY BY MAIL =====
-function sendHistoryByMail(ri, event){
-  event.stopPropagation();
-  let hist = getAllHistory();
-  const filterDate = state._histFilterDate || null;
-  if(filterDate) hist = hist.filter(h => h.date === filterDate);
-  const record = hist[ri];
-  if(!record){ alert('データが見つかりません'); return; }
-
-  const d = new Date(record.date + 'T00:00:00');
-  const dayName = DAYS_JP[d.getDay()];
-
-  // Build email body
-  let body = `【計量データ】\n`;
-  body += `日付：${record.date}（${dayName}曜日）\n`;
-  body += `担当：${record.staffName}\n`;
-  body += `─────────────────\n`;
-
-  const sorted = getHistoryPropertiesInEntryOrder(record);
-  sorted.forEach(prop => {
-    const data = record.entryData[prop.name];
-    if(!data) return;
-    let hasVal = false;
-    prop.fields.forEach(f => {
-      if(getFieldValue(data,f,prop.name) !== '') hasVal = true;
-    });
-    if(!hasVal) return;
-    body += `\n【${prop.name}】\n`;
-    prop.fields.forEach(f => {
-      const val = getFieldValue(data,f,prop.name);
-      if(val === '' || val === undefined) return;
-      body += `  ${f.label}：${val} ${f.unit}\n`;
-    });
-  });
-  body += `─────────────────\n`;
-
-  const to = getMailTo();
-  if(!to){ alert('送信先が設定されていません。\nメール設定タブでアドレスを登録してください。'); return; }
-  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）`);
-  const bodyEncoded = encodeURIComponent(body);
-  openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
-  markHistoryMailSent(record);
-  const button=document.getElementById(`histMailBtn_${ri}`);
-  if(button) button.textContent='✉️ 送信済み';
-}
-
-function openMailComposer(mailtoUrl){
-  const a = document.createElement('a');
-  a.href = mailtoUrl;
-  a.target = '_top';
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    if(a.parentNode) a.parentNode.removeChild(a);
-  }, 1000);
-}
-
-// ===== MAIL SETTINGS =====
-const LS_MAIL_LIST = 'keiryo_mail_list';
-const MAIL_COUNT = 4;
-const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
-const REMOVED_MAIL_DOMAIN = 'gmail' + '.com';
-const REQUIRED_MAIL_ADDRS = [
-  'yuno.uejima@gmail.com',
-  'kankyoubu.itaku@gmail.com'
-];
-
-function defaultMailList(){
-  return [
-    {addr:'annsyuu38@gmail.com', enabled:true},
-    {addr:REQUIRED_MAIL_ADDRS[0], enabled:true},
-    {addr:REQUIRED_MAIL_ADDRS[1], enabled:true},
-    {addr:'', enabled:false}
+  const calendarFiles = [
+    { name: "縦通しカレンダー", detail: "年間表示", file: "令和8年度収集カレンダー（縦通し）.html" },
+    { name: "月別カレンダー", detail: "月間表示", file: "令和8年度収集カレンダー（月別）.html" },
+    { name: "資源ごみ日程表", detail: "検索ツール", file: "R8資源ごみ日程表_検索ツール.html" },
+    { name: "メタリックカレンダー", detail: "一覧表示", file: "metallic_calendar.html?v=20260705_today" }
   ];
-}
 
-function ensureRequiredMail(list){
-  const normalized = Array.from({length:MAIL_COUNT}, (_,i) => {
-    const item = Array.isArray(list) ? list[i] : null;
-    return {addr:(item&&item.addr)||'', enabled:!!(item&&item.enabled)};
-  });
-  const removed = REMOVED_MAIL_LOCALPART + '@' + REMOVED_MAIL_DOMAIN;
-  let changed = false;
-  normalized.forEach(item => {
-    if(item.addr.trim().toLowerCase() === removed){ item.addr=''; item.enabled=false; changed=true; }
-  });
-  REQUIRED_MAIL_ADDRS.forEach(requiredAddr => {
-    const hit = normalized.find(item => item.addr.trim().toLowerCase() === requiredAddr);
-    if(hit){ if(!hit.enabled){ hit.enabled = true; changed=true; } return; }
-    let idx = normalized.findIndex(item => !item.addr);
-    if(idx < 0) idx = normalized.findIndex(item => !item.enabled);
-    if(idx < 0) idx = normalized.map(item =>
-      !REQUIRED_MAIL_ADDRS.includes(item.addr.trim().toLowerCase())
-    ).lastIndexOf(true);
-    if(idx < 0) return;
-    normalized[idx] = {addr:requiredAddr, enabled:true};
-    changed = true;
-  });
-  if(changed){ try{ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(normalized)); }catch(e){} }
-  return normalized;
-}
+  const software = [
+    { name: "物件表", detail: "表示設定", file: "index_2-4_colview.html" },
+    { name: "計量データ入力", detail: "v３−20", file: "index_3-20.html", revision: "20260915-source-aligned" },
+    { name: "メモ", detail: "記録", file: "index_5-1.html" },
+    { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
+    { name: "燃費管理", detail: "入力・履歴", file: "index_nenpi.html" },
+    { name: "燃費読込", detail: "GDrive記録", file: "index_nenpi_shared.html" },
+    { name: "予定の追加を送信", detail: "メール作成", file: "index_yotei_sousin.html" }
+  ];
 
-function loadMailList(){
-  try{
-    const v = localStorage.getItem(LS_MAIL_LIST);
-    return ensureRequiredMail(v ? JSON.parse(v) : defaultMailList());
-  }catch(e){ return ensureRequiredMail(defaultMailList()); }
-}
+  const softwareRoot = "./";
+  const launcher = document.getElementById("launcher");
+  const grid = document.getElementById("phoneGrid");
+  const frameLayer = document.getElementById("frameLayer");
+  const calendarPicker = document.getElementById("calendarPicker");
+  const calendarList = document.getElementById("calendarList");
+  const calendarClose = document.getElementById("calendarClose");
+  const currentFile = document.getElementById("currentFile");
+  const currentApp = document.getElementById("currentApp");
+  const zoomMenu = document.getElementById("zoomMenu");
+  const expandBtn = document.getElementById("expandBtn");
+  const themePanel = document.getElementById("themePanel");
+  const themeToggle = document.getElementById("themeToggle");
+  const defaultThemeCheck = document.getElementById("defaultThemeCheck");
+  const textLift = document.getElementById("textLift");
+  const textGradient = document.getElementById("textGradient");
+  const frames = new Map();
+  const cards = new Map();
+  const savedZoom = new Map();
+  const zoomLevels = [50, 75, 100, 125, 150, 175, 200];
+  const themeStorageKey = "uenoseisou23_theme";
+  const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
+  const softwareThemeExcludes = new Set([
+    ...calendarFiles.map((calendar) => calendar.file)
+  ]);
+  const defaultTheme = {
+    titleBg: "#ffffff",
+    titleText: "#000000",
+    titleBorder: "#000000",
+    baseBg: "#ffffff",
+    baseText: "#000000",
+    baseBorder: "#000000",
+    cardBg: "#ffffff",
+    cardBorder: "#000000",
+    buttonBg: "#ffffff",
+    buttonText: "#000000",
+    buttonBorder: "#000000",
+    softwareBg: "#ffffff",
+    softwareText: "#000000",
+    softwareBorder: "#000000",
+    softwareHeadingBorder: "#000000",
+    softwareButtonBg: "#ffffff",
+    softwareButtonText: "#000000",
+    softwareButtonBorder: "#000000",
+    doneButtonBg: "#ffffff",
+    doneButtonText: "#000000",
+    doneButtonBorder: "#000000",
+    textLift: false,
+    textGradient: false,
+    textGradientStart: "#ffffff",
+    textGradientEnd: "#d9d9d9",
+    buttonOpacity: 100,
+    softwareButtonOpacity: 100,
+    softwareOpacity: 100
+  };
+  let theme = loadTheme();
+  let defaultThemeEnabled = loadDefaultThemeEnabled();
+  let activeApp = null;
+  let currentZoom = 100;
 
-function saveMailList(list){ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(list)); }
-
-function loadMailSettings(){
-  const list = loadMailList();
-  const c = document.getElementById('mailAddressList');
-  c.innerHTML = '';
-  list.forEach((item, i) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
-    row.innerHTML = `
-      <input type="checkbox" id="mailChk_${i}" ${item.enabled?'checked':''} style="width:20px;height:20px;flex-shrink:0;accent-color:#000">
-      <input type="email" id="mailAddr_${i}" value="${item.addr}" placeholder="メールアドレス ${i+1}"
-        style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;outline:none">`;
-    c.appendChild(row);
-  });
-}
-
-function saveMailSettings(){
-  const list = Array.from({length:MAIL_COUNT}, (_,i) => ({
-    addr: document.getElementById(`mailAddr_${i}`).value.trim(),
-    enabled: document.getElementById(`mailChk_${i}`).checked
-  }));
-  saveMailList(list);
-  const active = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
-  alert('保存しました。\n送信先：\n' + (active.length ? active.join('\n') : '（なし）'));
-}
-
-function getMailTo(){
-  const list = loadMailList();
-  const addrs = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
-  return addrs.length ? addrs.join(',') : 'annsyuu38@gmail.com';
-}
-
-// ===== RESET PROPERTIES TO DEFAULT =====
-function resetPropertiesToDefault(){
-  if(!confirm(`物件リストをデフォルト（${DEFAULT_PROPERTIES.length}件）に戻しますか？\n追加・変更した物件情報はすべて消えます。`)) return;
-  localStorage.removeItem(LS_PROPERTIES);
-  allProperties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
-  saveJSON(LS_PROPERTIES, allProperties);
-  alert('物件リストをデフォルトに戻しました（' + allProperties.length + '件）');
-}
-
-// ===== ADD NEW PROPERTY =====
-let newPropDays=[];
-function toggleNewDay(label,day,event){
-  event.preventDefault();label.classList.toggle('checked');
-  if(newPropDays.includes(day))newPropDays=newPropDays.filter(d=>d!==day);else newPropDays.push(day);
-}
-function addFieldRow(){
-  const c=document.getElementById('newPropertyFields');
-  const div=document.createElement('div');div.className='field-edit-row';
-  div.innerHTML=`<div class="field-name-wrap">
-    <input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)">
-    <div class="field-dropdown"></div></div>
-    <select><option value="袋">袋</option><option value="kg">kg</option></select>
-    <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button>`;
-  c.appendChild(div);
-}
-function removeFieldRow(btn){ btn.parentElement.remove(); }
-function addNewProperty(){
-  const name=document.getElementById('newPropertyName').value.trim();
-  if(!name){alert('物件名を入力してください');return;}
-  if(allProperties.find(p=>p.name===name)){alert('同じ名前の物件が既に登録されています');return;}
-  const rows=document.querySelectorAll('#newPropertyFields .field-edit-row');
-  const fields=[];
-  rows.forEach(row=>{const l=row.querySelector('input').value.trim();const u=row.querySelector('select').value;if(l)fields.push({label:l,unit:u});});
-  if(!fields.length){alert('入力項目を1つ以上追加してください');return;}
-  const maxOrder=allProperties.reduce((m,p)=>Math.max(m,p.order||0),0);
-  newPropDays.sort((a,b)=>ORDERED_DAYS.indexOf(a)-ORDERED_DAYS.indexOf(b));
-  allProperties.push({name,order:maxOrder+1,days:[...newPropDays],fields,isCustom:true});
-  saveJSON(LS_PROPERTIES,allProperties);
-  document.getElementById('newPropertyName').value='';
-  document.querySelectorAll('#newPropertyDays .day-check-label').forEach(l=>l.classList.remove('checked'));
-  newPropDays=[];
-  document.getElementById('newPropertyFields').innerHTML=`<div class="field-edit-row">
-    <div class="field-name-wrap"><input type="text" placeholder="項目名をタップ" onfocus="showFieldDropdown(this)" oninput="filterFieldDropdown(this)" onblur="hideFieldDropdown(this)"><div class="field-dropdown"></div></div>
-    <select><option value="袋">袋</option><option value="kg">kg</option></select>
-    <button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)">✕</button></div>`;
-  alert(`「${name}」を登録しました`);
-}
-</script>
-<script>
-(function(){
-  const RESUME_KEY = 'ueno_seisou_resume_v1';
-  const PAGE = 'index_3-19.html';
-  let timer = null;
-  function saveResume(){
+  function loadTheme() {
     try {
-      localStorage.setItem(RESUME_KEY, JSON.stringify({page: PAGE, scrollY: window.scrollY || 0, updatedAt: Date.now()}));
-    } catch(e) {}
-  }
-  window.addEventListener('load', () => {
-    try {
-      const r = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null');
-      if(r && r.page === PAGE && typeof r.scrollY === 'number') setTimeout(() => window.scrollTo(0, r.scrollY), 120);
-    } catch(e) {}
-    saveResume();
-  });
-  window.addEventListener('scroll', () => {
-    clearTimeout(timer);
-    timer = setTimeout(saveResume, 250);
-  }, {passive:true});
-  window.addEventListener('pagehide', saveResume);
-})();
-</script>
-<div id="drag-ghost"></div>
-<!-- app-tabs.js 参照を削除（ファイルが存在しないため）。タブバー機能は ueno-tabbar.js がグローバルで提供。 -->
-
-<script>
-// メール登録機能 復旧スクリプト（カスタムタブ対応）
-(function(){
-  function tryRenderMailList() {
-    const list = document.getElementById('mailAddressList');
-    if (!list) return;
-
-    // すでに内容があれば何もしない
-    if (list.children.length > 0) return;
-
-    // メール画面が表示されている場合のみ描画
-    const mailScreen = document.getElementById('screen7');
-    const isVisible = mailScreen &&
-      (mailScreen.classList.contains('active') ||
-       mailScreen.offsetParent !== null);
-
-    if (isVisible && typeof loadMailSettings === 'function') {
-      loadMailSettings();
+      return { ...defaultTheme, ...JSON.parse(localStorage.getItem(themeStorageKey) || "{}") };
+    } catch (error) {
+      return { ...defaultTheme };
     }
   }
 
-  // 初回
-  setTimeout(tryRenderMailList, 150);
-  setTimeout(tryRenderMailList, 600);
-
-  // タブ切り替え検知（クリック時）
-  document.addEventListener('click', function(e){
-    const target = e.target;
-    if (target && (target.textContent || '').includes('メール')) {
-      setTimeout(tryRenderMailList, 120);
-      setTimeout(tryRenderMailList, 400);
+  function saveTheme() {
+    try {
+      localStorage.setItem(themeStorageKey, JSON.stringify(theme));
+    } catch (error) {
+      // 配色変更は保存不可の環境でも現在の画面へ反映する。
     }
-  }, true);
+  }
 
-  // 定期チェック（保険）
-  setInterval(tryRenderMailList, 1200);
-})();
+  function loadDefaultThemeEnabled() {
+    try {
+      const value = localStorage.getItem(defaultThemeEnabledKey);
+      return value === null ? true : value === "1";
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function saveDefaultThemeEnabled(enabled) {
+    defaultThemeEnabled = enabled;
+    try {
+      localStorage.setItem(defaultThemeEnabledKey, enabled ? "1" : "0");
+    } catch (error) {
+      // 設定保存不可の環境でも現在の画面へは反映する。
+    }
+    defaultThemeCheck.checked = enabled;
+  }
+
+  async function loadDefaultThemeFile() {
+    try {
+      const response = await fetch("theme.json?ts=" + Date.now(), { cache: "no-store" });
+      if (!response.ok) throw new Error("theme.json " + response.status);
+      return { ...defaultTheme, ...(await response.json()) };
+    } catch (error) {
+      return { ...defaultTheme };
+    }
+  }
+
+  async function enableDefaultTheme() {
+    saveDefaultThemeEnabled(true);
+    theme = await loadDefaultThemeFile();
+    applyTheme();
+  }
+
+  function disableDefaultTheme() {
+    saveDefaultThemeEnabled(false);
+    theme = loadTheme();
+    applyTheme();
+  }
+
+  function applyTheme() {
+    const root = document.documentElement.style;
+    root.setProperty("--title-bg", theme.titleBg);
+    root.setProperty("--title-text", theme.titleText);
+    root.setProperty("--title-border", theme.titleBorder);
+    root.setProperty("--base-bg", theme.baseBg);
+    root.setProperty("--base-text", theme.baseText);
+    root.setProperty("--base-border", theme.baseBorder);
+    root.setProperty("--card-bg", theme.cardBg);
+    root.setProperty("--card-border", theme.cardBorder);
+    root.setProperty("--button-bg", theme.buttonBg);
+    root.setProperty("--button-text", theme.buttonText);
+    root.setProperty("--button-border", theme.buttonBorder);
+    root.setProperty("--software-bg", theme.softwareBg);
+    root.setProperty("--software-text", theme.softwareText);
+    root.setProperty("--software-border", theme.softwareBorder);
+    root.setProperty("--text-lift-shadow", theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none");
+    root.setProperty("--text-gradient-bg", theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : "transparent");
+    defaultThemeCheck.checked = defaultThemeEnabled;
+    textLift.checked = theme.textLift;
+    textGradient.checked = theme.textGradient;
+    document.querySelectorAll("[data-theme]").forEach((input) => {
+      input.value = theme[input.dataset.theme];
+    });
+    frames.forEach((frame) => applySoftwareTheme(frame));
+  }
+
+  function changeThemeValue(key, value) {
+    if (defaultThemeEnabled) saveDefaultThemeEnabled(false);
+    theme[key] = value;
+    saveTheme();
+    applyTheme();
+  }
+
+  function createCard(app, index) {
+    const card = document.createElement("article");
+    card.className = "phone-card";
+    card.innerHTML = `
+      <div class="running-preview" role="button" tabindex="0" hidden aria-label="${app.name} の縮小画面を再開する"></div>
+      <button class="running-close" type="button" hidden aria-label="${app.name} を閉じる">×</button>
+      <button class="launch-btn" type="button">
+        <span>
+          <span class="launch-title">${app.name}</span>
+          <span class="launch-detail">${app.detail}</span>
+        </span>
+      </button>
+    `;
+    card.querySelector(".launch-btn").addEventListener("click", () => {
+      if (app.calendarPicker) showCalendarPicker();
+      else openSoftware(app);
+    });
+    card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app));
+    card.querySelector(".running-preview").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openSoftware(app);
+    });
+    card.querySelector(".running-close").addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeSoftwareApp(app);
+    });
+    cards.set(app.file, card);
+    return card;
+  }
+
+  function setCardRunning(app, isRunning) {
+    const card = cards.get(app.file);
+    if (!card) return;
+    card.classList.toggle("running", isRunning);
+    card.querySelector(".running-preview").hidden = !isRunning;
+    card.querySelector(".running-close").hidden = !isRunning;
+  }
+
+  function closeSoftwareApp(app) {
+    const frame = frames.get(app.file);
+    if (frame) frame.remove();
+    frames.delete(app.file);
+    savedZoom.delete(app.file);
+    if (cards.has(app.file)) {
+      setCardRunning(app, false);
+      cards.get(app.file).classList.remove("active");
+    }
+    if (activeApp && activeApp.file === app.file) {
+      activeApp = null;
+      currentZoom = 100;
+      launcher.hidden = false;
+      currentFile.textContent = "index.html";
+      currentFile.title = "index.html";
+      currentApp.textContent = "--";
+      currentApp.setAttribute("aria-label", "ソフト未起動");
+    }
+  }
+
+  function showLauncher(shouldCloseSoftware) {
+    launcher.hidden = false;
+    if (shouldCloseSoftware && activeApp) {
+      const appToClose = activeApp;
+      closeSoftwareApp(appToClose);
+    } else if (activeApp) {
+      if (cards.has(activeApp.file)) minimizeSoftware(activeApp);
+      else closeSoftwareApp(activeApp);
+    }
+    currentFile.textContent = "index.html";
+    currentFile.title = "index.html";
+    currentApp.textContent = "--";
+    currentApp.setAttribute("aria-label", "ソフト未起動");
+    closeZoomMenu();
+    closeCalendarPicker();
+  }
+
+  function showCalendarPicker() {
+    calendarList.innerHTML = "";
+    calendarFiles.forEach((calendar) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calendar-choice";
+      button.innerHTML = `
+        <span class="calendar-choice-title">${calendar.name}</span>
+        <span class="calendar-choice-detail">${calendar.file}</span>
+      `;
+      button.addEventListener("click", () => {
+        closeCalendarPicker();
+        openSoftware(calendar);
+      });
+      calendarList.appendChild(button);
+    });
+    calendarPicker.hidden = false;
+  }
+
+  function closeCalendarPicker() {
+    calendarPicker.hidden = true;
+  }
+
+  function createFrame(app) {
+    const frame = document.createElement("iframe");
+    frame.className = "software-frame";
+    frame.title = app.name;
+    frame.dataset.file = app.file;
+    const revision = app.revision ? "&revision=" + encodeURIComponent(app.revision) : "";
+    frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3" + revision;
+    frame.addEventListener("load", () => {
+      applySoftwareTheme(frame);
+      applyZoom(frame);
+    });
+    frameLayer.appendChild(frame);
+    frames.set(app.file, frame);
+    return frame;
+  }
+
+  function minimizeSoftware(app) {
+    const frame = frames.get(app.file);
+    const card = cards.get(app.file);
+    if (!frame || !card) return;
+    setCardRunning(app, true);
+    const previewButton = card.querySelector(".running-preview");
+    const workspace = document.querySelector(".workspace").getBoundingClientRect();
+    const preview = previewButton.getBoundingClientRect();
+    const fullWidth = workspace.width;
+    const fullHeight = workspace.height;
+    frame.style.removeProperty("left");
+    frame.style.removeProperty("top");
+    frame.style.setProperty("--preview-width", fullWidth + "px");
+    frame.style.setProperty("--preview-height", fullHeight + "px");
+    frame.style.setProperty("--preview-scale", Math.min(preview.width / fullWidth, preview.height / fullHeight));
+    frame.classList.remove("active");
+    frame.style.visibility = "visible";
+    previewButton.appendChild(frame);
+    card.classList.remove("active");
+    activeApp = null;
+  }
+
+  function openSoftware(app) {
+    if (app.direct) {
+      location.href = softwareRoot + encodeURI(app.file);
+      return;
+    }
+    if (activeApp && activeApp.file !== app.file) {
+      if (cards.has(activeApp.file)) minimizeSoftware(activeApp);
+      else closeSoftwareApp(activeApp);
+    }
+    activeApp = app;
+    currentZoom = savedZoom.get(app.file) || 100;
+    const frame = frames.get(app.file) || createFrame(app);
+    frameLayer.appendChild(frame);
+    frame.style.removeProperty("left");
+    frame.style.removeProperty("top");
+    frame.style.removeProperty("visibility");
+    frame.classList.add("active");
+    const appCard = cards.get(app.file);
+    if (appCard) appCard.classList.add("active");
+    applyZoom(frame);
+    if (appCard) setCardRunning(app, true);
+    currentFile.textContent = app.file;
+    currentFile.title = app.file;
+    currentApp.textContent = currentZoom + "%";
+    currentApp.setAttribute("aria-label", app.name + " の現在倍率 " + currentZoom + "%");
+    launcher.hidden = true;
+    closeZoomMenu();
+    closeCalendarPicker();
+  }
+
+  function applyZoom(frame) {
+    const documentInFrame = frame.contentDocument;
+    if (!documentInFrame) return;
+    documentInFrame.documentElement.style.zoom = String(currentZoom / 100);
+  }
+
+  function applySoftwareTheme(frame) {
+    const documentInFrame = frame.contentDocument;
+    if (!documentInFrame) return;
+
+    if (softwareThemeExcludes.has(frame.dataset.file)) {
+      documentInFrame.getElementById("ueno-v23-theme")?.remove();
+      return;
+    }
+
+    const style = documentInFrame.getElementById("ueno-v23-theme") || documentInFrame.createElement("style");
+    style.id = "ueno-v23-theme";
+    style.textContent = `
+      *, *::before, *::after {
+        color: ${theme.softwareText} !important;
+        background-color: ${theme.softwareBg} !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        text-shadow: ${theme.textLift ? "0 1px 0 #ffffff, 0 2px 3px rgba(0, 0, 0, 0.55)" : "none"} !important;
+      }
+      html, body, header, main, section, nav, article, aside, table, th, td,
+      button, input, select, textarea, dialog, [role="button"] {
+        background: ${theme.softwareBg} !important;
+        color: ${theme.softwareText} !important;
+      }
+      svg, svg * {
+        fill: ${theme.softwareBg} !important;
+        stroke: ${theme.softwareBorder} !important;
+      }
+      .card, .prop-card, .staff-item, .history-item, .hist-item,
+      .day-save-single, .past-data-banner, .save-order-banner,
+      .continue-panel, .section-title, #saveDialogBox, #filterPopup,
+      #youbiPopup, #hist-panel, .check-section, .modal,
+      input[type="date"], input[type="text"], input[type="number"],
+      input[type="email"], select, textarea {
+        border: 2px solid ${theme.softwareBorder} !important;
+        border-radius: 10px !important;
+      }
+      .prop-card-body {
+        border-top: 2px solid ${theme.softwareBorder} !important;
+      }
+      #screen1 .card {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
+        padding: 16px 0 !important;
+      }
+      #screen1 #dateInput {
+        display: block !important;
+        flex: 0 0 calc(100% - 48px) !important;
+        width: calc(100% - 48px) !important;
+        max-width: calc(100% - 48px) !important;
+        min-width: 0 !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+      }
+      h1, h2, h3, legend, .brand, .title, .screen-title, .section-title,
+      .panel-title, .card-title, .prop-name, .staff-name {
+        background: ${theme.textGradient ? `linear-gradient(to top, ${theme.textGradientStart}, ${theme.textGradientEnd})` : theme.softwareBg} !important;
+        border-radius: 7px !important;
+      }
+      #app-header h1, #app-header .header-title, .app-header #brand,
+      .app-header .header-title, .topbar .brand, body > h1 {
+        display: inline-block !important;
+        flex: 0 0 auto !important;
+        width: fit-content !important;
+        padding: 3px 7px !important;
+        border: 2px solid ${theme.softwareHeadingBorder} !important;
+        border-radius: 8px !important;
+      }
+      .prop-name, #propEntryTitle, .staff-name {
+        padding: 3px 7px !important;
+        border: 2px solid ${theme.softwareHeadingBorder} !important;
+        border-radius: 8px !important;
+      }
+      .prop-name {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: clip !important;
+      }
+      #propEntryTitle, .staff-name {
+        display: inline-block !important;
+      }
+      button, input[type="button"], input[type="submit"], input[type="reset"],
+      [role="button"], .btn, .toolbar-btn, .tb-btn, .nav-tab {
+        background: ${theme.softwareButtonBg} !important;
+        color: ${theme.softwareButtonText} !important;
+        border: 2px solid ${theme.softwareButtonBorder} !important;
+        border-radius: 10px !important;
+      }
+      .property-list-a button:not(.done) {
+        background: ${theme.softwareButtonBg} !important;
+        color: ${theme.softwareButtonText} !important;
+        border: 2px solid ${theme.softwareButtonBorder} !important;
+      }
+      .property-list-a button.done {
+        background: ${theme.doneButtonBg} !important;
+        color: ${theme.doneButtonText} !important;
+        border: 3px double ${theme.doneButtonBorder} !important;
+      }
+    `;
+    if (!style.parentNode) documentInFrame.head.appendChild(style);
+  }
+
+  if (defaultThemeEnabled) enableDefaultTheme();
+  else applyTheme();
+  software.forEach((app, index) => grid.appendChild(createCard(app, index)));
+
+  function renderZoomMenu() {
+    zoomMenu.innerHTML = "";
+    zoomLevels.forEach((level) => {
+      const button = document.createElement("button");
+      button.className = "zoom-option" + (level === currentZoom ? " selected" : "");
+      button.type = "button";
+      button.textContent = level + "%";
+      button.addEventListener("click", () => {
+        if (!activeApp) return;
+        currentZoom = level;
+        savedZoom.set(activeApp.file, level);
+        applyZoom(frames.get(activeApp.file));
+        currentApp.textContent = level + "%";
+        currentApp.setAttribute("aria-label", activeApp.name + " の現在倍率 " + level + "%");
+        closeZoomMenu();
+      });
+      zoomMenu.appendChild(button);
+    });
+  }
+
+  function closeZoomMenu() {
+    zoomMenu.hidden = true;
+    expandBtn.setAttribute("aria-expanded", "false");
+  }
+
+  themeToggle.addEventListener("click", () => {
+    themePanel.hidden = !themePanel.hidden;
+    themeToggle.setAttribute("aria-expanded", String(!themePanel.hidden));
+  });
+  document.querySelectorAll("[data-theme]").forEach((input) => {
+    input.addEventListener("input", () => changeThemeValue(input.dataset.theme, input.value));
+  });
+  textLift.addEventListener("change", () => changeThemeValue("textLift", textLift.checked));
+  textGradient.addEventListener("change", () => changeThemeValue("textGradient", textGradient.checked));
+  defaultThemeCheck.addEventListener("change", () => {
+    if (defaultThemeCheck.checked) enableDefaultTheme();
+    else disableDefaultTheme();
+  });
+  document.getElementById("themeReset").addEventListener("click", () => {
+    saveDefaultThemeEnabled(false);
+    theme = { ...defaultTheme };
+    saveTheme();
+    applyTheme();
+  });
+  calendarClose.addEventListener("click", closeCalendarPicker);
+  calendarPicker.addEventListener("click", (event) => {
+    if (event.target === calendarPicker) closeCalendarPicker();
+  });
+
+  document.getElementById("closeBtn").addEventListener("click", () => showLauncher(true));
+  document.getElementById("homeBtn").addEventListener("click", () => showLauncher(false));
+  expandBtn.addEventListener("click", () => {
+    if (!activeApp) return;
+    const open = zoomMenu.hidden;
+    if (!open) {
+      closeZoomMenu();
+      return;
+    }
+    renderZoomMenu();
+    zoomMenu.hidden = false;
+    expandBtn.setAttribute("aria-expanded", "true");
+  });
 </script>
-
 </body>
 </html>
