@@ -2267,8 +2267,9 @@ function openMailComposer(mailtoUrl){
 // ===== MAIL SETTINGS =====
 const LS_MAIL_LIST = 'keiryo_mail_list';
 const MAIL_COUNT = 4;
+const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
+const REMOVED_MAIL_DOMAIN = 'gmail' + '.com';
 const REQUIRED_MAIL_ADDRS = [
-  'yo.91863391@gmail.com',
   'yuno.uejima@gmail.com',
   'kankyoubu.itaku@gmail.com'
 ];
@@ -2278,7 +2279,7 @@ function defaultMailList(){
     {addr:'annsyuu38@gmail.com', enabled:true},
     {addr:REQUIRED_MAIL_ADDRS[0], enabled:true},
     {addr:REQUIRED_MAIL_ADDRS[1], enabled:true},
-    {addr:REQUIRED_MAIL_ADDRS[2], enabled:true}
+    {addr:'', enabled:false}
   ];
 }
 
@@ -2287,9 +2288,14 @@ function ensureRequiredMail(list){
     const item = Array.isArray(list) ? list[i] : null;
     return {addr:(item&&item.addr)||'', enabled:!!(item&&item.enabled)};
   });
+  const removed = REMOVED_MAIL_LOCALPART + '@' + REMOVED_MAIL_DOMAIN;
+  let changed = false;
+  normalized.forEach(item => {
+    if(item.addr.trim().toLowerCase() === removed){ item.addr=''; item.enabled=false; changed=true; }
+  });
   REQUIRED_MAIL_ADDRS.forEach(requiredAddr => {
     const hit = normalized.find(item => item.addr.trim().toLowerCase() === requiredAddr);
-    if(hit){ hit.enabled = true; return; }
+    if(hit){ if(!hit.enabled){ hit.enabled = true; changed=true; } return; }
     let idx = normalized.findIndex(item => !item.addr);
     if(idx < 0) idx = normalized.findIndex(item => !item.enabled);
     if(idx < 0) idx = normalized.map(item =>
@@ -2297,8 +2303,9 @@ function ensureRequiredMail(list){
     ).lastIndexOf(true);
     if(idx < 0) return;
     normalized[idx] = {addr:requiredAddr, enabled:true};
+    changed = true;
   });
-  try{ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(normalized)); }catch(e){}
+  if(changed){ try{ localStorage.setItem(LS_MAIL_LIST, JSON.stringify(normalized)); }catch(e){} }
   return normalized;
 }
 
