@@ -215,6 +215,47 @@
     margin-bottom: 12px;
     line-height: 1.6;
   }
+  .screenshot-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .screenshot-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .screenshot-frame {
+    max-height: 70vh;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    background: #f6f8fa;
+  }
+  .screenshot-frame img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+  .screenshot-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--accent-dark);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .screenshot-missing {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 13px;
+    background: #f8fafc;
+  }
   .note-block {
     border-left: 3px solid #9aa5b4;
     padding: 8px 12px;
@@ -783,6 +824,48 @@ const properties = [
   }
 ];
 
+const SCREENSHOT_FILES = {
+  "㈱やさいの戸島屋": "property_screenshots/001_(株)やさいの戸島屋.png",
+  "KFC イオンタウン伊賀上野店": "property_screenshots/002_KFC イオンタウン伊賀上野店.png",
+  "LA・MU": "property_screenshots/003_LA・MU.png",
+  "あみやき亭": "property_screenshots/004_あみやき亭.png",
+  "いがっこ給食センター": "property_screenshots/005_いがっこ給食センター.png",
+  "すき家 伊賀上野店": "property_screenshots/006_すき家 伊賀上野店.png",
+  "びっくりドンキー 伊賀上野店": "property_screenshots/007_びっくりドンキー 伊賀上野店.png",
+  "ほっともっと 伊賀桑町店": "property_screenshots/008_ほっともっと 伊賀桑町店.png",
+  "ほっともっと 伊賀白鳳通り店": "property_screenshots/009_ほっともっと 伊賀白鳳通り店.png",
+  "イオンタウン伊賀": "property_screenshots/010_イオンタウン伊賀.png",
+  "クスリのアオキ 伊賀上野店": "property_screenshots/011_クスリのアオキ 伊賀上野店.png",
+  "クスリのアオキ 平野東店": "property_screenshots/012_クスリのアオキ 平野東店.png",
+  "コメリ ＨＣ上野店": "property_screenshots/013_コメリ HC上野店.png",
+  "セカンドストリート 伊賀小田店": "property_screenshots/014_セカンドストリート 伊賀小田店.png",
+  "セブンイレブン 伊賀四十九町北店（店舗コード:1432）": "property_screenshots/015_セブンイレブン 伊賀四十九町北店.png",
+  "セブンイレブン 伊賀平野北谷店（店舗コード:1431）": "property_screenshots/016_セブンイレブン 伊賀平野北谷店.png",
+  "セブンイレブン 伊賀平野東町店（店舗コード:1449）": "property_screenshots/017_セブンイレブン 伊賀平野東町店.png",
+  "セブンイレブン 伊賀忍者市駅南店（店舗コード:2837）": "property_screenshots/018_セブンイレブン 伊賀忍者市駅南店.png",
+  "セブンイレブン 伊賀東条店（店舗コード:1442）": "property_screenshots/019_セブンイレブン 伊賀東条店.png",
+  "セブンイレブン 伊賀緑ヶ丘本町店（店舗コード:1422）": "property_screenshots/020_セブンイレブン 伊賀緑ヶ丘本町店.png",
+  "セブンイレブン 伊賀緑ヶ丘東町店（店舗コード:1420）": "property_screenshots/021_セブンイレブン 伊賀緑ヶ丘東町店.png",
+  "ナフコ 伊賀店": "property_screenshots/022_ナフコ 伊賀店.png",
+  "マックスバリュ 上野店": "property_screenshots/023_マックスバリュ 上野店.png",
+  "マックスバリュ 佐那具店": "property_screenshots/024_マックスバリュ 佐那具店.png",
+  "ライフテクノサービス": "property_screenshots/025_ライフテクノサービス.png",
+  "伊賀の街": "property_screenshots/026_伊賀の街.png",
+  "伊賀神戸駅": "property_screenshots/027_伊賀神戸駅.png",
+  "創価学会 伊賀上野文化会館": "property_screenshots/028_創価学会 伊賀上野文化会館.png",
+  "厚板プレス工業": "property_screenshots/029_厚板プレス工業.png",
+  "古本市場 上野店": "property_screenshots/030_古本市場 上野店.png",
+  "旧上野庁舎 SAKAKURA BASE": "property_screenshots/031_旧上野庁舎 SAKAKURA BASE.png",
+  "検察庁": "property_screenshots/032_検察庁.png",
+  "上野法務合同庁舎": "property_screenshots/033_法務局.png",
+  "西松屋 伊賀上野店": "property_screenshots/034_西松屋 伊賀上野店.png",
+  "農業屋 伊賀上野店": "property_screenshots/035_農業屋 伊賀上野店.png",
+  "飯田金属": "property_screenshots/036_飯田金属.png",
+  "魚民 上野市駅前店": "property_screenshots/037_魚民 上野市駅前店.png",
+  "チョーヤ梅酒": "property_screenshots/038_チョーヤ梅酒.png",
+  "コカ・コーラボトラーズ": "property_screenshots/039_コカ・コーラボトラーズ.png"
+};
+
 // 初期表示・検索
 const APP_VERSION = 'v5-1';
 const UPDATED_AT = '2026年5月19日';
@@ -855,6 +938,10 @@ function renderProperty(p) {
   const notesHtml = p.notes && p.notes.length
     ? `<div class="section-title">備考</div><div class="note-block">${p.notes.map(n => escapeHtml(n)).join("<br>")}</div>`
     : "";
+  const screenshotPath = SCREENSHOT_FILES[p.name];
+  const screenshotHtml = screenshotPath
+    ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット</div><div class="screenshot-frame"><img src="${escapeHtml(screenshotPath)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy"></div><a class="screenshot-link" href="${escapeHtml(screenshotPath)}" target="_blank" rel="noopener">画像を別画面で開く</a></div>`
+    : `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット</div><div class="screenshot-missing">この物件のスクリーンショットは未登録です。</div></div>`;
 
   return `
     <div class="card">
@@ -868,6 +955,7 @@ function renderProperty(p) {
       ${colsHtml}
       ${rowsHtml}
       ${notesHtml}
+      ${screenshotHtml}
     </div>
   `;
 }
