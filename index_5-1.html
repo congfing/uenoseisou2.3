@@ -229,6 +229,7 @@
   .screenshot-frame {
     max-height: 70vh;
     overflow: auto;
+    touch-action: pinch-zoom;
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px;
@@ -240,6 +241,15 @@
     max-width: 100%;
     height: auto;
     margin: 0 auto;
+    cursor: zoom-in;
+  }
+  .screenshot-item + .screenshot-item {
+    margin-top: 16px;
+  }
+  .screenshot-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 6px;
   }
   .screenshot-link {
     display: inline-block;
@@ -309,6 +319,7 @@
 
 <footer>計量物件表 記入箇所メモ v5-1</footer>
 
+<script src="property_screenshots/2026-09/manifest.js"></script>
 <script>
 const properties = [
   {
@@ -938,10 +949,11 @@ function renderProperty(p) {
   const notesHtml = p.notes && p.notes.length
     ? `<div class="section-title">備考</div><div class="note-block">${p.notes.map(n => escapeHtml(n)).join("<br>")}</div>`
     : "";
-  const screenshotPath = SCREENSHOT_FILES[p.name];
-  const screenshotHtml = screenshotPath
-    ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット</div><div class="screenshot-frame"><img src="${escapeHtml(screenshotPath)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy"></div><a class="screenshot-link" href="${escapeHtml(screenshotPath)}" target="_blank" rel="noopener">画像を別画面で開く</a></div>`
-    : `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット</div><div class="screenshot-missing">この物件のスクリーンショットは未登録です。</div></div>`;
+  const screenshotPaths = (window.MONTHLY_SCREENSHOTS && window.MONTHLY_SCREENSHOTS[p.name])
+    || (SCREENSHOT_FILES[p.name] ? [SCREENSHOT_FILES[p.name]] : []);
+  const screenshotHtml = screenshotPaths.length
+    ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div>${screenshotPaths.map((path, index) => `<div class="screenshot-item"><div class="screenshot-label">シート画像${screenshotPaths.length > 1 ? ` ${index + 1}` : ""}（画像をタップすると拡大できます）</div><div class="screenshot-frame"><img src="${escapeHtml(path)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy"></div><a class="screenshot-link" href="${escapeHtml(path)}" target="_blank" rel="noopener">画像を別画面で開く</a></div>`).join("")}</div>`
+    : `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div><div class="screenshot-missing">この物件のスクリーンショットは未登録です。</div></div>`;
 
   return `
     <div class="card">
