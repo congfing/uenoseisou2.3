@@ -657,6 +657,28 @@ const properties = [
     notes: ["月末にまとめて記入"]
   },
   {
+    no: 38, name: "検察庁",
+    file: "上野法務合同庁舎 2.xlsx",
+    fileNote: "検察庁Sheet（上野法務合同庁舎Book内）／入力後、月合計を上野法務合同庁舎の集計へ反映",
+    mark: "②",
+    header: "単位: kg（検察庁Sheet）",
+    cols: [
+      "A列（日付記入欄）",
+      "B列（可燃物（kg））",
+      "D列（不燃物（kg））",
+      "F列（古紙（kg））",
+      "C列（可燃物 小計）",
+      "E列（不燃物 小計）",
+      "G列（古紙 小計）"
+    ],
+    rows: "2〜20行目（日ごとの入力欄）",
+    notes: [
+      "検察庁SheetのC21・E21・G21が月合計",
+      "月合計を上野法務合同庁舎の集計へ反映",
+      "Excel上は自動連動せず、月末に手動で反映"
+    ]
+  },
+  {
     no: 30, name: "ドラッグセイムス 伊賀小田店",
     file: "大本紙料（株）ドラッグセイムス.xlsx",
     fileNote: "1シート・2店舗が行17〜18に縦並び／ 形式: 横方向に日付（O列=1日〜AS列=31日）、AT列=月合計",
@@ -871,7 +893,6 @@ const SCREENSHOT_FILES = {
   "厚板プレス工業": "property_screenshots/029_厚板プレス工業.png",
   "古本市場 上野店": "property_screenshots/030_古本市場 上野店.png",
   "旧上野庁舎 SAKAKURA BASE": "property_screenshots/031_旧上野庁舎 SAKAKURA BASE.png",
-  "検察庁": "property_screenshots/032_検察庁.png",
   "上野法務合同庁舎": "property_screenshots/033_法務局.png",
   "西松屋 伊賀上野店": "property_screenshots/034_西松屋 伊賀上野店.png",
   "農業屋 伊賀上野店": "property_screenshots/035_農業屋 伊賀上野店.png",
