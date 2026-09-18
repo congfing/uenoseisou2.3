@@ -81,7 +81,10 @@ window.MONTHLY_SCREENSHOTS = {
     "property_screenshots/2026-09/iga_government_20260918.png"
   ],
   "上野法務合同庁舎": [
-    "property_screenshots/2026-09/ueno_legal_20260918.png"
+    "property_screenshots/2026-09/houmukyoku_20260918.png"
+  ],
+  "法務局": [
+    "property_screenshots/2026-09/houmukyoku_20260918.png"
   ],
   "農業屋 伊賀上野店": [
     "property_screenshots/2026-09/agri_20260918b.png"

@@ -442,7 +442,7 @@ const PROPERTY_NAME_ALIASES={
   'クスリのアオキ 伊賀上野店':'株式会社クスリのアオキ 伊賀上野店',
   'クスリのアオキ 平野東店':'株式会社クスリのアオキ 平野東店',
   'コメリ ＨＣ上野店':'コメリ',
-  '法務局':'上野法務合同庁舎'
+
 };
 const SOURCE_ALIGNED_PROPERTY_NAMES=new Set(Object.values(PROPERTY_NAME_ALIASES));
 function canonicalPropertyName(name){ return PROPERTY_NAME_ALIASES[name]||name; }
@@ -605,6 +605,7 @@ const DEFAULT_PROPERTIES = [
   { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg'},{label:'ダンボール',unit:'kg'},{label:'その他',unit:'kg'}] },
   { name:'上野法務合同庁舎', order:37, days:[], fields:[{label:'可燃物',unit:'kg'},{label:'資源ごみ',unit:'kg'},{label:'不燃物',unit:'kg'}] },
   { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg'},{label:'不燃物',unit:'kg'},{label:'古紙',unit:'kg'}] },
+  { name:'法務局', order:39, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'シュレッダー',unit:'kg'},{label:'古紙',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
   { name:'飯田金属', order:40, days:[], fields:[{label:'kg数',unit:'kg'}] },
   { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'},{label:'段ボール',unit:'kg'},{label:'ペットボトル',unit:'kg'}] },
   { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'袋'},{label:'生活ゴミ（可燃）',unit:'kg'},{label:'生活ゴミ（不燃）',unit:'袋'},{label:'生活ゴミ（不燃）',unit:'kg'},{label:'産業廃棄物',unit:'kg'}] },
@@ -1052,7 +1053,7 @@ const PROPERTY_NAME_READINGS={
   '旧上野庁舎 SAKAKURA BASE':'きゅううえのちょうしゃさかくらべーす',
   '株式会社クスリのアオキ 伊賀上野店':'くすりのあおきいがうえのてん','株式会社クスリのアオキ 平野東店':'くすりのあおきひらのひがしてん',
   'コカ・コーラボトラーズ':'こかこーらぼとらーず','コメリ':'こめり',
-  '古本市場 上野店':'ふるほんいちばうえのてん','三重県伊賀庁舎':'みえけんいがちょうしゃ','検察庁':'けんさつちょう','すき家':'すきや',
+  '古本市場 上野店':'ふるほんいちばうえのてん','三重県伊賀庁舎':'みえけんいがちょうしゃ','検察庁':'けんさつちょう','法務局':'ほうむきょく','すき家':'すきや',
   'セカンドストリート伊賀小田店':'せかんどすとりーといがおたてん','創価学会':'そうかがっかい',
   'チョーヤ梅酒伊賀上野工場':'ちょーやうめしゅいがうえのこうじょう','津地方裁判所伊賀支部':'つちほうさいばんしょいがしぶ',
   'ナフコ伊賀店（㈱アレックス）':'なふこいがてんあれっくす','（株）西松屋チェーン 伊賀上野店':'にしまつやちぇーんいがうえのてん',
