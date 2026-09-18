@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>計量物件表 記入箇所メモ（v5-1）</title>
+<title>計量物件表 記入箇所メモ（v5-2）</title>
 <style>
   :root {
     --panel: #ffffff;
@@ -273,6 +273,10 @@
     color: #3a424d;
     margin-top: 10px;
     line-height: 1.6;
+  }
+  .conversion-note {
+    border-left-color: #1f6feb;
+    background: #f7fbff;
   }
   footer {
     text-align: center;
@@ -878,8 +882,8 @@ const SCREENSHOT_FILES = {
 };
 
 // 初期表示・検索
-const APP_VERSION = 'v5-1';
-const UPDATED_AT = '2026年5月19日';
+const APP_VERSION = 'v5-2';
+const UPDATED_AT = '2026年9月18日';
 const select = document.getElementById('propSelect');
 const content = document.getElementById('content');
 const searchInput = document.getElementById('propSearch');
@@ -892,8 +896,27 @@ headerSub.textContent = `${APP_VERSION}　／　全${properties.length}物件（
 function propertySearchText(p) {
   return [
     p.no, p.name, p.file, p.fileNote, p.mark, p.header, p.rows,
-    ...(p.cols || []), ...(p.notes || [])
+    ...(p.cols || []), ...(p.notes || []), conversionNoteFor(p)
   ].join(' ').toLowerCase();
+}
+
+// 3-20の現在仕様。倍率は物件ごとに保存され、入力画面で変更できます。
+const AUTO_CONVERSION_NOTES = {
+  "イオンタウン伊賀": "あり：ごみ（袋）→ごみ（kg）、生ごみ（袋）→生ごみ（kg）。倍率を選択できます（初期値は各1倍）。",
+  "マックスバリュ 佐那具店": "あり：ごみ（袋）→ごみ（kg）は初期3倍、生ごみ（袋）→生ごみ（kg）は初期4倍。倍率を選択・保存できます。",
+  "マックスバリュ 上野店": "あり：ごみ（袋）→ごみ（kg）は初期2倍、生ごみ（袋）→生ごみ（kg）は初期7倍。倍率を選択・保存できます。",
+  "旧上野庁舎 SAKAKURA BASE": "あり：ホテル白・図書館青・物販透明・カフェ黒の各可燃（袋）→可燃（kg）。倍率を選択できます。各不燃（kg）は直接入力です。"
+};
+
+function conversionNoteFor(p) {
+  if (AUTO_CONVERSION_NOTES[p.name]) return AUTO_CONVERSION_NOTES[p.name];
+  const hasBag = (p.cols || []).some(value => /袋/.test(value))
+    || (p.notes || []).some(value => /袋/.test(value));
+  const hasKg = (p.cols || []).some(value => /kg|㎏|Ｋｇ/i.test(value))
+    || (p.notes || []).some(value => /kg|㎏|Ｋｇ/i.test(value));
+  if (hasBag && hasKg) return "なし：袋数とkgは別々に入力します。袋数からkgへ自動換算しません。";
+  if (hasBag) return "なし：袋数の入力のみです。袋数からkgへの自動換算はありません。";
+  return "対象外：kgを直接入力します。袋数からkgへの自動換算はありません。";
 }
 
 function populateSelect(list, selectedNo) {
@@ -949,6 +972,7 @@ function renderProperty(p) {
   const notesHtml = p.notes && p.notes.length
     ? `<div class="section-title">備考</div><div class="note-block">${p.notes.map(n => escapeHtml(n)).join("<br>")}</div>`
     : "";
+  const conversionHtml = `<div class="section-title">袋数からkgへの換算</div><div class="note-block conversion-note">${escapeHtml(conversionNoteFor(p))}</div>`;
   const screenshotPaths = (window.MONTHLY_SCREENSHOTS && window.MONTHLY_SCREENSHOTS[p.name])
     || (SCREENSHOT_FILES[p.name] ? [SCREENSHOT_FILES[p.name]] : []);
   const screenshotHtml = screenshotPaths.length
@@ -966,6 +990,7 @@ function renderProperty(p) {
       ${headerHtml}
       ${colsHtml}
       ${rowsHtml}
+      ${conversionHtml}
       ${notesHtml}
       ${screenshotHtml}
     </div>
