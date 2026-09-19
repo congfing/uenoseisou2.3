@@ -2284,12 +2284,11 @@ function sendHistoryByMail(ri, event){
   const d = new Date(record.date + 'T00:00:00');
   const dayName = DAYS_JP[d.getDay()];
 
-  // Build email body
-  let body = `【計量データ】\n`;
-  body += `日付：${record.date}（${dayName}曜日）\n`;
-  body += `担当：${record.staffName}\n`;
-  body += `─────────────────\n`;
-
+  // 履歴と同じ物件順・項目順で、メールでも物件ごとに区切って表示する。
+  const lineBreak = '\r\n';
+  const bodyBlocks = [
+    ['【計量データ】', `日付：${record.date}（${dayName}曜日）`, `担当：${record.staffName}`, '─────────────────'].join(lineBreak)
+  ];
   const sorted = getHistoryPropertiesInEntryOrder(record);
   sorted.forEach(prop => {
     const data = record.entryData[prop.name];
@@ -2299,14 +2298,16 @@ function sendHistoryByMail(ri, event){
       if(getFieldValue(data,f,prop.name) !== '') hasVal = true;
     });
     if(!hasVal) return;
-    body += `\n【${prop.name}】\n`;
+    const propertyLines = [`【${prop.name}】`];
     prop.fields.forEach(f => {
       const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
-      body += `  ${f.label}：${val} ${f.unit}\n`;
+      propertyLines.push(`・${f.label}：${val} ${f.unit}`);
     });
+    bodyBlocks.push(propertyLines.join(lineBreak));
   });
-  body += `─────────────────\n`;
+  bodyBlocks.push('─────────────────');
+  const body = bodyBlocks.join(lineBreak + lineBreak) + lineBreak;
 
   const to = getMailTo();
   if(!to){ alert('送信先が設定されていません。\nメール設定タブでアドレスを登録してください。'); return; }
