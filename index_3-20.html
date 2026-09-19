@@ -2302,7 +2302,7 @@ function sendHistoryByMail(ri, event){
     prop.fields.forEach(f => {
       const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
-      propertyLines.push(`・${f.label}：${val} ${f.unit}`);
+      propertyLines.push(`${f.label}：${val} ${f.unit}`);
     });
     bodyBlocks.push(propertyLines.join(lineBreak));
   });
