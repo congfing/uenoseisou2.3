@@ -2337,6 +2337,12 @@ const LS_MAIL_LIST = 'keiryo_mail_list';
 const MAIL_COUNT = 4;
 const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
 const REMOVED_MAIL_DOMAIN = 'gmail' + '.com';
+// 使われていない/誤りのアドレス。端末に残っていても開いた時点で自動的に空欄にする。
+// yuno.uejima は yuno.uejma の打ち間違いで、送っても必ず配信エラーになる。
+const REMOVED_MAIL_ADDRS = [
+  REMOVED_MAIL_LOCALPART + '@' + REMOVED_MAIL_DOMAIN,
+  'yuno.uejima@gmail.com'
+];
 const REQUIRED_MAIL_ADDRS = [
   'yuno.uejma@gmail.com',
   'kankyoubu.itaku@gmail.com'
@@ -2356,10 +2362,11 @@ function ensureRequiredMail(list){
     const item = Array.isArray(list) ? list[i] : null;
     return {addr:(item&&item.addr)||'', enabled:!!(item&&item.enabled)};
   });
-  const removed = REMOVED_MAIL_LOCALPART + '@' + REMOVED_MAIL_DOMAIN;
   let changed = false;
   normalized.forEach(item => {
-    if(item.addr.trim().toLowerCase() === removed){ item.addr=''; item.enabled=false; changed=true; }
+    if(REMOVED_MAIL_ADDRS.includes(item.addr.trim().toLowerCase())){
+      item.addr=''; item.enabled=false; changed=true;
+    }
   });
   REQUIRED_MAIL_ADDRS.forEach(requiredAddr => {
     const hit = normalized.find(item => item.addr.trim().toLowerCase() === requiredAddr);
