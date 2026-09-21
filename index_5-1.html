@@ -292,6 +292,227 @@
     .meta-grid { grid-template-columns: 90px 1fr; }
   }
 
+  /* 黒枠クイック分類フィルター */
+  .filter-box {
+    border: 2px solid #1a1a1a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .filter-box-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filter-box-title::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #1a1a1a;
+    border-radius: 2px;
+  }
+  .filter-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .filter-btn {
+    border: 1.5px solid #1a1a1a;
+    background: #f8fafc;
+    color: #1a1a1a;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn:active {
+    transform: scale(0.97);
+  }
+  .filter-btn.active {
+    background: #1a1a1a;
+    color: #ffffff;
+    border-color: #1a1a1a;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  .filter-btn.reset-btn {
+    border-color: #8c959f;
+    color: #57606a;
+    background: #f1f3f5;
+  }
+  .filter-btn.reset-btn:hover {
+    background: #e1e4e8;
+  }
+  .filter-candidates-area {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #c0c6cc;
+  }
+  .candidates-header {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .candidates-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0969da;
+  }
+  .candidates-hint {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .candidates-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+  .candidate-chip {
+    border: 1px solid #1f6feb;
+    background: #f0f7ff;
+    color: #0969da;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .candidate-chip:hover, .candidate-chip:active {
+    background: #1f6feb;
+    color: #ffffff;
+  }
+  .candidate-chip.selected {
+    background: #0969da;
+    color: #ffffff;
+    font-weight: 700;
+    border-color: #0969da;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  /* 全画面画像モーダル（ライトボックス） */
+  .screenshot-frame {
+    cursor: pointer;
+  }
+  .screenshot-link-btn {
+    display: inline-block;
+    margin-top: 8px;
+    background: #eef3fb;
+    color: #0969da;
+    border: 1px solid #c8d8ee;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .screenshot-link-btn:hover, .screenshot-link-btn:active {
+    background: #0969da;
+    color: #ffffff;
+    border-color: #0969da;
+  }
+  .image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(25, 25, 25, 0.9);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+  }
+  .image-modal-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 12px;
+  }
+  .image-modal-close {
+    background: #333333;
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    font-size: 22px;
+    font-weight: 700;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .image-modal-close:hover, .image-modal-close:active {
+    background: #e03131;
+    border-color: #e03131;
+    transform: scale(1.1);
+  }
+  .image-modal-body {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    -webkit-overflow-scrolling: touch;
+    cursor: zoom-out;
+  }
+  .image-modal-body img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  }
+  .image-modal-footer {
+    padding: 8px 16px;
+    text-align: center;
+    background: rgba(25, 25, 25, 0.9);
+    color: #a0a6ad;
+    font-size: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+
 </style>
 </head>
 <body>
@@ -302,6 +523,27 @@
 
 <main>
   <div class="selector">
+    <!-- 黒枠コンテナ: クイック分類フィルター -->
+    <div class="filter-box">
+      <div class="filter-box-title">分類で絞り込み（タップで候補を表示）</div>
+      <div class="filter-btn-group">
+        <button type="button" class="filter-btn" data-filter="formula_kg">袋数を数式でkg</button>
+        <button type="button" class="filter-btn" data-filter="not_month_end">締め日が月末でない</button>
+        <button type="button" class="filter-btn" data-filter="month_end">締め日が月末</button>
+        <button type="button" class="filter-btn" data-filter="annual_sheet">sheetが年間sheet</button>
+        <button type="button" class="filter-btn" data-filter="pickup_days">記入日が収集日</button>
+        <button type="button" class="filter-btn" data-filter="monthly_total">月の合計だけを年間報告</button>
+        <button type="button" class="filter-btn reset-btn" id="resetFilterBtn">✕ 全表示</button>
+      </div>
+      <div class="filter-candidates-area" id="filterCandidatesArea" style="display: none;">
+        <div class="candidates-header">
+          <span class="candidates-title" id="candidatesTitle">該当候補</span>
+          <span class="candidates-hint">（タップして物件を表示）</span>
+        </div>
+        <div class="candidates-list" id="candidatesList"></div>
+      </div>
+    </div>
+
     <label for="propSearch">物件名・ファイル名で検索</label>
     <div class="search-row">
       <input type="search" id="propSearch" placeholder="例：セブン、マックス、kg、段ボール">
@@ -321,9 +563,23 @@
   </div>
 </main>
 
+<!-- 全画面画像モーダル（ライトボックス） -->
+<div class="image-modal-overlay" id="imageModal" style="display: none;" onclick="if(event.target===this)closeImageModal()">
+  <div class="image-modal-header">
+    <span class="image-modal-title" id="imageModalTitle">画像プレビュー</span>
+    <button type="button" class="image-modal-close" id="imageModalClose" onclick="closeImageModal()" title="閉じる（✕）" aria-label="閉じる">✕</button>
+  </div>
+  <div class="image-modal-body" id="imageModalBody" onclick="if(event.target===this)closeImageModal()">
+    <img id="imageModalImg" src="" alt="拡大画像プレビュー">
+  </div>
+  <div class="image-modal-footer" onclick="closeImageModal()">
+    <span>✕ マーク、または背景をタップして閉じられます</span>
+  </div>
+</div>
+
 <footer>計量物件表 記入箇所メモ v5-1</footer>
 
-<script src="property_screenshots/2026-09/manifest.js"></script>
+<script src="property_screenshots/2026-09/manifest.js?v=20260922_0432"></script>
 <script>
 const properties = [
   {
@@ -894,8 +1150,9 @@ const SCREENSHOT_FILES = {
   "古本市場 上野店": "property_screenshots/2026-09/furuhon_20260918.png",
   "津地方裁判所伊賀支部": "property_screenshots/2026-09/district_court_20260918b.png",
   "旧上野庁舎 SAKAKURA BASE": "property_screenshots/031_旧上野庁舎 SAKAKURA BASE.png",
-  "上野法務合同庁舎": "property_screenshots/2026-09/houmukyoku_20260918.png",
-  "法務局": "property_screenshots/2026-09/houmukyoku_20260918.png",
+  "上野法務合同庁舎": "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
+  "法務局": "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
+  "検察庁": "property_screenshots/2026-09/prosecutors_daily_20260922.png",
   "西松屋 伊賀上野店": "property_screenshots/034_西松屋 伊賀上野店.png",
   "農業屋 伊賀上野店": "property_screenshots/2026-09/agri_20260918b.png",
   "飯田金属": "property_screenshots/2026-09/iida_20260918b.png",
@@ -942,6 +1199,90 @@ function conversionNoteFor(p) {
   return "対象外：kgを直接入力します。袋数からkgへの自動換算はありません。";
 }
 
+// フィルター条件定義
+const FILTER_DEFINITIONS = {
+  formula_kg: {
+    label: "袋数を数式でkg",
+    predicate: (p) => {
+      const names = [
+        "イオンタウン伊賀",
+        "マックスバリュ 佐那具店",
+        "マックスバリュ 上野店",
+        "旧上野庁舎 SAKAKURA BASE",
+        "農業屋 伊賀上野店",
+        "伊賀の街"
+      ];
+      return names.includes(p.name);
+    }
+  },
+  not_month_end: {
+    label: "締め日が月末でない",
+    predicate: (p) => {
+      return p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ";
+    }
+  },
+  month_end: {
+    label: "締め日が月末",
+    predicate: (p) => {
+      return !(p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ");
+    }
+  },
+  annual_sheet: {
+    label: "sheetが年間sheet",
+    predicate: (p) => {
+      return p.name.includes("セブンイレブン") ||
+             p.name.includes("セカンドストリート") ||
+             p.name.includes("ドラッグセイムス") ||
+             p.name === "津地方裁判所伊賀支部" ||
+             p.name === "魚民 上野市駅前店";
+    }
+  },
+  pickup_days: {
+    label: "記入日が収集日",
+    predicate: (p) => {
+      const names = [
+        "チョーヤ梅酒",
+        "㈱やさいの戸島屋",
+        "伊賀神戸駅",
+        "古本市場 上野店",
+        "厚板プレス工業",
+        "三重県伊賀庁舎",
+        "ドラッグセイムス 伊賀小田店",
+        "ドラッグセイムス 伊賀上野店",
+        "津地方裁判所伊賀支部",
+        "農業屋 伊賀上野店",
+        "飯田金属",
+        "創価学会 伊賀上野文化会館",
+        "コカ・コーラボトラーズ",
+        "ライフテクノサービス",
+        "いがっこ給食センター",
+        "検察庁",
+        "上野法務合同庁舎"
+      ];
+      return names.includes(p.name);
+    }
+  },
+  monthly_total: {
+    label: "月の合計だけを年間報告",
+    predicate: (p) => {
+      const names = [
+        "上野法務合同庁舎",
+        "検察庁",
+        "魚民 上野市駅前店",
+        "津地方裁判所伊賀支部"
+      ];
+      return names.includes(p.name);
+    }
+  }
+};
+
+let activeFilterKey = null;
+const filterButtons = document.querySelectorAll('.filter-btn[data-filter]');
+const resetFilterBtn = document.getElementById('resetFilterBtn');
+const filterCandidatesArea = document.getElementById('filterCandidatesArea');
+const candidatesTitle = document.getElementById('candidatesTitle');
+const candidatesList = document.getElementById('candidatesList');
+
 function populateSelect(list, selectedNo) {
   select.innerHTML = '<option value="">-- 物件を選択 --</option>';
   list.forEach(p => {
@@ -954,27 +1295,110 @@ function populateSelect(list, selectedNo) {
   hitCount.textContent = `表示候補：${list.length} / ${properties.length}物件`;
 }
 
-function applySearch() {
-  const q = searchInput.value.trim().toLowerCase();
-  const selectedNo = parseInt(select.value, 10) || null;
-  const list = q ? properties.filter(p => propertySearchText(p).includes(q)) : properties;
-  populateSelect(list, selectedNo);
-  if (q && list.length === 1) {
-    select.value = list[0].no;
-    content.innerHTML = renderProperty(list[0]);
-  } else if (q && list.length === 0) {
-    content.innerHTML = `<div class="card"><div class="placeholder">該当する物件がありません。<br>検索文字を変えてください。</div></div>`;
+function renderCandidates(list, selectedNo) {
+  if (!activeFilterKey) {
+    filterCandidatesArea.style.display = 'none';
+    candidatesList.innerHTML = '';
+    return;
+  }
+  const def = FILTER_DEFINITIONS[activeFilterKey];
+  candidatesTitle.textContent = `【${def ? def.label : ''}】の該当物件（${list.length}件）`;
+  candidatesList.innerHTML = '';
+  if (list.length === 0) {
+    candidatesList.innerHTML = '<span style="font-size:12px;color:var(--muted);padding:4px;">該当する物件がありません</span>';
+  } else {
+    list.forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'candidate-chip' + (selectedNo === p.no ? ' selected' : '');
+      btn.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
+      btn.addEventListener('click', () => {
+        selectPropertyByNo(p.no);
+      });
+      candidatesList.appendChild(btn);
+    });
+  }
+  filterCandidatesArea.style.display = 'block';
+}
+
+function selectPropertyByNo(no) {
+  select.value = no;
+  const p = properties.find(x => x.no === no);
+  if (!p) {
+    content.innerHTML = `<div class="card"><div class="placeholder">上のプルダウンから物件を選択すると、<br>その物件の記入箇所データが表示されます。</div></div>`;
+    return;
+  }
+  content.innerHTML = renderProperty(p);
+  // 候補チップの選択ハイライトを更新
+  document.querySelectorAll('.candidate-chip').forEach(chip => {
+    chip.classList.toggle('selected', chip.textContent.startsWith(String(p.no).padStart(2, ' ') + '.'));
+  });
+  // 詳細カードへスムーズにスクロール
+  const cardElem = content.querySelector('.card');
+  if (cardElem) {
+    cardElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
-populateSelect(properties, null);
+function getFilteredProperties() {
+  let list = properties;
+  if (activeFilterKey && FILTER_DEFINITIONS[activeFilterKey]) {
+    list = list.filter(FILTER_DEFINITIONS[activeFilterKey].predicate);
+  }
+  const q = searchInput.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter(p => propertySearchText(p).includes(q));
+  }
+  return list;
+}
 
-searchInput.addEventListener('input', applySearch);
-clearSearch.addEventListener('click', () => {
+function updateDisplay() {
+  const selectedNo = parseInt(select.value, 10) || null;
+  const list = getFilteredProperties();
+  populateSelect(list, selectedNo);
+  renderCandidates(list, selectedNo);
+
+  const q = searchInput.value.trim().toLowerCase();
+  if (q && list.length === 1) {
+    selectPropertyByNo(list[0].no);
+  } else if (q && list.length === 0) {
+    content.innerHTML = `<div class="card"><div class="placeholder">該当する物件がありません。<br>条件や検索文字を変えてください。</div></div>`;
+  }
+}
+
+// フィルターボタンのイベントリスナー
+filterButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.getAttribute('data-filter');
+    if (activeFilterKey === key) {
+      // 同じボタンを再タップで解除
+      activeFilterKey = null;
+      btn.classList.remove('active');
+    } else {
+      activeFilterKey = key;
+      filterButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    updateDisplay();
+  });
+});
+
+resetFilterBtn.addEventListener('click', () => {
+  activeFilterKey = null;
+  filterButtons.forEach(b => b.classList.remove('active'));
   searchInput.value = '';
-  populateSelect(properties, parseInt(select.value, 10) || null);
+  updateDisplay();
   searchInput.focus();
 });
+
+searchInput.addEventListener('input', updateDisplay);
+clearSearch.addEventListener('click', () => {
+  searchInput.value = '';
+  updateDisplay();
+  searchInput.focus();
+});
+
+populateSelect(properties, null);
 
 function escapeHtml(s) {
   return String(s)
@@ -999,7 +1423,26 @@ function renderProperty(p) {
   const screenshotPaths = (window.MONTHLY_SCREENSHOTS && window.MONTHLY_SCREENSHOTS[p.name])
     || (SCREENSHOT_FILES[p.name] ? [SCREENSHOT_FILES[p.name]] : []);
   const screenshotHtml = screenshotPaths.length
-    ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div>${screenshotPaths.map((path, index) => `<div class="screenshot-item"><div class="screenshot-label">シート画像${screenshotPaths.length > 1 ? ` ${index + 1}` : ""}（画像をタップすると拡大できます）</div><div class="screenshot-frame"><img src="${escapeHtml(path)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy"></div><a class="screenshot-link" href="${escapeHtml(path)}" target="_blank" rel="noopener">画像を別画面で開く</a></div>`).join("")}</div>`
+    ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div>${screenshotPaths.map((path, index) => {
+        let labelText = `シート画像${screenshotPaths.length > 1 ? ` ${index + 1}` : ""}`;
+        if (path.includes('ueno_legal_monthly') || path.includes('houmukyoku_monthly')) {
+          labelText += '【月データ用：上野法務合同庁舎 実績報告】';
+        } else if (path.includes('prosecutors_daily')) {
+          labelText += '【日次入力：検察庁】';
+        } else if (path.includes('uomasa_sheet1')) {
+          labelText += '【Sheet1：月間総数記録】';
+        } else if (path.includes('uomasa_sheet2')) {
+          labelText += '【Sheet2：日次記録】';
+        }
+        const titleStr = `${p.name} - ${labelText}`;
+        return `<div class="screenshot-item">
+          <div class="screenshot-label">${escapeHtml(labelText)}（画像をタップすると拡大できます）</div>
+          <div class="screenshot-frame js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}" onclick="openImageModal('${escapeHtml(path)}', '${escapeHtml(titleStr)}')">
+            <img src="${escapeHtml(path)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy">
+          </div>
+          <button type="button" class="screenshot-link-btn js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}" onclick="openImageModal('${escapeHtml(path)}', '${escapeHtml(titleStr)}')">🔍 画像を別画面（拡大）で開く</button>
+        </div>`;
+      }).join("")}</div>`
     : `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div><div class="screenshot-missing">この物件のスクリーンショットは未登録です。</div></div>`;
 
   return `
@@ -1020,16 +1463,59 @@ function renderProperty(p) {
   `;
 }
 
+// 画像拡大モーダル制御
+function openImageModal(src, title) {
+  const modal = document.getElementById('imageModal');
+  const modalImg = document.getElementById('imageModalImg');
+  const modalTitle = document.getElementById('imageModalTitle');
+  if (!modal || !modalImg) {
+    console.warn('Image modal elements not found');
+    return;
+  }
+  modalImg.src = src;
+  if (modalTitle) modalTitle.textContent = title || '画像プレビュー';
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+window.openImageModal = openImageModal;
+
+function closeImageModal() {
+  const modal = document.getElementById('imageModal');
+  const modalImg = document.getElementById('imageModalImg');
+  if (!modal) return;
+  modal.style.display = 'none';
+  if (modalImg) modalImg.src = '';
+  document.body.style.overflow = '';
+}
+window.closeImageModal = closeImageModal;
+
+// クリックイベントのデリゲーション（画像・ボタンのどちらをタップしても確実に開く）
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('.js-modal-trigger');
+  if (trigger) {
+    e.preventDefault();
+    const src = trigger.getAttribute('data-src');
+    const title = trigger.getAttribute('data-title');
+    if (src) {
+      openImageModal(src, title);
+    }
+  }
+});
+
+// ESCキーで閉じる
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeImageModal();
+  }
+});
+
 select.addEventListener("change", (e) => {
   const no = parseInt(e.target.value, 10);
   if (!no) {
     content.innerHTML = `<div class="card"><div class="placeholder">上のプルダウンから物件を選択すると、<br>その物件の記入箇所データが表示されます。</div></div>`;
     return;
   }
-  const p = properties.find(x => x.no === no);
-  if (!p) return;
-  content.innerHTML = renderProperty(p);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  selectPropertyByNo(no);
 });
 </script>
 <script>
