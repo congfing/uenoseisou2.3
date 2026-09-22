@@ -486,22 +486,23 @@
   .image-modal-body {
     flex: 1;
     overflow: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     padding: 10px;
     -webkit-overflow-scrolling: touch;
-    cursor: zoom-out;
+    touch-action: pan-x pan-y pinch-zoom;
+    overscroll-behavior: contain;
   }
   .image-modal-body img {
-    max-width: 100%;
-    max-height: 100%;
+    display: block;
+    max-width: none;
+    max-height: none;
     width: auto;
     height: auto;
-    object-fit: contain;
     border-radius: 4px;
     background: #ffffff;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+    transform-origin: top left;
+    cursor: zoom-in;
   }
   .image-modal-footer {
     padding: 8px 16px;
@@ -511,6 +512,42 @@
     font-size: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
+  }
+  .image-zoom-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .image-zoom-controls button {
+    width: 38px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 7px;
+    background: #333333;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .image-zoom-controls button:hover,
+  .image-zoom-controls button:active {
+    background: #0969da;
+    border-color: #6ea8fe;
+  }
+  .image-zoom-label {
+    min-width: 52px;
+    color: #ffffff;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 600px) {
+    .image-modal-header { padding: 8px 10px; }
+    .image-modal-body { padding: 6px; }
+    .image-modal-footer { padding: 6px 10px; }
   }
 
 </style>
@@ -572,8 +609,14 @@
   <div class="image-modal-body" id="imageModalBody" onclick="if(event.target===this)closeImageModal()">
     <img id="imageModalImg" src="" alt="拡大画像プレビュー">
   </div>
-  <div class="image-modal-footer" onclick="closeImageModal()">
-    <span>✕ マーク、または背景をタップして閉じられます</span>
+  <div class="image-modal-footer" id="imageModalFooter">
+    <div class="image-zoom-controls" role="group" aria-label="画像の拡大縮小">
+      <button type="button" id="imageZoomOut" title="縮小" aria-label="縮小">−</button>
+      <span class="image-zoom-label" id="imageZoomLabel">100%</span>
+      <button type="button" id="imageZoomIn" title="拡大" aria-label="拡大">＋</button>
+      <button type="button" id="imageZoomReset" title="実寸に戻す" aria-label="実寸に戻す">↺</button>
+      <button type="button" id="imageZoomClose" title="閉じる" aria-label="閉じる">✕</button>
+    </div>
   </div>
 </div>
 
@@ -1464,6 +1507,36 @@ function renderProperty(p) {
 }
 
 // 画像拡大モーダル制御
+let imageZoom = 1;
+let imageFitWidth = 0;
+
+function updateImageZoomLabel() {
+  const label = document.getElementById('imageZoomLabel');
+  if (label) label.textContent = `${Math.round(imageZoom * 100)}%`;
+}
+
+function applyImageZoom() {
+  const modalBody = document.getElementById('imageModalBody');
+  const modalImg = document.getElementById('imageModalImg');
+  if (!modalBody || !modalImg || !imageFitWidth) return;
+  modalImg.style.width = `${Math.max(1, Math.round(imageFitWidth * imageZoom))}px`;
+  updateImageZoomLabel();
+}
+
+function fitImageToModal() {
+  const modalBody = document.getElementById('imageModalBody');
+  const modalImg = document.getElementById('imageModalImg');
+  if (!modalBody || !modalImg || !modalImg.naturalWidth) return;
+  const availableWidth = Math.max(80, modalBody.clientWidth - 12);
+  imageFitWidth = Math.min(modalImg.naturalWidth, availableWidth);
+  applyImageZoom();
+}
+
+function changeImageZoom(delta) {
+  imageZoom = Math.min(4, Math.max(0.5, Number((imageZoom + delta).toFixed(2))));
+  applyImageZoom();
+}
+
 function openImageModal(src, title) {
   const modal = document.getElementById('imageModal');
   const modalImg = document.getElementById('imageModalImg');
@@ -1472,10 +1545,15 @@ function openImageModal(src, title) {
     console.warn('Image modal elements not found');
     return;
   }
+  imageZoom = 1;
+  imageFitWidth = 0;
+  modalImg.style.width = 'auto';
+  modalImg.onload = fitImageToModal;
   modalImg.src = src;
   if (modalTitle) modalTitle.textContent = title || '画像プレビュー';
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  if (modalImg.complete) fitImageToModal();
 }
 window.openImageModal = openImageModal;
 
@@ -1484,10 +1562,38 @@ function closeImageModal() {
   const modalImg = document.getElementById('imageModalImg');
   if (!modal) return;
   modal.style.display = 'none';
-  if (modalImg) modalImg.src = '';
+  if (modalImg) {
+    modalImg.onload = null;
+    modalImg.src = '';
+    modalImg.style.width = 'auto';
+  }
+  imageZoom = 1;
+  imageFitWidth = 0;
   document.body.style.overflow = '';
 }
 window.closeImageModal = closeImageModal;
+
+document.getElementById('imageZoomOut')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  changeImageZoom(-0.25);
+});
+document.getElementById('imageZoomIn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  changeImageZoom(0.25);
+});
+document.getElementById('imageZoomReset')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  imageZoom = 1;
+  applyImageZoom();
+  document.getElementById('imageModalBody')?.scrollTo({ top: 0, left: 0 });
+});
+document.getElementById('imageZoomClose')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeImageModal();
+});
+window.addEventListener('resize', () => {
+  if (document.getElementById('imageModal')?.style.display === 'flex') fitImageToModal();
+});
 
 // クリックイベントのデリゲーション（画像・ボタンのどちらをタップしても確実に開く）
 document.addEventListener('click', (e) => {
