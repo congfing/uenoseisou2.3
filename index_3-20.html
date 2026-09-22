@@ -602,7 +602,7 @@ const DEFAULT_PROPERTIES = [
   { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg',col:'C'},{label:'紙類',unit:'kg',col:'D'},{label:'他可燃ゴミ',unit:'kg',col:'E'},{label:'不燃(ビニール等)',unit:'kg',col:'F'},{label:'カン',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'},{label:'割れ物',unit:'kg',col:'J'},{label:'発泡',unit:'kg',col:'K'},{label:'食品リサイクル',unit:'kg',col:'L'}] },
   { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
   { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
-  { name:'検察庁', order:38, days:[], fields:[{label:'不燃物',unit:'kg',col:'D'}] },
+  { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg',col:'B'},{label:'不燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'F'}] },
   { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'D'}] },
   { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'C'}] },
   { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
@@ -779,7 +779,7 @@ function mergeDefaultProperty(savedProp,defaultProp){
   };
 }
 
-const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260922_kensatsucho_d';
+const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260922_kensatsucho_all3';
 
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
