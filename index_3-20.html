@@ -589,7 +589,7 @@ const DEFAULT_PROPERTIES = [
   { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
   { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物',unit:'袋',col:'E'},{label:'不燃物',unit:'kg',col:'F'},{label:'ダンボール',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'カン',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'}] },
   { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'D'},{label:'不燃ごみ（ビン）',unit:'袋',col:'E'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'F'}] },
-  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'C'}] },
@@ -696,7 +696,10 @@ function getAutoKgRule(prop,sourceKey){
       'ごみ__袋':'ごみ__kg',
       '生ごみ__袋':'生ごみ__kg'
     };
-    if(targets[sourceKey]) return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,1),selectable:true};
+    if(targets[sourceKey]) {
+      const defaultMultiplier=sourceKey==='ごみ__袋' ? 1 : null;
+      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,defaultMultiplier),selectable:true};
+    }
   }
   if(prop.name==='マックスバリュ佐那具店'){
     const defaults={
