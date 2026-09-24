@@ -60,7 +60,7 @@ window.MONTHLY_SCREENSHOTS = {
     "property_screenshots/2026-09/seven_20260918.png"
   ],
   "セカンドストリート 伊賀小田店（店舗コード:3628）": [
-    "property_screenshots/2026-09/seven_20260918.png"
+    "property_screenshots/014_セカンドストリート 伊賀小田店.png"
   ],
   "チョーヤ梅酒": [
     "property_screenshots/2026-09/choya_20260918.png"
