@@ -709,6 +709,15 @@ function getAutoKgRule(prop,sourceKey){
       return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
     }
   }
+  if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
+    const targets={
+      '生活ゴミ（可燃）__袋':'生活ゴミ（可燃）__kg',
+      '生活ゴミ（不燃）__袋':'生活ゴミ（不燃）__kg'
+    };
+    if(targets[sourceKey]){
+      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  }
   if(prop.name==='イオンタウン伊賀'){
     const targets={
       'ごみ__袋':'ごみ__kg',
