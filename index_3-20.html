@@ -691,6 +691,24 @@ function setAutoMultiplier(prop,sourceKey,value){
 function getAutoKgRule(prop,sourceKey){
   if(!prop) return;
   const propertyRules={};
+  if(prop.name==='すき家'){
+    const targets={
+      '可燃物__袋':'可燃物__kg',
+      'ビン・缶・PET__袋':'ビン・缶・PET__kg'
+    };
+    if(targets[sourceKey]){
+      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  }
+  if(prop.name==='古本市場 上野店'){
+    const targets={
+      '可燃物__袋':'可燃物__kg',
+      '資源物__袋':'資源物__kg'
+    };
+    if(targets[sourceKey]){
+      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  }
   if(prop.name==='イオンタウン伊賀'){
     const targets={
       'ごみ__袋':'ごみ__kg',
