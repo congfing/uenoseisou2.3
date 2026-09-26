@@ -1773,9 +1773,26 @@
     }, 1000);
   }
 
+  function detectTargetPeriod(bookName = "") {
+    if (bookName) {
+      // Book名から「X月〜Y月」や「X月Y月」などのパターンを抽出
+      const m = bookName.match(/(\d{1,2}月[\s〜\-・~と]*\d{1,2}月|\d{1,2}月)/);
+      if (m) {
+        return m[0].trim();
+      }
+    }
+    // 指示がない場合のデフォルト: 現在からの先月・現在月の2ヶ月
+    const now = new Date();
+    const curMonth = now.getMonth() + 1;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = prevDate.getMonth() + 1;
+    return `${prevMonth}月・${curMonth}月`;
+  }
+
   function buildNewTableConfigMailData() {
     const activeVer = getActiveKeiryoVersion();
     const bookName = getSavedExcelBookName();
+    const period = detectTargetPeriod(bookName);
     const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
     const dStr = new Date().toLocaleString("ja-JP");
 
@@ -1785,12 +1802,14 @@
     lines.push(`■ 使用バージョン指定：３−${activeVer === "3-21" ? "21" : "20"}を使う`);
     lines.push(`■ 対象ファイル：index_${activeVer}.html`);
     lines.push(`■ Excel Book名：${bookName}`);
+    lines.push(`■ 対象データ期間：${period}（先月・現在月の2ヶ月または指定期間）`);
     lines.push(`■ 送信日時：${dStr}`);
     lines.push("");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("【AIへの指示内容】");
     lines.push(`1. 本メールの設定内容に基づいて index_3-21.html を作成・更新して Push してください。`);
     lines.push(`2. index.html の計量データ入力のリンクおよびパネル設定を「3-${activeVer === "3-21" ? "21" : "20"}」に切り替えて Push してください。`);
+    lines.push(`3. 新しいExcel表（${bookName}）には【${period}】の過去データを引き継いで作成してください。`);
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("");
     lines.push("■ 物件別 新項目・並び順設定一覧:");
@@ -1811,15 +1830,18 @@
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     const exportData = {
       targetVersion: activeVer,
+      targetPeriod: period,
       bookName: bookName,
       updatedAt: dStr,
       properties: props
     };
     lines.push(JSON.stringify(exportData, null, 2));
 
+    const subject = `新しい計量データ表の作成（${period}）`;
+
     return {
       to: getMailTo(),
-      subject: "新しい計量データ表の作成",
+      subject: subject,
       body: lines.join("\r\n")
     };
   }
