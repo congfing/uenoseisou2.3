@@ -313,6 +313,18 @@
     </div>
 
     <div class="card" style="margin-top:12px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px">🏷️ メール本文の列番号設定</div>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="includeColChk" style="width:20px;height:20px;accent-color:#000">
+        <span style="font-weight:600">メール本文に列番号（[C列]など）を付与する</span>
+      </label>
+      <div style="font-size:12px;color:#888;margin-top:6px;line-height:1.6">
+        ※現在はご指示により<b>全ての列番号付与を停止</b>しています（チェックなし）。<br>
+        ※「セブン-イレブン」「セカンドストリート」は横書き形式のため、本設定に関わらず常に列番号は付与されません。
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
       <div style="font-size:13px;color:#666;line-height:1.7">
         送信時にチェックが入っているアドレスに送信されます。<br>
         アドレスを空にするとその行は無視されます。
@@ -573,17 +585,18 @@ const DEFAULT_PROPERTIES = [
   { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'G'}] },
   { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'金属',unit:'kg',col:'I'},{label:'ビン・割れ物',unit:'kg',col:'M'},{label:'硬質プラスチック',unit:'kg',col:'R'}] },
   { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'O'}] },
-  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'ビン',unit:'袋',col:'F'},{label:'PET',unit:'袋',col:'D'},{label:'缶',unit:'袋',col:'E'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋',col:'C'},{label:'不燃ビン缶PET',unit:'袋',col:'D'},{label:'段ボール',unit:'kg',col:'E'}] },
+  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+
   { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'F'},{label:'発泡スチロール',unit:'kg',col:'I'},{label:'木くず',unit:'kg',col:'K'},{label:'その他',unit:'kg',col:'M'}] },
-  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'L'},{label:'可燃ごみ',unit:'kg',col:'C'}] },
-  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'袋'},{label:'不燃ごみ',unit:'kg'}] },
+  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'}] },
+  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
   { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
   { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'J'}] },
   { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
@@ -809,7 +822,8 @@ function mergeDefaultProperty(savedProp,defaultProp){
   };
 }
 
-const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260922_kensatsucho_all3';
+const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260927_seven_no_col';
+
 
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
@@ -1661,15 +1675,19 @@ function exportText(){
   entered.forEach((prop, idx) => {
     const data = state.entryData[prop.name];
     lines.push((idx+1) + '．' + prop.name);
+    const incCol = shouldIncludeMailColumns(prop);
     prop.fields.forEach(f => {
       const fieldValue=getFieldValue(data,f,prop.name);
       const val = fieldValue !== '' ? fieldValue : '－';
-      const extraColumn=getSevenSeparateMaterialColumn(prop,f);
-      const sourceHint = extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '';
+      const extraColumn=incCol ? getSevenSeparateMaterialColumn(prop,f) : '';
+      const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
       lines.push('　　' + f.label + '：' + val + ' ' + f.unit + sourceHint);
     });
     const combined=getSevenBottleCanPetTotal(prop,data);
-    if(combined) lines.push(`　　ビン缶PET 合計（原本入力）：${combined.total} 袋 [${combined.col}列]`);
+    if(combined){
+      const hint = shouldIncludeMailColumns(prop) ? ` [${combined.col}列]` : '';
+      lines.push(`　　ビン缶PET 合計（原本入力）：${combined.total} 袋${hint}`);
+    }
     lines.push('');
   });
   lines.push('━━━━━━━━━━━━━━━━━');
@@ -2338,15 +2356,19 @@ function sendHistoryByMail(ri, event){
     });
     if(!hasVal) return;
     const propertyLines = [`【${prop.name}】`];
+    const incCol = shouldIncludeMailColumns(prop);
     prop.fields.forEach(f => {
       const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
-      const extraColumn=getSevenSeparateMaterialColumn(prop,f);
-      const sourceHint = extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '';
+      const extraColumn=incCol ? getSevenSeparateMaterialColumn(prop,f) : '';
+      const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
       propertyLines.push(`${f.label}：${val} ${f.unit}${sourceHint}`);
     });
     const combined=getSevenBottleCanPetTotal(prop,data);
-    if(combined) propertyLines.push(`ビン缶PET 合計（原本入力）：${combined.total} 袋 [${combined.col}列]`);
+    if(combined){
+      const hint = shouldIncludeMailColumns(prop) ? ` [${combined.col}列]` : '';
+      propertyLines.push(`ビン缶PET 合計（原本入力）：${combined.total} 袋${hint}`);
+    }
     bodyBlocks.push(propertyLines.join(lineBreak));
   });
   bodyBlocks.push('─────────────────');
@@ -2377,7 +2399,19 @@ function openMailComposer(mailtoUrl){
 
 // ===== MAIL SETTINGS =====
 const LS_MAIL_LIST = 'keiryo_mail_list';
+const LS_MAIL_INCLUDE_COLUMNS = 'keiryo_mail_include_columns';
 const MAIL_COUNT = 4;
+
+function shouldIncludeMailColumns(prop){
+  // 全ての列番号の付与を一度停止（ユーザー指示：全ての列番号の付与を一度停止してください）
+  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, false);
+  if(!enabled) return false;
+  // セブン-イレブン・セカンドストリートは横書き形式のため常に列番号を付与しない
+  if(prop && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))){
+    return false;
+  }
+  return true;
+}
 const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
 const REMOVED_MAIL_DOMAIN = 'gmail' + '.com';
 // 使われていない/誤りのアドレス。端末に残っていても開いた時点で自動的に空欄にする。
@@ -2449,6 +2483,8 @@ function loadMailSettings(){
         style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;outline:none">`;
     c.appendChild(row);
   });
+  const colChk = document.getElementById('includeColChk');
+  if(colChk) colChk.checked = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, false);
 }
 
 function saveMailSettings(){
@@ -2457,6 +2493,8 @@ function saveMailSettings(){
     enabled: document.getElementById(`mailChk_${i}`).checked
   }));
   saveMailList(list);
+  const colChk = document.getElementById('includeColChk');
+  if(colChk) saveJSON(LS_MAIL_INCLUDE_COLUMNS, colChk.checked);
   const active = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
   alert('保存しました。\n送信先：\n' + (active.length ? active.join('\n') : '（なし）'));
 }
