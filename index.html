@@ -1739,10 +1739,19 @@
     }
   }
 
+  const REQUIRED_MAIL_ADDRS = [
+    "annsyuu38@gmail.com",
+    "yuno.uejma@gmail.com",
+    "kankyoubu.itaku@gmail.com"
+  ];
+
   function loadMailList() {
-    return loadJSON(LS_MAIL_LIST, [
-      { addr: "annsyuu38@gmail.com", enabled: true }
-    ]);
+    const defaultList = [
+      { addr: "annsyuu38@gmail.com", enabled: true },
+      { addr: "yuno.uejma@gmail.com", enabled: true },
+      { addr: "kankyoubu.itaku@gmail.com", enabled: true }
+    ];
+    return loadJSON(LS_MAIL_LIST, defaultList);
   }
 
   function getMailTo() {
