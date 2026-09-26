@@ -790,27 +790,31 @@
       </div>
 
       <!-- パネル本文 -->
-      <div style="padding:18px;display:flex;flex-direction:column;gap:16px;background:#ffffff;">
+      <div style="padding:18px;display:flex;flex-direction:column;gap:16px;background:#ffffff;overflow-y:auto;max-height:calc(85vh - 120px);">
         <div style="font-size:13px;color:#333333;line-height:1.6;">
-          新しい計量データ表の作成を継続するかを選択できます。<br>
+          計量データ入力で使用するバージョンを選択し、メール送信ボタンでAIへ指示を出します。<br>
           項目の追加・削除・並び順やExcelブック名の設定は「新しい表を設定する」ボタンで進みます。
         </div>
 
-        <!-- 継続チェックボックス -->
-        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8fafc;border:2px solid #000000;border-radius:10px;cursor:pointer;user-select:none;">
-          <input type="checkbox" id="continueNewTableCheck" style="width:24px;height:24px;accent-color:#000000;cursor:pointer;">
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-size:15px;font-weight:700;color:#000000;">新しい計量データ表の作成を継続する</span>
-              <span id="newTableStatusBadge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px solid #000000;background:#000000;color:#ffffff;">
-                継続: ON
-              </span>
-            </div>
-            <div style="font-size:11px;color:#555555;margin-top:4px;">
-              ※オン（チェック）で継続して新しい表を作成・更新します
-            </div>
+        <!-- バージョン選択（3-20を使う / 3-21を使う） -->
+        <div style="background:#f8fafc;border:2px solid #000000;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#000000;">
+            使用するバージョンを選択：
           </div>
-        </label>
+          <div style="display:flex;gap:10px;">
+            <label id="labelVer320" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#ffffff;color:#000000;transition:all 0.15s;">
+              <input type="radio" name="keiryoVersionRadio" id="radioVer320" value="3-20" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;">
+              <span>３−20を使う</span>
+            </label>
+            <label id="labelVer321" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#000000;color:#ffffff;transition:all 0.15s;">
+              <input type="radio" name="keiryoVersionRadio" id="radioVer321" value="3-21" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;" checked>
+              <span>３−21を使う</span>
+            </label>
+          </div>
+          <div id="versionNoteText" style="font-size:11px;color:#555555;margin-top:8px;line-height:1.4;">
+            ※選択中のバージョンで計量データ入力が起動します。メール送信でAIへ反映指示を出せます。
+          </div>
+        </div>
 
         <!-- 設定Book名表示 -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
@@ -818,6 +822,19 @@
           <span id="panelBookNameDisplay" style="font-weight:700;color:#000000;background:#ffffff;padding:3px 10px;border-radius:6px;border:1px solid #000000;">
             計量データ表物件別8月9月.xlsx
           </span>
+        </div>
+
+        <!-- メール送信枠（AIへ指示を出す） -->
+        <div style="background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px;">
+            ✉️ AIへ設定更新・Pushを指示する
+          </div>
+          <div style="font-size:11px;color:#15803d;margin-bottom:10px;line-height:1.4;">
+            件名「新しい計量データ表の作成」でメールを送信し、AIに 3-21 の作成・Pushとリンク切り替えを指示します。
+          </div>
+          <button type="button" class="btn" style="width:100%;padding:11px;background:#16a34a!important;color:#ffffff!important;border:none!important;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 4px rgba(22,163,74,0.3);display:flex;align-items:center;justify-content:center;gap:6px;" onclick="sendNewTableConfigMail()">
+            ✉️ メール送信（AIに指示を出す）
+          </button>
         </div>
       </div>
 
@@ -965,7 +982,7 @@
 
   const software = [
     { name: "物件表", detail: "表示設定", file: "index_2-4_colview.html" },
-    { name: "計量データ入力", detail: "v３−20", file: "index_3-20.html", revision: "20260915-source-aligned" },
+    { name: "計量データ入力", detail: "v３−21", file: "index_3-21.html", revision: "20260927-v321" },
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
     { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
     { name: "燃費管理", detail: "入力・履歴", file: "index_nenpi.html" },
@@ -1564,38 +1581,153 @@
     }
   }
 
-  function updateContinueCheckboxUI() {
-    const chk = document.getElementById("continueNewTableCheck");
-    const badge = document.getElementById("newTableStatusBadge");
+  const LS_ACTIVE_VERSION = "keiryo_active_version";
+  const LS_MAIL_LIST = "keiryo_mail_list";
+
+  function getActiveKeiryoVersion() {
+    const v = localStorage.getItem(LS_ACTIVE_VERSION);
+    return (v === "3-20") ? "3-20" : "3-21"; // デフォルトは 3-21
+  }
+
+  function setActiveKeiryoVersion(ver) {
+    const v = (ver === "3-20") ? "3-20" : "3-21";
+    localStorage.setItem(LS_ACTIVE_VERSION, v);
+    localStorage.setItem(LS_CONTINUE_NEW_TABLE, v === "3-21" ? "1" : "0");
+    updateVersionUI();
+    applyActiveKeiryoVersionToSoftware();
+  }
+
+  function onVersionRadioChange(val) {
+    setActiveKeiryoVersion(val);
+  }
+
+  function applyActiveKeiryoVersionToSoftware() {
+    const ver = getActiveKeiryoVersion();
+    const app = software.find(s => s.name === "計量データ入力");
+    if (app) {
+      app.file = `index_${ver}.html`;
+      app.detail = `v${ver === "3-21" ? "３−21" : "３−20"}`;
+      app.revision = `20260927-v${ver}`;
+
+      // カード内の表示テキストも動的更新
+      cards.forEach((card) => {
+        const titleEl = card.querySelector(".launch-title");
+        if (titleEl && titleEl.textContent === "計量データ入力") {
+          const detailEl = card.querySelector(".launch-detail");
+          if (detailEl) detailEl.textContent = app.detail;
+        }
+      });
+    }
+  }
+
+  function updateVersionUI() {
+    const activeVer = getActiveKeiryoVersion();
+    const r320 = document.getElementById("radioVer320");
+    const r321 = document.getElementById("radioVer321");
+    const l320 = document.getElementById("labelVer320");
+    const l321 = document.getElementById("labelVer321");
     const launcherBadge = document.getElementById("launcherContinueStatusBadge");
-    const isContinue = isContinueNewTableEnabled();
-    if (chk) chk.checked = isContinue;
-    if (badge) {
-      if (isContinue) {
-        badge.textContent = "継続: ON";
-        badge.style.background = "#000000";
-        badge.style.color = "#ffffff";
-        badge.style.borderColor = "#000000";
+
+    if (r320) r320.checked = (activeVer === "3-20");
+    if (r321) r321.checked = (activeVer === "3-21");
+
+    if (l320 && l321) {
+      if (activeVer === "3-20") {
+        l320.style.background = "#000000";
+        l320.style.color = "#ffffff";
+        l321.style.background = "#ffffff";
+        l321.style.color = "#000000";
       } else {
-        badge.textContent = "継続: OFF";
-        badge.style.background = "#ffffff";
-        badge.style.color = "#666666";
-        badge.style.borderColor = "#999999";
+        l320.style.background = "#ffffff";
+        l320.style.color = "#000000";
+        l321.style.background = "#000000";
+        l321.style.color = "#ffffff";
       }
     }
+
     if (launcherBadge) {
-      if (isContinue) {
-        launcherBadge.textContent = "継続: ON";
-        launcherBadge.style.background = "#000000";
-        launcherBadge.style.color = "#ffffff";
-        launcherBadge.style.borderColor = "#000000";
-      } else {
-        launcherBadge.textContent = "継続: OFF";
-        launcherBadge.style.background = "#ffffff";
-        launcherBadge.style.color = "#666666";
-        launcherBadge.style.borderColor = "#999999";
-      }
+      launcherBadge.textContent = `${activeVer === "3-21" ? "3-21" : "3-20"} を使用中`;
+      launcherBadge.style.background = "#000000";
+      launcherBadge.style.color = "#ffffff";
     }
+  }
+
+  function loadMailList() {
+    return loadJSON(LS_MAIL_LIST, [
+      { addr: "annsyuu38@gmail.com", enabled: true }
+    ]);
+  }
+
+  function getMailTo() {
+    const list = loadMailList();
+    const addrs = list.filter(m => m.addr && m.enabled).map(m => m.addr);
+    return addrs.length ? addrs.join(",") : "annsyuu38@gmail.com";
+  }
+
+  function openMailComposer(mailtoUrl) {
+    const a = document.createElement("a");
+    a.href = mailtoUrl;
+    a.target = "_top";
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 1000);
+  }
+
+  function sendNewTableConfigMail() {
+    const activeVer = getActiveKeiryoVersion();
+    const bookName = getSavedExcelBookName();
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const dStr = new Date().toLocaleString("ja-JP");
+
+    const lines = [];
+    lines.push("【AIへの指示：新しい計量データ表の作成】");
+    lines.push("");
+    lines.push(`■ 使用バージョン指定：３−${activeVer === "3-21" ? "21" : "20"}を使う`);
+    lines.push(`■ 対象ファイル：index_${activeVer}.html`);
+    lines.push(`■ Excel Book名：${bookName}`);
+    lines.push(`■ 送信日時：${dStr}`);
+    lines.push("");
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    lines.push("【AIへの指示内容】");
+    lines.push(`1. 本メールの設定内容に基づいて index_3-21.html を作成・更新して Push してください。`);
+    lines.push(`2. index.html の計量データ入力のリンクおよびパネル設定を「3-${activeVer === "3-21" ? "21" : "20"}」に切り替えて Push してください。`);
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    lines.push("");
+    lines.push("■ 物件別 新項目・並び順設定一覧:");
+    lines.push("────────────────────────────");
+    props.forEach((p, idx) => {
+      const count = (p.fields || []).length;
+      lines.push(`${idx + 1}. ${p.name} (${count}項目)`);
+      (p.fields || []).forEach((f, fIdx) => {
+        const orig = (f.originalLabel && f.originalLabel !== f.label) ? ` [旧:${f.originalLabel}]` : "";
+        const colHint = f.col ? ` [${f.col}列]` : "";
+        lines.push(`   (${fIdx + 1}) ${f.label} (${f.unit})${colHint}${orig}`);
+      });
+      lines.push("");
+    });
+
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    lines.push("■ AI自動解析用 JSON データ:");
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    const exportData = {
+      targetVersion: activeVer,
+      bookName: bookName,
+      updatedAt: dStr,
+      properties: props
+    };
+    lines.push(JSON.stringify(exportData, null, 2));
+
+    const body = lines.join("\r\n");
+    const to = getMailTo();
+    const subject = encodeURIComponent("新しい計量データ表の作成");
+    const bodyEncoded = encodeURIComponent(body);
+
+    openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
+    alert(`✉️ メーラーを起動しました。\n件名「新しい計量データ表の作成」でメールを送信して、AIへ指示を出してください。`);
   }
 
   function updatePanelBookNameDisplay() {
@@ -1608,7 +1740,7 @@
   function openNewTablePanel() {
     const modal = document.getElementById("newTableSettingsModal");
     if (modal) {
-      updateContinueCheckboxUI();
+      updateVersionUI();
       updatePanelBookNameDisplay();
       modal.style.display = "flex";
       document.body.style.overflow = "hidden";
@@ -1621,7 +1753,7 @@
       modal.style.display = "none";
       document.body.style.overflow = "";
     }
-    updateContinueCheckboxUI();
+    updateVersionUI();
     updatePanelBookNameDisplay();
   }
 
@@ -2115,13 +2247,6 @@
   }
 
   // 初期リスナー登録
-  const continueChk = document.getElementById("continueNewTableCheck");
-  if (continueChk) {
-    continueChk.addEventListener("change", () => {
-      localStorage.setItem(LS_CONTINUE_NEW_TABLE, continueChk.checked ? "1" : "0");
-      updateContinueCheckboxUI();
-    });
-  }
   const newTableModal = document.getElementById("newTableSettingsModal");
   if (newTableModal) {
     newTableModal.addEventListener("click", (e) => {
@@ -2129,7 +2254,8 @@
     });
   }
 
-  updateContinueCheckboxUI();
+  updateVersionUI();
+  applyActiveKeiryoVersionToSoftware();
   updatePanelBookNameDisplay();
 
 </script>
