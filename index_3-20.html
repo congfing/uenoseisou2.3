@@ -2519,15 +2519,23 @@ function saveMailSettings(){
 }
 
 // ===== 新計量データ表の作成 モーダル制御 =====
+const LS_NEW_EXCEL_BOOK_NAME = 'keiryo_new_excel_book_name';
+const DEFAULT_NEW_EXCEL_BOOK_NAME = '計量データ表物件別8月9月.xlsx';
+
 let colSettingsState = {
   selectedPropName: '',
   searchQuery: '',
-  draftFileName: '',
+  draftBookName: '',
   draftFields: []
 };
 
+function getSavedExcelBookName() {
+  const saved = loadJSON(LS_NEW_EXCEL_BOOK_NAME, '');
+  return saved || DEFAULT_NEW_EXCEL_BOOK_NAME;
+}
+
 function getDefaultFileName(propName) {
-  return `新_${propName || '物件'}.xlsx`;
+  return colSettingsState.draftBookName || getSavedExcelBookName();
 }
 
 function normalizePropSearch(str) {
@@ -2548,8 +2556,16 @@ function openColumnSettingsModal() {
   if (!modal) return;
 
   colSettingsState.searchQuery = '';
+  colSettingsState.draftBookName = getSavedExcelBookName();
+
   const searchInput = document.getElementById('colPropSearchInput');
   if (searchInput) searchInput.value = '';
+
+  const fileNameInput = document.getElementById('colPropFileNameInput');
+  if (fileNameInput) {
+    fileNameInput.value = colSettingsState.draftBookName;
+    fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
+  }
 
   const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
   if (props.length > 0) {
@@ -2637,16 +2653,18 @@ function selectColProp(propName, clearSaveStatus) {
       col: f.col || '',
       originalLabel: f.originalLabel || f.label || ''
     }));
-    colSettingsState.draftFileName = prop.newFileName || '';
   } else {
     colSettingsState.draftFields = [];
-    colSettingsState.draftFileName = '';
   }
 
+  // ブック名は全物件共通のため、保持されている値または保存済みの値を使用
+  if (!colSettingsState.draftBookName) {
+    colSettingsState.draftBookName = getSavedExcelBookName();
+  }
   const fileNameInput = document.getElementById('colPropFileNameInput');
-  if (fileNameInput && prop) {
-    fileNameInput.value = colSettingsState.draftFileName;
-    fileNameInput.placeholder = getDefaultFileName(prop.name);
+  if (fileNameInput) {
+    fileNameInput.value = colSettingsState.draftBookName;
+    fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
   }
 
   const newOrderInput = document.getElementById('newOrderInput');
@@ -2675,11 +2693,12 @@ function resetCurrentPropToSaved() {
   if (!prop) return;
   if (!confirm(`「${prop.name}」の変更を破棄して、保存済みの設定に戻しますか？`)) return;
 
+  colSettingsState.draftBookName = getSavedExcelBookName();
   selectColProp(prop.name, true);
 }
 
 function onPropFileNameChange(val) {
-  colSettingsState.draftFileName = val.trim();
+  colSettingsState.draftBookName = (val || '').trim();
   setUnsavedState();
 }
 
@@ -2939,14 +2958,23 @@ function saveCurrentPropColumns() {
 
   const isHoriz = isHorizontalProperty(prop.name);
 
-  // ファイル名設定の処理
-  let fileName = (colSettingsState.draftFileName || '').trim();
-  if (!fileName) {
-    fileName = getDefaultFileName(prop.name);
-  } else if (!fileName.toLowerCase().endsWith('.xlsx')) {
-    fileName += '.xlsx';
+  // Excelブック名（Book名）設定の処理
+  let bookName = (colSettingsState.draftBookName || '').trim();
+  if (!bookName) {
+    bookName = DEFAULT_NEW_EXCEL_BOOK_NAME;
+  } else if (!bookName.toLowerCase().endsWith('.xlsx')) {
+    bookName += '.xlsx';
   }
-  prop.newFileName = fileName;
+  colSettingsState.draftBookName = bookName;
+  saveJSON(LS_NEW_EXCEL_BOOK_NAME, bookName);
+
+  // 互換性のため各物件プロパティにもセット
+  prop.newFileName = bookName;
+
+  const fileNameInput = document.getElementById('colPropFileNameInput');
+  if (fileNameInput) {
+    fileNameInput.value = bookName;
+  }
 
   // 後方互換性用の列記号リスト
   const autoCols = [
@@ -2967,7 +2995,7 @@ function saveCurrentPropColumns() {
 
   const statusEl = document.getElementById('colSaveStatus');
   if (statusEl) {
-    statusEl.innerHTML = `✅ 「${prop.name}」の設定を保存しました<br><span style="font-size:12px;color:#15803d">📁 新ファイル名: ${prop.newFileName}</span>`;
+    statusEl.innerHTML = `✅ 「${prop.name}」の設定を保存しました<br><span style="font-size:12px;color:#15803d">📗 新Excelブック名: ${bookName}</span>`;
     statusEl.style.display = 'block';
   }
 
@@ -3072,7 +3100,7 @@ function addNewProperty(){
     <div style="background:#fff;border-bottom:1px solid #cbd5e1;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,0.04)">
       <div>
         <div style="font-size:17px;font-weight:700;color:#0f172a">📊 新計量データ表の作成</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">項目の追加・削除・手動編集・列設定（ファイル名: .xlsx）</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Excelブック名設定（.xlsx）・項目の追加・削除・手動編集・並び順</div>
       </div>
       <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer" onclick="closeColumnSettingsModal()">
         ✕ 閉じる
@@ -3097,6 +3125,20 @@ function addNewProperty(){
 
     <!-- メインコンテンツ（スクロール可能） -->
     <div style="flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;">
+      <!-- Excelブック名（Book名）設定カード（全体共通） -->
+      <div class="card" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label style="font-size:13px;font-weight:700;color:#166534">📗 作成するExcelブックの名前 (.xlsx):</label>
+          <span style="font-size:11px;color:#15803d;font-weight:600">※Book名（全体ファイル名）</span>
+        </div>
+        <input type="text" id="colPropFileNameInput" placeholder="計量データ表物件別8月9月.xlsx"
+          style="width:100%;padding:9px 12px;border:2px solid #86efac;border-radius:8px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none"
+          oninput="onPropFileNameChange(this.value)">
+        <div style="font-size:11px;color:#166534;margin-top:5px;line-height:1.4">
+          ※作成するExcel全体のBook名を指定します（例: 計量データ表物件別8月9月.xlsx）
+        </div>
+      </div>
+
       <!-- 物件情報カード -->
       <div class="card" style="background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f1f5f9">
@@ -3110,17 +3152,6 @@ function addNewProperty(){
               ↩️ 元に戻す
             </button>
           </div>
-        </div>
-
-        <!-- ファイル名設定枠 -->
-        <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px 12px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:700;color:#1e293b">📁 新しい表のファイル名 (.xlsx):</label>
-            <span style="font-size:11px;color:#64748b">※未記入時は「新_」付き</span>
-          </div>
-          <input type="text" id="colPropFileNameInput" placeholder="新_物件名.xlsx"
-            style="width:100%;padding:9px 12px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none"
-            oninput="onPropFileNameChange(this.value)">
         </div>
 
         <!-- 項目を追加枠 -->
