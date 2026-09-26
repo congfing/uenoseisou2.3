@@ -747,44 +747,22 @@
     <section class="launcher" id="launcher" aria-label="ソフト起動画面">
       <h1 class="launcher-heading">ソフト一覧</h1>
 
-      <!-- 新計量データ表の作成パネル -->
-      <section class="new-table-panel" id="newTablePanel" style="max-width:690px;margin:0 auto 16px;background:var(--card-bg, #ffffff);border:2px solid var(--button-border, #2563eb);border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:18px;">📊</span>
-            <span style="font-size:16px;font-weight:700;color:var(--base-text, #0f172a);">新計量データ表の作成</span>
+      <!-- 新しい表を設定する トリガーボタン（白黒デザイン） -->
+      <div style="max-width:690px;margin:0 auto 16px;box-sizing:border-box;">
+        <button type="button" id="newTableLauncherBtn" onclick="openNewTablePanel()"
+          style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border:2px solid var(--button-border, #000000);border-radius:12px;background:var(--button-bg, #ffffff);color:var(--button-text, #000000);cursor:pointer;box-sizing:border-box;box-shadow:0 2px 4px rgba(0,0,0,0.06);transition:all 0.15s;">
+          <div style="display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px;">
+            <span style="font-size:17px;font-weight:700;letter-spacing:0.02em;">新しい表を設定する</span>
+            <span style="font-size:11px;opacity:0.75;font-weight:600;">新計量データ表の継続更新・項目設定</span>
           </div>
-          <span id="newTableStatusBadge" style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;background:#dcfce7;color:#15803d;border:1px solid #86efac;">
-            🟢 継続更新：ON
-          </span>
-        </div>
-
-        <div style="font-size:13px;color:var(--base-text, #334155);margin-bottom:12px;line-height:1.5;">
-          Excelブック名（Book名）や各物件の項目順・並び順を設定し、新しい計量データ表を作成・反映します。
-        </div>
-
-        <!-- 継続チェックボックス -->
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--base-bg, #f8fafc);border:2px solid var(--button-border, #cbd5e1);border-radius:10px;cursor:pointer;margin-bottom:12px;user-select:none;">
-          <input type="checkbox" id="continueNewTableCheck" style="width:22px;height:22px;accent-color:#2563eb;cursor:pointer;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--base-text, #1e293b);">新しい計量データ表の作成を継続する</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">※オン（チェック）で継続して新しい表を作成・更新します</div>
-          </div>
-        </label>
-
-        <!-- 設定ボタン ＆ 現在のBook名表示 -->
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div style="font-size:12px;color:var(--base-text, #475569);display:flex;align-items:center;gap:6px;">
-            <span style="font-weight:600;">設定Book名:</span>
-            <span id="panelBookNameDisplay" style="font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:6px;border:1px solid #bfdbfe;">
-              計量データ表物件別8月9月.xlsx
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="launcherContinueStatusBadge" style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:16px;border:1.5px solid var(--button-border, #000000);background:var(--base-bg, #000000);color:var(--base-text, #ffffff);">
+              継続: ON
             </span>
+            <span style="font-size:16px;font-weight:700;">▶</span>
           </div>
-          <button type="button" id="openNewTableModalBtn" class="btn" style="padding:10px 18px;font-size:14px;font-weight:700;background:#2563eb;color:#ffffff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(37,99,235,0.3);display:flex;align-items:center;gap:6px;" onclick="openColumnSettingsModal()">
-            📋 新しい表を設定する
-          </button>
-        </div>
-      </section>
+        </button>
+      </div>
 
       <div class="phone-grid" id="phoneGrid"></div>
     </section>
@@ -799,6 +777,61 @@
       <div class="calendar-list" id="calendarList"></div>
     </div>
   </section>
+
+  <!-- ===== 新しい表を設定する パネル（モーダル） ===== -->
+  <div id="newTableSettingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99998;align-items:center;justify-content:center;padding:16px;-webkit-overflow-scrolling:touch;">
+    <div style="width:100%;max-width:480px;background:#ffffff;color:#000000;border:2px solid #000000;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.35);">
+      <!-- パネルヘッダー -->
+      <div style="background:#ffffff;border-bottom:2px solid #000000;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="font-size:17px;font-weight:700;color:#000000;">新しい表を設定する</div>
+        <button type="button" style="background:#ffffff;color:#000000;border:1.5px solid #000000;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px;" onclick="closeNewTablePanel()">
+          ✕ 閉じる
+        </button>
+      </div>
+
+      <!-- パネル本文 -->
+      <div style="padding:18px;display:flex;flex-direction:column;gap:16px;background:#ffffff;">
+        <div style="font-size:13px;color:#333333;line-height:1.6;">
+          新しい計量データ表の作成を継続するかを選択できます。<br>
+          項目の追加・削除・並び順やExcelブック名の設定は「新しい表を設定する」ボタンで進みます。
+        </div>
+
+        <!-- 継続チェックボックス -->
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8fafc;border:2px solid #000000;border-radius:10px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="continueNewTableCheck" style="width:24px;height:24px;accent-color:#000000;cursor:pointer;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:15px;font-weight:700;color:#000000;">新しい計量データ表の作成を継続する</span>
+              <span id="newTableStatusBadge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px solid #000000;background:#000000;color:#ffffff;">
+                継続: ON
+              </span>
+            </div>
+            <div style="font-size:11px;color:#555555;margin-top:4px;">
+              ※オン（チェック）で継続して新しい表を作成・更新します
+            </div>
+          </div>
+        </label>
+
+        <!-- 設定Book名表示 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;">
+          <span style="font-weight:600;color:#333333;">設定中のBook名 (.xlsx):</span>
+          <span id="panelBookNameDisplay" style="font-weight:700;color:#000000;background:#ffffff;padding:3px 10px;border-radius:6px;border:1px solid #000000;">
+            計量データ表物件別8月9月.xlsx
+          </span>
+        </div>
+      </div>
+
+      <!-- パネルフッター（閉じるボタン ＆ 新しい表を設定するボタンで進む） -->
+      <div style="background:#f8fafc;border-top:2px solid #000000;padding:14px 18px;display:flex;gap:10px;flex-shrink:0;">
+        <button type="button" style="flex:1;background:#ffffff;color:#000000;border:2px solid #000000;padding:12px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer;" onclick="closeNewTablePanel()">
+          ✕ 閉じる
+        </button>
+        <button type="button" id="proceedNewTableBtn" style="flex:2;background:#000000;color:#ffffff;border:2px solid #000000;padding:12px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.25);" onclick="proceedToColumnSettings()">
+          新しい表を設定する ▶
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== 新計量データ表の作成 モーダル（別画面） ===== -->
   <div id="colSettingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);z-index:99999;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;">
@@ -1534,19 +1567,33 @@
   function updateContinueCheckboxUI() {
     const chk = document.getElementById("continueNewTableCheck");
     const badge = document.getElementById("newTableStatusBadge");
+    const launcherBadge = document.getElementById("launcherContinueStatusBadge");
     const isContinue = isContinueNewTableEnabled();
     if (chk) chk.checked = isContinue;
     if (badge) {
       if (isContinue) {
-        badge.textContent = "🟢 継続更新：ON";
-        badge.style.background = "#dcfce7";
-        badge.style.color = "#15803d";
-        badge.style.borderColor = "#86efac";
+        badge.textContent = "継続: ON";
+        badge.style.background = "#000000";
+        badge.style.color = "#ffffff";
+        badge.style.borderColor = "#000000";
       } else {
-        badge.textContent = "⚪ 継続更新：OFF";
-        badge.style.background = "#f1f5f9";
-        badge.style.color = "#64748b";
-        badge.style.borderColor = "#cbd5e1";
+        badge.textContent = "継続: OFF";
+        badge.style.background = "#ffffff";
+        badge.style.color = "#666666";
+        badge.style.borderColor = "#999999";
+      }
+    }
+    if (launcherBadge) {
+      if (isContinue) {
+        launcherBadge.textContent = "継続: ON";
+        launcherBadge.style.background = "#000000";
+        launcherBadge.style.color = "#ffffff";
+        launcherBadge.style.borderColor = "#000000";
+      } else {
+        launcherBadge.textContent = "継続: OFF";
+        launcherBadge.style.background = "#ffffff";
+        launcherBadge.style.color = "#666666";
+        launcherBadge.style.borderColor = "#999999";
       }
     }
   }
@@ -1556,6 +1603,35 @@
     if (disp) {
       disp.textContent = getSavedExcelBookName();
     }
+  }
+
+  function openNewTablePanel() {
+    const modal = document.getElementById("newTableSettingsModal");
+    if (modal) {
+      updateContinueCheckboxUI();
+      updatePanelBookNameDisplay();
+      modal.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    }
+  }
+
+  function closeNewTablePanel() {
+    const modal = document.getElementById("newTableSettingsModal");
+    if (modal) {
+      modal.style.display = "none";
+      document.body.style.overflow = "";
+    }
+    updateContinueCheckboxUI();
+    updatePanelBookNameDisplay();
+  }
+
+  function proceedToColumnSettings() {
+    const modal = document.getElementById("newTableSettingsModal");
+    if (modal) {
+      modal.style.display = "none";
+      document.body.style.overflow = "";
+    }
+    openColumnSettingsModal();
   }
 
   let colSettingsState = {
@@ -2046,6 +2122,13 @@
       updateContinueCheckboxUI();
     });
   }
+  const newTableModal = document.getElementById("newTableSettingsModal");
+  if (newTableModal) {
+    newTableModal.addEventListener("click", (e) => {
+      if (e.target === newTableModal) closeNewTablePanel();
+    });
+  }
+
   updateContinueCheckboxUI();
   updatePanelBookNameDisplay();
 
