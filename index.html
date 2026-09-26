@@ -746,6 +746,46 @@
   <main class="workspace">
     <section class="launcher" id="launcher" aria-label="ソフト起動画面">
       <h1 class="launcher-heading">ソフト一覧</h1>
+
+      <!-- 新計量データ表の作成パネル -->
+      <section class="new-table-panel" id="newTablePanel" style="max-width:690px;margin:0 auto 16px;background:var(--card-bg, #ffffff);border:2px solid var(--button-border, #2563eb);border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">📊</span>
+            <span style="font-size:16px;font-weight:700;color:var(--base-text, #0f172a);">新計量データ表の作成</span>
+          </div>
+          <span id="newTableStatusBadge" style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;background:#dcfce7;color:#15803d;border:1px solid #86efac;">
+            🟢 継続更新：ON
+          </span>
+        </div>
+
+        <div style="font-size:13px;color:var(--base-text, #334155);margin-bottom:12px;line-height:1.5;">
+          Excelブック名（Book名）や各物件の項目順・並び順を設定し、新しい計量データ表を作成・反映します。
+        </div>
+
+        <!-- 継続チェックボックス -->
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--base-bg, #f8fafc);border:2px solid var(--button-border, #cbd5e1);border-radius:10px;cursor:pointer;margin-bottom:12px;user-select:none;">
+          <input type="checkbox" id="continueNewTableCheck" style="width:22px;height:22px;accent-color:#2563eb;cursor:pointer;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--base-text, #1e293b);">新しい計量データ表の作成を継続する</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">※オン（チェック）で継続して新しい表を作成・更新します</div>
+          </div>
+        </label>
+
+        <!-- 設定ボタン ＆ 現在のBook名表示 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:12px;color:var(--base-text, #475569);display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:600;">設定Book名:</span>
+            <span id="panelBookNameDisplay" style="font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:6px;border:1px solid #bfdbfe;">
+              計量データ表物件別8月9月.xlsx
+            </span>
+          </div>
+          <button type="button" id="openNewTableModalBtn" class="btn" style="padding:10px 18px;font-size:14px;font-weight:700;background:#2563eb;color:#ffffff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(37,99,235,0.3);display:flex;align-items:center;gap:6px;" onclick="openColumnSettingsModal()">
+            📋 新しい表を設定する
+          </button>
+        </div>
+      </section>
+
       <div class="phone-grid" id="phoneGrid"></div>
     </section>
     <div class="frame-layer" id="frameLayer" aria-label="起動したソフト"></div>
@@ -759,6 +799,127 @@
       <div class="calendar-list" id="calendarList"></div>
     </div>
   </section>
+
+  <!-- ===== 新計量データ表の作成 モーダル（別画面） ===== -->
+  <div id="colSettingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);z-index:99999;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;">
+    <div style="width:100%;max-width:540px;height:100%;max-height:100%;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+      <!-- ヘッダー -->
+      <div style="background:#fff;border-bottom:1px solid #cbd5e1;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,0.04)">
+        <div>
+          <div style="font-size:17px;font-weight:700;color:#0f172a">📊 新計量データ表の作成</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">Excelブック名設定（.xlsx）・項目の追加・削除・手動編集・並び順</div>
+        </div>
+        <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer" onclick="closeColumnSettingsModal()">
+          ✕ 閉じる
+        </button>
+      </div>
+
+      <!-- 物件選択エリア（検索＆枠タップ） -->
+      <div style="background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 16px;flex-shrink:0;">
+        <div style="position:relative;margin-bottom:8px">
+          <input type="text" id="colPropSearchInput" placeholder="🔍 物件名で検索（ひらがな可）..." oninput="onColPropSearch(this.value)"
+            style="width:100%;padding:10px 12px 10px 34px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;background:#f8fafc;outline:none">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;pointer-events:none">🔍</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:#475569">🏢 物件一覧（枠をタップで選択）:</span>
+          <span id="colPropCountBadge" style="font-size:11px;color:#64748b;font-weight:600"></span>
+        </div>
+        <div id="colPropChipsContainer" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
+          <!-- 物件枠（チップ）が動的に挿入される -->
+        </div>
+      </div>
+
+      <!-- メインコンテンツ（スクロール可能） -->
+      <div style="flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;">
+        <!-- Excelブック名（Book名）設定カード（全体共通） -->
+        <div class="card" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:700;color:#166534">📗 作成するExcelブックの名前 (.xlsx):</label>
+            <span style="font-size:11px;color:#15803d;font-weight:600">※Book名（全体ファイル名）</span>
+          </div>
+          <input type="text" id="colPropFileNameInput" placeholder="計量データ表物件別8月9月.xlsx"
+            style="width:100%;padding:9px 12px;border:2px solid #86efac;border-radius:8px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none"
+            oninput="onPropFileNameChange(this.value)">
+          <div style="font-size:11px;color:#166534;margin-top:5px;line-height:1.4">
+            ※作成するExcel全体のBook名を指定します（例: 計量データ表物件別8月9月.xlsx）
+          </div>
+        </div>
+
+        <!-- 物件情報カード -->
+        <div class="card" style="background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f1f5f9">
+            <div>
+              <span style="font-size:12px;color:#64748b;font-weight:600">設定中の物件:</span>
+              <div id="colPropDetailName" style="font-size:18px;font-weight:700;color:#0f172a;margin-top:2px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="colPropFieldCountBadge" style="font-size:12px;background:#e2e8f0;color:#334155;padding:3px 8px;border-radius:10px;font-weight:600"></span>
+              <button type="button" class="btn btn-sm" id="colResetPropBtn" style="background:#fef2f2!important;color:#b91c1c!important;border:1px solid #fca5a5!important;padding:5px 10px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer" onclick="resetCurrentPropToSaved()">
+                ↩️ 元に戻す
+              </button>
+            </div>
+          </div>
+
+          <!-- 項目を追加枠 -->
+          <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span>➕ 項目を追加する</span>
+              <span style="font-size:11px;font-weight:normal;color:#3b82f6">（指定した番号に挿入され、以降は1つずつずれます）</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;gap:8px">
+                <input type="text" id="newColLabelInput" placeholder="新しい項目名（例: プラスチック）"
+                  style="flex:2;padding:8px 10px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:600;outline:none;background:#fff">
+                <select id="newColUnitInput" style="flex:1;padding:8px 8px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:700;background:#fff;outline:none">
+                  <option value="袋">袋</option>
+                  <option value="kg">kg</option>
+                  <option value="本">本</option>
+                  <option value="枚">枚</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap">挿入番号:</span>
+                <input type="number" id="newOrderInput" value="1" min="1"
+                  style="width:65px;padding:8px 6px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:8px;background:#fff;outline:none">
+                <button type="button" class="btn" style="flex:1;background:#2563eb!important;color:#fff!important;border:none!important;padding:8px 14px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer" onclick="addNewOrderItem()">
+                  ➕ 追加する
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 横書き物件用の案内 -->
+          <div id="colPropHorizontalNotice" style="display:none;background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:12px">
+            ℹ️ <b>横書き形式の物件です</b>（セブン-イレブン・セカンドストリート）
+          </div>
+
+          <!-- 項目一覧 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;color:#334155">📋 現在の項目一覧（希望の番号を入れて変更ボタンで全体の並び順を変更）:</div>
+          </div>
+          <div id="colPropFieldsList" style="display:flex;flex-direction:column;gap:8px">
+            <!-- 各項目の枠が動的に生成される -->
+          </div>
+        </div>
+      </div>
+
+      <!-- フッター（保存＆閉じる） -->
+      <div style="background:#fff;border-top:1px solid #cbd5e1;padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;box-shadow:0 -2px 6px rgba(0,0,0,0.03)">
+        <div id="colSaveStatus" style="font-size:13px;font-weight:700;color:#16a34a;text-align:center;min-height:18px;display:none;line-height:1.4">
+          ✅ 保存しました
+        </div>
+        <div style="display:flex;gap:10px">
+          <button type="button" id="colSaveBtn" class="btn" style="flex:2;background:#16a34a!important;color:#fff!important;border:none!important;padding:12px;font-size:16px;font-weight:700;border-radius:10px;box-shadow:0 2px 4px rgba(22,163,74,0.3);cursor:pointer" onclick="saveCurrentPropColumns()">
+            💾 保存する
+          </button>
+          <button type="button" class="btn" style="flex:1;background:#f1f5f9!important;color:#334155!important;border:1px solid #cbd5e1!important;padding:12px;font-size:16px;font-weight:600;border-radius:10px;cursor:pointer" onclick="closeColumnSettingsModal()">
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1278,6 +1439,616 @@
     zoomMenu.hidden = false;
     expandBtn.setAttribute("aria-expanded", "true");
   });
+
+
+  // ===== 新計量データ表の作成 パネル＆モーダル制御 =====
+  const LS_CONTINUE_NEW_TABLE = "keiryo_continue_new_table";
+  const LS_NEW_EXCEL_BOOK_NAME = "keiryo_new_excel_book_name";
+  const LS_PROPERTIES = "keiryo_properties";
+  const DEFAULT_NEW_EXCEL_BOOK_NAME = "計量データ表物件別8月9月.xlsx";
+
+  function loadJSON(key, defaultVal) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : defaultVal;
+    } catch(e) {
+      return defaultVal;
+    }
+  }
+
+  function saveJSON(key, val) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch(e) {}
+  }
+
+  function isContinueNewTableEnabled() {
+    const val = localStorage.getItem(LS_CONTINUE_NEW_TABLE);
+    return val === null ? true : (val === "1" || val === "true");
+  }
+
+  function getSavedExcelBookName() {
+    const saved = loadJSON(LS_NEW_EXCEL_BOOK_NAME, "");
+    return saved || DEFAULT_NEW_EXCEL_BOOK_NAME;
+  }
+
+  const DEFAULT_PROPERTIES = [
+  { name:'ほっともっと 伊賀桑町店', order:1, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
+  { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
+  { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'G'}] },
+  { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'金属',unit:'kg',col:'I'},{label:'ビン・割れ物',unit:'kg',col:'M'},{label:'硬質プラスチック',unit:'kg',col:'R'}] },
+  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'O'}] },
+  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+
+  { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'F'},{label:'発泡スチロール',unit:'kg',col:'I'},{label:'木くず',unit:'kg',col:'K'},{label:'その他',unit:'kg',col:'M'}] },
+  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'}] },
+  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
+  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
+  { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'J'}] },
+  { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
+  { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物',unit:'袋',col:'E'},{label:'不燃物',unit:'kg',col:'F'},{label:'ダンボール',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'カン',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'}] },
+  { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'E'},{label:'不燃ごみ（ビン）',unit:'袋',col:'G'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'I'}] },
+  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'H'}] },
+  { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥',col:'B'},{label:'可燃物収集',unit:'kg',col:'C'},{label:'フィルター紙収集',unit:'㎥',col:'D'},{label:'フィルター紙収集',unit:'kg',col:'E'}] },
+  { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
+  { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
+  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'D'},{label:'生ごみ',unit:'袋',col:'L'}] },
+  { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋',col:'D'},{label:'可燃物',unit:'kg',col:'F'},{label:'古紙',unit:'kg',col:'H'},{label:'資源物',unit:'袋',col:'J'},{label:'資源物',unit:'kg',col:'L'}] },
+  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'T'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'E'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'G'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'U'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'I'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'K'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'V'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'M'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'O'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'W'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'Q'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'S'}] },
+  { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg',col:'C'},{label:'紙類',unit:'kg',col:'D'},{label:'他可燃ゴミ',unit:'kg',col:'E'},{label:'不燃(ビニール等)',unit:'kg',col:'F'},{label:'カン',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'},{label:'割れ物',unit:'kg',col:'J'},{label:'発泡',unit:'kg',col:'K'},{label:'食品リサイクル',unit:'kg',col:'L'}] },
+  { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'kg',col:'H'}] },
+  { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
+  { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg',col:'B'},{label:'不燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'F'}] },
+  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
+  { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'I'}] },
+  { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'I'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
+  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
+  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
+  { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'不燃物１（ビン・缶・PET）',unit:'袋',col:'G'},{label:'不燃物１（ビン・缶・PET）',unit:'kg',col:'I'},{label:'不燃物２（容器包装系）',unit:'袋',col:'K'},{label:'不燃物２（容器包装系）',unit:'kg',col:'M'},{label:'粗大ごみ／その他',unit:'袋',col:'O'},{label:'粗大ごみ／その他',unit:'kg',col:'Q'}] },
+];
+
+  let allProperties = (() => {
+    const saved = loadJSON(LS_PROPERTIES, null);
+    if (Array.isArray(saved) && saved.length > 0) return saved;
+    saveJSON(LS_PROPERTIES, DEFAULT_PROPERTIES.slice());
+    return DEFAULT_PROPERTIES.slice();
+  })();
+
+  function reloadAllProperties() {
+    const saved = loadJSON(LS_PROPERTIES, null);
+    if (Array.isArray(saved) && saved.length > 0) {
+      allProperties = saved;
+    }
+  }
+
+  function updateContinueCheckboxUI() {
+    const chk = document.getElementById("continueNewTableCheck");
+    const badge = document.getElementById("newTableStatusBadge");
+    const isContinue = isContinueNewTableEnabled();
+    if (chk) chk.checked = isContinue;
+    if (badge) {
+      if (isContinue) {
+        badge.textContent = "🟢 継続更新：ON";
+        badge.style.background = "#dcfce7";
+        badge.style.color = "#15803d";
+        badge.style.borderColor = "#86efac";
+      } else {
+        badge.textContent = "⚪ 継続更新：OFF";
+        badge.style.background = "#f1f5f9";
+        badge.style.color = "#64748b";
+        badge.style.borderColor = "#cbd5e1";
+      }
+    }
+  }
+
+  function updatePanelBookNameDisplay() {
+    const disp = document.getElementById("panelBookNameDisplay");
+    if (disp) {
+      disp.textContent = getSavedExcelBookName();
+    }
+  }
+
+  let colSettingsState = {
+    selectedPropName: "",
+    searchQuery: "",
+    draftBookName: "",
+    draftFields: []
+  };
+
+  function getDefaultFileName(propName) {
+    return colSettingsState.draftBookName || getSavedExcelBookName();
+  }
+
+  function normalizePropSearch(str) {
+    let s = (str || "")
+      .toLowerCase()
+      .replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60))
+      .replace(/[\s　\-_]/g, "");
+    return s.replace(/(?:せぶん|7\.11|711|seven)/g, "7.11");
+  }
+
+  function isHorizontalProperty(name) {
+    if (!name) return false;
+    return name.startsWith("7.11") || name.includes("セブン") || name.includes("セカンドストリート");
+  }
+
+  function openColumnSettingsModal() {
+    const modal = document.getElementById("colSettingsModal");
+    if (!modal) return;
+
+    reloadAllProperties();
+    colSettingsState.searchQuery = "";
+    colSettingsState.draftBookName = getSavedExcelBookName();
+
+    const searchInput = document.getElementById("colPropSearchInput");
+    if (searchInput) searchInput.value = "";
+
+    const fileNameInput = document.getElementById("colPropFileNameInput");
+    if (fileNameInput) {
+      fileNameInput.value = colSettingsState.draftBookName;
+      fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
+    }
+
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    if (props.length > 0) {
+      const exists = props.find(p => p.name === colSettingsState.selectedPropName);
+      if (!exists) {
+        colSettingsState.selectedPropName = props[0].name;
+      }
+      selectColProp(colSettingsState.selectedPropName, true);
+    }
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeColumnSettingsModal() {
+    const modal = document.getElementById("colSettingsModal");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "";
+    updatePanelBookNameDisplay();
+  }
+
+  function onColPropSearch(query) {
+    colSettingsState.searchQuery = query || "";
+    renderColPropChips();
+  }
+
+  function renderColPropChips() {
+    const container = document.getElementById("colPropChipsContainer");
+    const countBadge = document.getElementById("colPropCountBadge");
+    if (!container) return;
+
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const qNorm = normalizePropSearch(colSettingsState.searchQuery);
+
+    const filtered = props.filter(p => {
+      if (!qNorm) return true;
+      const nameNorm = normalizePropSearch(p.name);
+      return nameNorm.includes(qNorm);
+    });
+
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} / ${props.length}件`;
+    }
+
+    container.innerHTML = "";
+    if (filtered.length === 0) {
+      container.innerHTML = "<span style=\"font-size:12px;color:#94a3b8;padding:6px 4px\">該当する物件がありません</span>";
+      return;
+    }
+
+    filtered.forEach(p => {
+      const isSelected = p.name === colSettingsState.selectedPropName;
+      const isHoriz = isHorizontalProperty(p.name);
+      const count = (p.fields || []).length;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.style.cssText = `flex-shrink:0;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${isSelected ? "#2563eb" : "#cbd5e1"};background:${isSelected ? "#2563eb" : (isHoriz ? "#f8fafc" : "#fff")};color:${isSelected ? "#fff" : (isHoriz ? "#64748b" : "#1e293b")};box-shadow:${isSelected ? "0 2px 4px rgba(37,99,235,0.25)" : "none"};transition:all 0.15s`;
+
+      let label = p.name;
+      if (isHoriz) {
+        label += " (横)";
+      } else if (count > 0) {
+        label += ` (${count})`;
+      }
+      btn.textContent = label;
+      btn.onclick = () => selectColProp(p.name, true);
+      container.appendChild(btn);
+
+      if (isSelected) {
+        setTimeout(() => {
+          if (btn.scrollIntoView) {
+            btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+          }
+        }, 50);
+      }
+    });
+  }
+
+  function selectColProp(propName, clearSaveStatus) {
+    colSettingsState.selectedPropName = propName;
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const prop = props.find(p => p.name === propName);
+
+    if (prop) {
+      colSettingsState.draftFields = (prop.fields || []).map(f => ({
+        label: f.label || "",
+        unit: f.unit || "袋",
+        col: f.col || "",
+        originalLabel: f.originalLabel || f.label || ""
+      }));
+    } else {
+      colSettingsState.draftFields = [];
+    }
+
+    if (!colSettingsState.draftBookName) {
+      colSettingsState.draftBookName = getSavedExcelBookName();
+    }
+    const fileNameInput = document.getElementById("colPropFileNameInput");
+    if (fileNameInput) {
+      fileNameInput.value = colSettingsState.draftBookName;
+      fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
+    }
+
+    const newOrderInput = document.getElementById("newOrderInput");
+    if (newOrderInput) {
+      newOrderInput.value = colSettingsState.draftFields.length + 1;
+      newOrderInput.max = colSettingsState.draftFields.length + 1;
+    }
+
+    renderColPropChips();
+    renderColPropFields();
+
+    if (clearSaveStatus) {
+      const statusEl = document.getElementById("colSaveStatus");
+      if (statusEl) statusEl.style.display = "none";
+      const saveBtn = document.getElementById("colSaveBtn");
+      if (saveBtn) {
+        saveBtn.textContent = "💾 保存する";
+        saveBtn.style.background = "#16a34a";
+      }
+    }
+  }
+
+  function resetCurrentPropToSaved() {
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+    if (!prop) return;
+    if (!confirm(`「${prop.name}」の変更を破棄して、保存済みの設定に戻しますか？`)) return;
+
+    colSettingsState.draftBookName = getSavedExcelBookName();
+    selectColProp(prop.name, true);
+  }
+
+  function onPropFileNameChange(val) {
+    colSettingsState.draftBookName = (val || "").trim();
+    setUnsavedState();
+  }
+
+  function addNewOrderItem() {
+    const nameInput = document.getElementById("newColLabelInput");
+    const unitInput = document.getElementById("newColUnitInput");
+    const orderInput = document.getElementById("newOrderInput");
+
+    const label = nameInput ? nameInput.value.trim() : "";
+    if (!label) {
+      alert("新しい項目名を入力してください");
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    const unit = unitInput ? unitInput.value : "袋";
+    const total = colSettingsState.draftFields.length;
+    let targetOrder = orderInput ? parseInt(orderInput.value, 10) : (total + 1);
+    if (isNaN(targetOrder) || targetOrder < 1) {
+      targetOrder = total + 1;
+    }
+
+    const insertIdx = Math.max(0, Math.min(total, targetOrder - 1));
+
+    colSettingsState.draftFields.splice(insertIdx, 0, {
+      label: label,
+      unit: unit,
+      col: "",
+      originalLabel: label
+    });
+
+    if (nameInput) nameInput.value = "";
+
+    renderColPropFields();
+    setUnsavedState();
+  }
+
+  function renderColPropFields() {
+    const nameEl = document.getElementById("colPropDetailName");
+    const countBadge = document.getElementById("colPropFieldCountBadge");
+    const noticeEl = document.getElementById("colPropHorizontalNotice");
+    const listEl = document.getElementById("colPropFieldsList");
+    const newOrderInput = document.getElementById("newOrderInput");
+    if (!listEl) return;
+
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+
+    if (!prop) {
+      if (nameEl) nameEl.textContent = "物件が選択されていません";
+      if (countBadge) countBadge.textContent = "";
+      if (noticeEl) noticeEl.style.display = "none";
+      listEl.innerHTML = "<div style=\"color:#94a3b8;font-size:13px;padding:20px;text-align:center\">上の物件一覧から物件を選択してください</div>";
+      return;
+    }
+
+    if (nameEl) nameEl.textContent = prop.name;
+    const fields = colSettingsState.draftFields || [];
+    if (countBadge) countBadge.textContent = `${fields.length}項目`;
+    if (newOrderInput) {
+      newOrderInput.value = fields.length + 1;
+      newOrderInput.max = fields.length + 1;
+    }
+
+    const isHoriz = isHorizontalProperty(prop.name);
+    if (noticeEl) noticeEl.style.display = isHoriz ? "block" : "none";
+
+    listEl.innerHTML = "";
+    if (fields.length === 0) {
+      listEl.innerHTML = "<div style=\"color:#94a3b8;font-size:13px;padding:16px;text-align:center\">登録されている項目はありません。「項目を追加」枠から追加してください。</div>";
+      return;
+    }
+
+    fields.forEach((f, idx) => {
+      const isRenamed = f.originalLabel && f.originalLabel !== f.label;
+      const currentOrder = idx + 1;
+
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;flex-direction:column;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;gap:6px";
+
+      const topRow = document.createElement("div");
+      topRow.style.cssText = "display:flex;align-items:center;gap:8px";
+
+      const numBadge = document.createElement("span");
+      numBadge.style.cssText = "font-size:13px;font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:12px;border:1px solid #bfdbfe;flex-shrink:0";
+      numBadge.textContent = `${currentOrder}`;
+      topRow.appendChild(numBadge);
+
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = f.label || "";
+      nameInput.placeholder = "項目名を入力";
+      nameInput.style.cssText = "flex:1;min-width:0;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none";
+      nameInput.oninput = (e) => onFieldNameInput(idx, e.target.value);
+      topRow.appendChild(nameInput);
+
+      const unitSelect = document.createElement("select");
+      unitSelect.style.cssText = "width:68px;padding:6px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:14px;font-weight:700;background:#fff;outline:none;text-align:center";
+      ["袋","kg","本","枚"].forEach(u => {
+        const uOpt = document.createElement("option");
+        uOpt.value = u;
+        uOpt.textContent = u;
+        if ((f.unit || "袋") === u) uOpt.selected = true;
+        unitSelect.appendChild(uOpt);
+      });
+      unitSelect.onchange = (e) => onFieldUnitChange(idx, e.target.value);
+      topRow.appendChild(unitSelect);
+
+      row.appendChild(topRow);
+
+      const btmRow = document.createElement("div");
+      btmRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;border-top:1px dashed #e2e8f0;flex-wrap:wrap";
+
+      const orderWrap = document.createElement("div");
+      orderWrap.style.cssText = "display:flex;align-items:center;gap:6px";
+
+      const orderLbl = document.createElement("span");
+      orderLbl.style.cssText = "font-size:13px;font-weight:700;color:#334155;flex-shrink:0";
+      orderLbl.textContent = "並び順:";
+      orderWrap.appendChild(orderLbl);
+
+      const orderInput = document.createElement("input");
+      orderInput.type = "number";
+      orderInput.id = `orderInput_${idx}`;
+      orderInput.value = currentOrder;
+      orderInput.min = 1;
+      orderInput.max = fields.length;
+      orderInput.style.cssText = "width:52px;padding:6px 4px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:6px;background:#fff;outline:none";
+      orderWrap.appendChild(orderInput);
+
+      const changeBtn = document.createElement("button");
+      changeBtn.type = "button";
+      changeBtn.id = `orderChangeBtn_${idx}`;
+      changeBtn.textContent = "変更";
+      changeBtn.title = "入力した番号に移動し、全体の並び順を変更します";
+      changeBtn.style.cssText = "padding:6px 12px;font-size:13px;font-weight:700;background:#2563eb!important;color:#fff!important;border:none!important;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(37,99,235,0.25);";
+      changeBtn.onclick = () => applyItemOrderChange(idx);
+      orderWrap.appendChild(changeBtn);
+
+      btmRow.appendChild(orderWrap);
+
+      const actWrap = document.createElement("div");
+      actWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin-left:auto";
+
+      if (isRenamed) {
+        const origHint = document.createElement("span");
+        origHint.style.cssText = "font-size:11px;color:#0369a1;background:#e0f2fe;padding:2px 6px;border-radius:4px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis";
+        origHint.title = `元の名前: ${f.originalLabel}`;
+        origHint.textContent = `旧: ${f.originalLabel}`;
+        actWrap.appendChild(origHint);
+
+        const revBtn = document.createElement("button");
+        revBtn.type = "button";
+        revBtn.title = "元の名前に戻す";
+        revBtn.style.cssText = "padding:5px 8px;font-size:11px;font-weight:700;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer";
+        revBtn.textContent = "↩️ 元の名";
+        revBtn.onclick = () => revertSingleFieldName(idx);
+        actWrap.appendChild(revBtn);
+      }
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.title = "この項目を削除";
+      delBtn.style.cssText = "padding:5px 9px;font-size:13px;font-weight:700;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer";
+      delBtn.textContent = "🗑️ 削除";
+      delBtn.onclick = () => deleteColField(idx);
+      actWrap.appendChild(delBtn);
+
+      btmRow.appendChild(actWrap);
+      row.appendChild(btmRow);
+
+      listEl.appendChild(row);
+    });
+  }
+
+  function onFieldNameInput(fieldIndex, newName) {
+    if (!colSettingsState.draftFields[fieldIndex]) return;
+    colSettingsState.draftFields[fieldIndex].label = newName;
+    setUnsavedState();
+  }
+
+  function onFieldUnitChange(fieldIndex, newUnit) {
+    if (!colSettingsState.draftFields[fieldIndex]) return;
+    colSettingsState.draftFields[fieldIndex].unit = newUnit;
+    setUnsavedState();
+  }
+
+  function revertSingleFieldName(fieldIndex) {
+    if (!colSettingsState.draftFields[fieldIndex]) return;
+    const f = colSettingsState.draftFields[fieldIndex];
+    if (f.originalLabel) {
+      f.label = f.originalLabel;
+      renderColPropFields();
+      setUnsavedState();
+    }
+  }
+
+  function applyItemOrderChange(fromIdx) {
+    const inputEl = document.getElementById(`orderInput_${fromIdx}`);
+    if (!inputEl) return;
+    const targetOrder = parseInt(inputEl.value, 10);
+    const total = colSettingsState.draftFields.length;
+
+    if (isNaN(targetOrder) || targetOrder < 1) {
+      alert("1以上の有効な順番を入力してください");
+      inputEl.value = fromIdx + 1;
+      return;
+    }
+
+    const toIdx = Math.max(0, Math.min(total - 1, targetOrder - 1));
+
+    if (fromIdx === toIdx) {
+      renderColPropFields();
+      return;
+    }
+
+    const [movedItem] = colSettingsState.draftFields.splice(fromIdx, 1);
+    colSettingsState.draftFields.splice(toIdx, 0, movedItem);
+
+    renderColPropFields();
+    setUnsavedState();
+  }
+
+  function deleteColField(fieldIndex) {
+    if (!colSettingsState.draftFields[fieldIndex]) return;
+    const f = colSettingsState.draftFields[fieldIndex];
+    if (!confirm(`「${f.label || "この項目"}」を削除しますか？`)) return;
+
+    colSettingsState.draftFields.splice(fieldIndex, 1);
+    renderColPropFields();
+    setUnsavedState();
+  }
+
+  function setUnsavedState() {
+    const statusEl = document.getElementById("colSaveStatus");
+    if (statusEl) statusEl.style.display = "none";
+
+    const saveBtn = document.getElementById("colSaveBtn");
+    if (saveBtn) {
+      saveBtn.textContent = "💾 変更を保存する";
+      saveBtn.style.background = "#2563eb";
+    }
+  }
+
+  function saveCurrentPropColumns() {
+    const props = (typeof allProperties !== "undefined" && Array.isArray(allProperties)) ? allProperties : [];
+    const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+    if (!prop) {
+      alert("物件が見つかりません");
+      return;
+    }
+
+    const isHoriz = isHorizontalProperty(prop.name);
+
+    let bookName = (colSettingsState.draftBookName || "").trim();
+    if (!bookName) {
+      bookName = DEFAULT_NEW_EXCEL_BOOK_NAME;
+    } else if (!bookName.toLowerCase().endsWith(".xlsx")) {
+      bookName += ".xlsx";
+    }
+    colSettingsState.draftBookName = bookName;
+    saveJSON(LS_NEW_EXCEL_BOOK_NAME, bookName);
+
+    prop.newFileName = bookName;
+
+    const fileNameInput = document.getElementById("colPropFileNameInput");
+    if (fileNameInput) {
+      fileNameInput.value = bookName;
+    }
+
+    const autoCols = [
+      "C","D","E","F","G","H","I","J","K","L","M","N",
+      "O","P","Q","R","S","T","U","V","W","X","Y","Z",
+      "AA","AB","AC","AD","AE"
+    ];
+
+    prop.fields = colSettingsState.draftFields.map((draft, idx) => ({
+      label: (draft.label || "").trim() || "（名称未設定）",
+      unit: draft.unit || "袋",
+      col: isHoriz ? "" : (draft.col || autoCols[idx] || ""),
+      originalLabel: draft.originalLabel || draft.label || ""
+    }));
+
+    saveJSON(LS_PROPERTIES, allProperties);
+    updatePanelBookNameDisplay();
+
+    const statusEl = document.getElementById("colSaveStatus");
+    if (statusEl) {
+      statusEl.innerHTML = `✅ 「${prop.name}」の設定を保存しました<br><span style="font-size:12px;color:#15803d">📗 新Excelブック名: ${bookName}</span>`;
+      statusEl.style.display = "block";
+    }
+
+    const saveBtn = document.getElementById("colSaveBtn");
+    if (saveBtn) {
+      saveBtn.textContent = "✅ 保存済み";
+      saveBtn.style.background = "#16a34a";
+      setTimeout(() => {
+        if (saveBtn.textContent === "✅ 保存済み") {
+          saveBtn.textContent = "💾 保存する";
+        }
+      }, 1800);
+    }
+
+    renderColPropChips();
+  }
+
+  // 初期リスナー登録
+  const continueChk = document.getElementById("continueNewTableCheck");
+  if (continueChk) {
+    continueChk.addEventListener("change", () => {
+      localStorage.setItem(LS_CONTINUE_NEW_TABLE, continueChk.checked ? "1" : "0");
+      updateContinueCheckboxUI();
+    });
+  }
+  updateContinueCheckboxUI();
+  updatePanelBookNameDisplay();
+
 </script>
 </body>
 </html>

@@ -324,20 +324,6 @@
       </div>
     </div>
 
-    <!-- 新計量データ表の作成ボタン枠 -->
-    <div class="card" style="margin-top:12px;border:2px solid #2563eb;background:#f8fafc">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:15px;font-weight:700;color:#1e3a8a">📊 新計量データ表の作成</div>
-        <span style="font-size:12px;background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-weight:600">新表作成</span>
-      </div>
-      <div style="font-size:13px;color:#475569;margin-bottom:12px;line-height:1.6">
-        物件ごとの項目の追加・削除・手動編集、列番号設定を行い、新しい計量データ表を作成・反映します。
-      </div>
-      <button type="button" class="btn btn-primary" style="background:#2563eb!important;color:#fff!important;border:2px solid #1d4ed8!important;border-radius:10px;font-size:16px;font-weight:700;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openColumnSettingsModal()">
-        📋 新しい表を作る
-      </button>
-    </div>
-
     <div class="card" style="margin-top:12px">
       <div style="font-size:13px;color:#666;line-height:1.7">
         送信時にチェックが入っているアドレスに送信されます。<br>
@@ -1735,7 +1721,12 @@ function exportXlsx(){
   XLSX.utils.book_append_sheet(wb,ws,'計量データ');
   const safeDate = (state.date || 'nodate').replace(/-/g,'');
   const safeStaff = state.selectedStaff || '未設定';
-  XLSX.writeFile(wb,`計量データ_${safeDate}_${safeStaff}.xlsx`);
+  let filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  if (isContinueNewTableEnabled()) {
+    const bookName = getSavedExcelBookName();
+    if (bookName) filename = bookName;
+  }
+  XLSX.writeFile(wb, filename);
 }
 
 // ===== CONVERT SCREEN =====
@@ -2341,7 +2332,11 @@ function shareHistoryAsExcel(ri, event){
 
   const safeDate = (record.date || 'nodate').replace(/-/g,'');
   const safeStaff = record.staffName || '未設定';
-  const filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  let filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  if (isContinueNewTableEnabled()) {
+    const bookName = getSavedExcelBookName();
+    if (bookName) filename = bookName;
+  }
 
   // ダウンロード → iPhoneでは「ファイル」アプリのDownloadsに保存される
   XLSX.writeFile(wb, filename);
@@ -2519,8 +2514,14 @@ function saveMailSettings(){
 }
 
 // ===== 新計量データ表の作成 モーダル制御 =====
+const LS_CONTINUE_NEW_TABLE = 'keiryo_continue_new_table';
 const LS_NEW_EXCEL_BOOK_NAME = 'keiryo_new_excel_book_name';
 const DEFAULT_NEW_EXCEL_BOOK_NAME = '計量データ表物件別8月9月.xlsx';
+
+function isContinueNewTableEnabled() {
+  const val = localStorage.getItem(LS_CONTINUE_NEW_TABLE);
+  return val === null ? true : (val === '1' || val === 'true');
+}
 
 let colSettingsState = {
   selectedPropName: '',
