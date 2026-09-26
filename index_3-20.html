@@ -2519,56 +2519,12 @@ function saveMailSettings(){
 }
 
 // ===== 新計量データ表の作成 モーダル制御 =====
-const COL_LETTERS = [
-  'A','B','C','D','E','F','G','H','I','J','K','L','M','N',
-  'O','P','Q','R','S','T','U','V','W','X','Y','Z',
-  'AA','AB','AC','AD','AE'
-];
-
-const COL_OPTIONS = [
-  { val: '', label: '（なし）' },
-  ...COL_LETTERS.map(c => ({ val: c, label: `${c}列` }))
-];
-
 let colSettingsState = {
   selectedPropName: '',
   searchQuery: '',
   draftFileName: '',
   draftFields: []
 };
-
-function getColIdx(col) {
-  if (!col) return -1;
-  return COL_LETTERS.indexOf(String(col).trim().toUpperCase());
-}
-
-function getColByIndex(idx) {
-  if (idx < 0 || idx >= COL_LETTERS.length) return '';
-  return COL_LETTERS[idx];
-}
-
-function shiftColumnsAfter(fields, targetCol) {
-  const targetIdx = getColIdx(targetCol);
-  if (targetIdx === -1) return;
-  // targetCol 以上の列を持つ項目の列を自動で1つ後ろにずらす
-  fields.forEach(f => {
-    const cIdx = getColIdx(f.col);
-    if (cIdx >= targetIdx && cIdx + 1 < COL_LETTERS.length) {
-      f.col = getColByIndex(cIdx + 1);
-    }
-  });
-}
-
-function sortFieldsByColumn(fields) {
-  fields.sort((a, b) => {
-    const ia = getColIdx(a.col);
-    const ib = getColIdx(b.col);
-    if (ia === -1 && ib === -1) return 0;
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-}
 
 function getDefaultFileName(propName) {
   return `新_${propName || '物件'}.xlsx`;
@@ -2587,21 +2543,9 @@ function isHorizontalProperty(name) {
   return name.startsWith('7.11') || name.includes('セブン') || name.includes('セカンドストリート');
 }
 
-function initNewColDropdown() {
-  const sel = document.getElementById('newColSelect');
-  if (!sel || sel.children.length > 0) return;
-  COL_OPTIONS.forEach(opt => {
-    const el = document.createElement('option');
-    el.value = opt.val;
-    el.textContent = opt.label;
-    sel.appendChild(el);
-  });
-}
-
 function openColumnSettingsModal() {
   const modal = document.getElementById('colSettingsModal');
   if (!modal) return;
-  initNewColDropdown();
 
   colSettingsState.searchQuery = '';
   const searchInput = document.getElementById('colPropSearchInput');
@@ -2657,7 +2601,7 @@ function renderColPropChips() {
   filtered.forEach(p => {
     const isSelected = p.name === colSettingsState.selectedPropName;
     const isHoriz = isHorizontalProperty(p.name);
-    const colCount = (p.fields || []).filter(f => f.col).length;
+    const count = (p.fields || []).length;
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -2666,8 +2610,8 @@ function renderColPropChips() {
     let label = p.name;
     if (isHoriz) {
       label += ' (横)';
-    } else if (colCount > 0) {
-      label += ` (${colCount})`;
+    } else if (count > 0) {
+      label += ` (${count})`;
     }
     btn.textContent = label;
     btn.onclick = () => selectColProp(p.name, true);
@@ -2693,18 +2637,22 @@ function selectColProp(propName, clearSaveStatus) {
       col: f.col || '',
       originalLabel: f.originalLabel || f.label || ''
     }));
-    sortFieldsByColumn(colSettingsState.draftFields);
     colSettingsState.draftFileName = prop.newFileName || '';
   } else {
     colSettingsState.draftFields = [];
     colSettingsState.draftFileName = '';
   }
 
-  // ファイル名入力欄の更新
   const fileNameInput = document.getElementById('colPropFileNameInput');
   if (fileNameInput && prop) {
     fileNameInput.value = colSettingsState.draftFileName;
     fileNameInput.placeholder = getDefaultFileName(prop.name);
+  }
+
+  const newOrderInput = document.getElementById('newOrderInput');
+  if (newOrderInput) {
+    newOrderInput.value = colSettingsState.draftFields.length + 1;
+    newOrderInput.max = colSettingsState.draftFields.length + 1;
   }
 
   renderColPropChips();
@@ -2735,35 +2683,32 @@ function onPropFileNameChange(val) {
   setUnsavedState();
 }
 
-function addNewColumnField() {
+function addNewOrderItem() {
   const nameInput = document.getElementById('newColLabelInput');
   const unitInput = document.getElementById('newColUnitInput');
-  const colInput = document.getElementById('newColSelect');
+  const orderInput = document.getElementById('newOrderInput');
 
   const label = nameInput ? nameInput.value.trim() : '';
   if (!label) {
-    alert('新しい列名（項目名）を入力してください');
+    alert('新しい項目名を入力してください');
     if (nameInput) nameInput.focus();
     return;
   }
   const unit = unitInput ? unitInput.value : '袋';
-  const targetCol = colInput ? colInput.value : '';
-
-  // 指定された列以降にある既存項目の列番号を自動で1つずつずらす
-  if (targetCol) {
-    shiftColumnsAfter(colSettingsState.draftFields, targetCol);
+  const total = colSettingsState.draftFields.length;
+  let targetOrder = orderInput ? parseInt(orderInput.value, 10) : (total + 1);
+  if (isNaN(targetOrder) || targetOrder < 1) {
+    targetOrder = total + 1;
   }
 
-  // 新項目を追加
-  colSettingsState.draftFields.push({
+  const insertIdx = Math.max(0, Math.min(total, targetOrder - 1));
+
+  colSettingsState.draftFields.splice(insertIdx, 0, {
     label: label,
     unit: unit,
-    col: targetCol,
+    col: '',
     originalLabel: label
   });
-
-  // 列番号順に自動ソート
-  sortFieldsByColumn(colSettingsState.draftFields);
 
   if (nameInput) nameInput.value = '';
 
@@ -2776,6 +2721,7 @@ function renderColPropFields() {
   const countBadge = document.getElementById('colPropFieldCountBadge');
   const noticeEl = document.getElementById('colPropHorizontalNotice');
   const listEl = document.getElementById('colPropFieldsList');
+  const newOrderInput = document.getElementById('newOrderInput');
   if (!listEl) return;
 
   const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
@@ -2792,18 +2738,23 @@ function renderColPropFields() {
   if (nameEl) nameEl.textContent = prop.name;
   const fields = colSettingsState.draftFields || [];
   if (countBadge) countBadge.textContent = `${fields.length}項目`;
+  if (newOrderInput) {
+    newOrderInput.value = fields.length + 1;
+    newOrderInput.max = fields.length + 1;
+  }
 
   const isHoriz = isHorizontalProperty(prop.name);
   if (noticeEl) noticeEl.style.display = isHoriz ? 'block' : 'none';
 
   listEl.innerHTML = '';
   if (fields.length === 0) {
-    listEl.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:16px;text-align:center">登録されている項目はありません。「列を追加」枠から項目を追加してください。</div>';
+    listEl.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:16px;text-align:center">登録されている項目はありません。「項目を追加」枠から追加してください。</div>';
     return;
   }
 
   fields.forEach((f, idx) => {
     const isRenamed = f.originalLabel && f.originalLabel !== f.label;
+    const currentOrder = idx + 1;
 
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;flex-direction:column;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;gap:6px';
@@ -2812,10 +2763,10 @@ function renderColPropFields() {
     const topRow = document.createElement('div');
     topRow.style.cssText = 'display:flex;align-items:center;gap:8px';
 
-    const lblTag = document.createElement('span');
-    lblTag.style.cssText = 'font-size:12px;font-weight:700;color:#64748b;width:24px;flex-shrink:0';
-    lblTag.textContent = '名:';
-    topRow.appendChild(lblTag);
+    const numBadge = document.createElement('span');
+    numBadge.style.cssText = 'font-size:13px;font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:12px;border:1px solid #bfdbfe;flex-shrink:0';
+    numBadge.textContent = `${currentOrder}`;
+    topRow.appendChild(numBadge);
 
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
@@ -2839,72 +2790,49 @@ function renderColPropFields() {
 
     row.appendChild(topRow);
 
-    // 下段: 列番号セレクト + 元の名前表示 + 元に戻すボタン + 削除ボタン
+    // 下段: 並び順番号入力枠 + 変更ボタン + 元の名前表示 + 元に戻すボタン + 削除ボタン
     const btmRow = document.createElement('div');
-    btmRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:4px;border-top:1px dashed #e2e8f0';
+    btmRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;border-top:1px dashed #e2e8f0;flex-wrap:wrap';
 
-    const colWrap = document.createElement('div');
-    colWrap.style.cssText = 'display:flex;align-items:center;gap:6px;flex:1;min-width:0';
+    const orderWrap = document.createElement('div');
+    orderWrap.style.cssText = 'display:flex;align-items:center;gap:6px';
 
-    const colLbl = document.createElement('span');
-    colLbl.style.cssText = 'font-size:12px;font-weight:600;color:#475569;flex-shrink:0';
-    colLbl.textContent = '列:';
-    colWrap.appendChild(colLbl);
+    const orderLbl = document.createElement('span');
+    orderLbl.style.cssText = 'font-size:13px;font-weight:700;color:#334155;flex-shrink:0';
+    orderLbl.textContent = '並び順:';
+    orderWrap.appendChild(orderLbl);
 
-    const colSelect = document.createElement('select');
-    colSelect.id = `colSelect_${idx}`;
-    colSelect.style.cssText = 'padding:6px 8px;border:2px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;background:#fff;color:#0f172a;outline:none;min-width:85px;cursor:pointer';
-    if (isHoriz) {
-      colSelect.disabled = true;
-      colSelect.style.opacity = '0.5';
-      colSelect.style.cursor = 'not-allowed';
-    }
-
-    COL_OPTIONS.forEach(opt => {
-      const option = document.createElement('option');
-      option.value = opt.val;
-      option.textContent = opt.label;
-      if (!isHoriz && (f.col || '') === opt.val) {
-        option.selected = true;
-      }
-      colSelect.appendChild(option);
-    });
+    const orderInput = document.createElement('input');
+    orderInput.type = 'number';
+    orderInput.id = `orderInput_${idx}`;
+    orderInput.value = currentOrder;
+    orderInput.min = 1;
+    orderInput.max = fields.length;
+    orderInput.style.cssText = 'width:52px;padding:6px 4px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:6px;background:#fff;outline:none';
+    orderWrap.appendChild(orderInput);
 
     const changeBtn = document.createElement('button');
     changeBtn.type = 'button';
-    changeBtn.id = `colChangeBtn_${idx}`;
+    changeBtn.id = `orderChangeBtn_${idx}`;
     changeBtn.textContent = '変更';
-    changeBtn.title = '選択した列番号に変更し、他の列を自動でずらして並び替えます';
+    changeBtn.title = '入力した番号に移動し、全体の並び順を変更します';
     changeBtn.style.cssText = 'padding:6px 12px;font-size:13px;font-weight:700;background:#2563eb!important;color:#fff!important;border:none!important;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(37,99,235,0.25);';
-    if (isHoriz) {
-      changeBtn.disabled = true;
-      changeBtn.style.opacity = '0.5';
-      changeBtn.style.cursor = 'not-allowed';
-    }
+    changeBtn.onclick = () => applyItemOrderChange(idx);
+    orderWrap.appendChild(changeBtn);
 
-    colSelect.onchange = (e) => {
-      changeBtn.style.background = '#e11d48!important';
-      changeBtn.textContent = '変更確定';
-    };
-    changeBtn.onclick = () => applyColumnChange(idx);
+    btmRow.appendChild(orderWrap);
 
-    colWrap.appendChild(colSelect);
-    colWrap.appendChild(changeBtn);
+    // 右側アクション（元の名前バッジ、元の名に戻す、削除）
+    const actWrap = document.createElement('div');
+    actWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:auto';
 
     if (isRenamed) {
       const origHint = document.createElement('span');
-      origHint.style.cssText = 'font-size:11px;color:#0369a1;background:#e0f2fe;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px';
+      origHint.style.cssText = 'font-size:11px;color:#0369a1;background:#e0f2fe;padding:2px 6px;border-radius:4px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis';
       origHint.title = `元の名前: ${f.originalLabel}`;
       origHint.textContent = `旧: ${f.originalLabel}`;
-      colWrap.appendChild(origHint);
-    }
-    btmRow.appendChild(colWrap);
+      actWrap.appendChild(origHint);
 
-    // アクションボタン（個別復元 + 削除）
-    const actWrap = document.createElement('div');
-    actWrap.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0';
-
-    if (isRenamed) {
       const revBtn = document.createElement('button');
       revBtn.type = 'button';
       revBtn.title = '元の名前に戻す';
@@ -2951,53 +2879,33 @@ function revertSingleFieldName(fieldIndex) {
   }
 }
 
-function applyColumnChange(fieldIndex) {
-  const selectEl = document.getElementById(`colSelect_${fieldIndex}`);
-  if (!selectEl) return;
-  const newCol = selectEl.value;
-  const currentItem = colSettingsState.draftFields[fieldIndex];
-  if (!currentItem) return;
+function applyItemOrderChange(fromIdx) {
+  const inputEl = document.getElementById(`orderInput_${fromIdx}`);
+  if (!inputEl) return;
+  const targetOrder = parseInt(inputEl.value, 10);
+  const total = colSettingsState.draftFields.length;
 
-  const oldCol = currentItem.col || '';
-  if (newCol === oldCol) {
-    sortFieldsByColumn(colSettingsState.draftFields);
+  if (isNaN(targetOrder) || targetOrder < 1) {
+    alert('1以上の有効な順番を入力してください');
+    inputEl.value = fromIdx + 1;
+    return;
+  }
+
+  // 1始まりから0始まりインデックスへ（0 〜 total-1 の範囲に収める）
+  const toIdx = Math.max(0, Math.min(total - 1, targetOrder - 1));
+
+  if (fromIdx === toIdx) {
     renderColPropFields();
     return;
   }
 
-  if (!newCol) {
-    currentItem.col = '';
-    sortFieldsByColumn(colSettingsState.draftFields);
-    renderColPropFields();
-    setUnsavedState();
-    return;
-  }
+  // 配列から fromIdx の項目を取り出し、toIdx に挿入！
+  const [movedItem] = colSettingsState.draftFields.splice(fromIdx, 1);
+  colSettingsState.draftFields.splice(toIdx, 0, movedItem);
 
-  const targetIdx = getColIdx(newCol);
-  if (targetIdx === -1) return;
-
-  // 自分以外の項目で、newCol 以上の列を持っているものを自動で1列ずつ後ろにずらす
-  colSettingsState.draftFields.forEach((f, idx) => {
-    if (idx === fieldIndex) return;
-    const cIdx = getColIdx(f.col);
-    if (cIdx >= targetIdx && cIdx + 1 < COL_LETTERS.length) {
-      f.col = getColByIndex(cIdx + 1);
-    }
-  });
-
-  // 自身の列を newCol に設定
-  currentItem.col = newCol;
-
-  // 列番号順に自動ソート
-  sortFieldsByColumn(colSettingsState.draftFields);
-
-  // 画面再描画
+  // 画面再描画（全体の順番が自動で再計算・更新される）
   renderColPropFields();
   setUnsavedState();
-}
-
-function onColDropdownChange(fieldIndex, newCol) {
-  applyColumnChange(fieldIndex);
 }
 
 function deleteColField(fieldIndex) {
@@ -3040,11 +2948,18 @@ function saveCurrentPropColumns() {
   }
   prop.newFileName = fileName;
 
-  // fields の更新
-  prop.fields = colSettingsState.draftFields.map(draft => ({
+  // 後方互換性用の列記号リスト
+  const autoCols = [
+    'C','D','E','F','G','H','I','J','K','L','M','N',
+    'O','P','Q','R','S','T','U','V','W','X','Y','Z',
+    'AA','AB','AC','AD','AE'
+  ];
+
+  // fields の更新（現在のドラフト順序通りに保存）
+  prop.fields = colSettingsState.draftFields.map((draft, idx) => ({
     label: (draft.label || '').trim() || '（名称未設定）',
     unit: draft.unit || '袋',
-    col: isHoriz ? '' : (draft.col || ''),
+    col: isHoriz ? '' : (draft.col || autoCols[idx] || ''),
     originalLabel: draft.originalLabel || draft.label || ''
   }));
 
@@ -3208,15 +3123,15 @@ function addNewProperty(){
             oninput="onPropFileNameChange(this.value)">
         </div>
 
-        <!-- 列を追加枠 -->
+        <!-- 項目を追加枠 -->
         <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:12px">
           <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <span>➕ 列（項目）を追加する</span>
-            <span style="font-size:11px;font-weight:normal;color:#3b82f6">（指定列以降は自動で1列ずつずれます）</span>
+            <span>➕ 項目を追加する</span>
+            <span style="font-size:11px;font-weight:normal;color:#3b82f6">（指定した番号に挿入され、以降は1つずつずれます）</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;gap:8px">
-              <input type="text" id="newColLabelInput" placeholder="新しい列名（例: プラスチック）"
+              <input type="text" id="newColLabelInput" placeholder="新しい項目名（例: プラスチック）"
                 style="flex:2;padding:8px 10px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:600;outline:none;background:#fff">
               <select id="newColUnitInput" style="flex:1;padding:8px 8px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:700;background:#fff;outline:none">
                 <option value="袋">袋</option>
@@ -3226,26 +3141,24 @@ function addNewProperty(){
               </select>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap">挿入列:</span>
-              <select id="newColSelect" style="flex:1;padding:8px 10px;border:2px solid #cbd5e1;border-radius:8px;font-size:16px;font-weight:700;background:#fff;outline:none">
-                <!-- COL_OPTIONS -->
-              </select>
-              <button type="button" class="btn" style="flex:1;background:#2563eb!important;color:#fff!important;border:none!important;padding:8px 14px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer" onclick="addNewColumnField()">
+              <span style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap">挿入番号:</span>
+              <input type="number" id="newOrderInput" value="1" min="1"
+                style="width:65px;padding:8px 6px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:8px;background:#fff;outline:none">
+              <button type="button" class="btn" style="flex:1;background:#2563eb!important;color:#fff!important;border:none!important;padding:8px 14px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer" onclick="addNewOrderItem()">
                 ➕ 追加する
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 横書き物件用の警告案内 -->
+        <!-- 横書き物件用の案内 -->
         <div id="colPropHorizontalNotice" style="display:none;background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:12px">
-          ⚠️ <b>横書き形式のため列番号は指定されません</b><br>
-          セブン-イレブンおよびセカンドストリートは横書き形式のため、列番号の指定は不要です。
+          ℹ️ <b>横書き形式の物件です</b>（セブン-イレブン・セカンドストリート）
         </div>
 
         <!-- 項目一覧 -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:700;color:#334155">📋 現在の項目一覧（タップで手動書き換え・列変更で自動並び替え）:</div>
+          <div style="font-size:13px;font-weight:700;color:#334155">📋 現在の項目一覧（希望の番号を入れて変更ボタンで全体の並び順を変更）:</div>
         </div>
         <div id="colPropFieldsList" style="display:flex;flex-direction:column;gap:8px">
           <!-- 各項目の枠が動的に生成される -->
