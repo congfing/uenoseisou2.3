@@ -757,7 +757,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
             <span id="launcherContinueStatusBadge" style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:16px;border:1.5px solid var(--button-border, #000000);background:var(--base-bg, #000000);color:var(--base-text, #ffffff);">
-              継続: ON
+              3-20 を使用中
             </span>
             <span style="font-size:16px;font-weight:700;">▶</span>
           </div>
@@ -802,12 +802,12 @@
             使用するバージョンを選択：
           </div>
           <div style="display:flex;gap:10px;">
-            <label id="labelVer320" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#ffffff;color:#000000;transition:all 0.15s;">
-              <input type="radio" name="keiryoVersionRadio" id="radioVer320" value="3-20" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;">
+            <label id="labelVer320" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#000000;color:#ffffff;transition:all 0.15s;">
+              <input type="radio" name="keiryoVersionRadio" id="radioVer320" value="3-20" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;" checked>
               <span>３−20を使う</span>
             </label>
-            <label id="labelVer321" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#000000;color:#ffffff;transition:all 0.15s;">
-              <input type="radio" name="keiryoVersionRadio" id="radioVer321" value="3-21" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;" checked>
+            <label id="labelVer321" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:2px solid #000000;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;background:#ffffff;color:#000000;transition:all 0.15s;">
+              <input type="radio" name="keiryoVersionRadio" id="radioVer321" value="3-21" onchange="onVersionRadioChange(this.value)" style="width:18px;height:18px;accent-color:#000000;cursor:pointer;">
               <span>３−21を使う</span>
             </label>
           </div>
@@ -982,7 +982,7 @@
 
   const software = [
     { name: "物件表", detail: "表示設定", file: "index_2-4_colview.html" },
-    { name: "計量データ入力", detail: "v３−21", file: "index_3-21.html", revision: "20260927-v321" },
+    { name: "計量データ入力", detail: "v３−20", file: "index_3-20.html", revision: "20260927-v320" },
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
     { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
     { name: "燃費管理", detail: "入力・履歴", file: "index_nenpi.html" },
@@ -1582,11 +1582,20 @@
   }
 
   const LS_ACTIVE_VERSION = "keiryo_active_version";
+  const LS_VERSION_INIT = "keiryo_version_init_320";
   const LS_MAIL_LIST = "keiryo_mail_list";
+
+  try {
+    if (localStorage.getItem(LS_VERSION_INIT) !== "20260927_320") {
+      localStorage.setItem(LS_ACTIVE_VERSION, "3-20");
+      localStorage.setItem(LS_CONTINUE_NEW_TABLE, "0");
+      localStorage.setItem(LS_VERSION_INIT, "20260927_320");
+    }
+  } catch(e) {}
 
   function getActiveKeiryoVersion() {
     const v = localStorage.getItem(LS_ACTIVE_VERSION);
-    return (v === "3-20") ? "3-20" : "3-21"; // デフォルトは 3-21
+    return (v === "3-21") ? "3-21" : "3-20"; // デフォルトは 3-20
   }
 
   function setActiveKeiryoVersion(ver) {
