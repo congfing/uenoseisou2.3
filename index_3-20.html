@@ -2853,7 +2853,7 @@ function renderColPropFields() {
 
     const colSelect = document.createElement('select');
     colSelect.id = `colSelect_${idx}`;
-    colSelect.style.cssText = 'padding:6px 8px;border:2px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;background:#fff;color:#0f172a;outline:none;min-width:88px;cursor:pointer';
+    colSelect.style.cssText = 'padding:6px 8px;border:2px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;background:#fff;color:#0f172a;outline:none;min-width:85px;cursor:pointer';
     if (isHoriz) {
       colSelect.disabled = true;
       colSelect.style.opacity = '0.5';
@@ -2870,8 +2870,26 @@ function renderColPropFields() {
       colSelect.appendChild(option);
     });
 
-    colSelect.onchange = (e) => onColDropdownChange(idx, e.target.value);
+    const changeBtn = document.createElement('button');
+    changeBtn.type = 'button';
+    changeBtn.id = `colChangeBtn_${idx}`;
+    changeBtn.textContent = '変更';
+    changeBtn.title = '選択した列番号に変更し、他の列を自動でずらして並び替えます';
+    changeBtn.style.cssText = 'padding:6px 12px;font-size:13px;font-weight:700;background:#2563eb!important;color:#fff!important;border:none!important;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(37,99,235,0.25);';
+    if (isHoriz) {
+      changeBtn.disabled = true;
+      changeBtn.style.opacity = '0.5';
+      changeBtn.style.cursor = 'not-allowed';
+    }
+
+    colSelect.onchange = (e) => {
+      changeBtn.style.background = '#e11d48!important';
+      changeBtn.textContent = '変更確定';
+    };
+    changeBtn.onclick = () => applyColumnChange(idx);
+
     colWrap.appendChild(colSelect);
+    colWrap.appendChild(changeBtn);
 
     if (isRenamed) {
       const origHint = document.createElement('span');
@@ -2933,15 +2951,53 @@ function revertSingleFieldName(fieldIndex) {
   }
 }
 
-function onColDropdownChange(fieldIndex, newCol) {
-  if (!colSettingsState.draftFields[fieldIndex]) return;
-  colSettingsState.draftFields[fieldIndex].col = newCol;
+function applyColumnChange(fieldIndex) {
+  const selectEl = document.getElementById(`colSelect_${fieldIndex}`);
+  if (!selectEl) return;
+  const newCol = selectEl.value;
+  const currentItem = colSettingsState.draftFields[fieldIndex];
+  if (!currentItem) return;
+
+  const oldCol = currentItem.col || '';
+  if (newCol === oldCol) {
+    sortFieldsByColumn(colSettingsState.draftFields);
+    renderColPropFields();
+    return;
+  }
+
+  if (!newCol) {
+    currentItem.col = '';
+    sortFieldsByColumn(colSettingsState.draftFields);
+    renderColPropFields();
+    setUnsavedState();
+    return;
+  }
+
+  const targetIdx = getColIdx(newCol);
+  if (targetIdx === -1) return;
+
+  // 自分以外の項目で、newCol 以上の列を持っているものを自動で1列ずつ後ろにずらす
+  colSettingsState.draftFields.forEach((f, idx) => {
+    if (idx === fieldIndex) return;
+    const cIdx = getColIdx(f.col);
+    if (cIdx >= targetIdx && cIdx + 1 < COL_LETTERS.length) {
+      f.col = getColByIndex(cIdx + 1);
+    }
+  });
+
+  // 自身の列を newCol に設定
+  currentItem.col = newCol;
 
   // 列番号順に自動ソート
   sortFieldsByColumn(colSettingsState.draftFields);
 
+  // 画面再描画
   renderColPropFields();
   setUnsavedState();
+}
+
+function onColDropdownChange(fieldIndex, newCol) {
+  applyColumnChange(fieldIndex);
 }
 
 function deleteColField(fieldIndex) {
