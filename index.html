@@ -1811,6 +1811,7 @@
     lines.push(`2. index.html の計量データ入力のリンクおよびパネル設定を「3-${activeVer === "3-21" ? "21" : "20"}」に切り替えて Push してください。`);
     lines.push(`3. 新しいExcel表（${bookName}）には【${period}】の過去データを引き継いで作成してください。`);
     lines.push(`4. 項目設定で「倍率: あり」の項目は、袋数に入力された値に倍率を掛けてkgを算出する自動連動枠とし、袋入力枠を生成・連動してください。「倍率: なし (単独枠)」の項目は手入力の単独枠としてください。`);
+    lines.push(`5. 計算用倍率の袋項目（kg換算用の袋数入力枠）には項目名に「（計算用）」を入れ、原本Excelに列が存在しないため列番号は「なし」に設定してください。メール本文にもそのまま「〇〇（計算用）」と記載されます。`);
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("");
     lines.push("■ 物件別 新項目・並び順設定一覧:");
@@ -2407,8 +2408,9 @@
           // 主にkgを出すために袋数を数えて掛け算するため、自動的に袋入力枠（またはkg入力枠）を生成
           if (f.unit === "kg") {
             // kg項目で「倍率あり」にした場合、掛け算の元となる「袋入力枠」を直前（上）に自動生成！
+            const clean = f.label.replace(/（計算用）/g, "").replace(/\(計算用\)/g, "").trim();
             const newBagItem = {
-              label: f.label,
+              label: `${clean}（計算用）`,
               unit: "袋",
               col: "",
               originalLabel: f.originalLabel || f.label,
@@ -2552,13 +2554,40 @@
       "AA","AB","AC","AD","AE"
     ];
 
-    prop.fields = colSettingsState.draftFields.map((draft, idx) => ({
-      label: (draft.label || "").trim() || "（名称未設定）",
-      unit: draft.unit || "袋",
-      col: isHoriz ? "" : (draft.col || autoCols[idx] || ""),
-      originalLabel: draft.originalLabel || draft.label || "",
-      hasMultiplier: draft.hasMultiplier !== undefined ? draft.hasMultiplier : isMultiplierActive(draft, colSettingsState.draftFields)
-    }));
+    prop.fields = colSettingsState.draftFields.map((draft, idx) => {
+      let finalCol = draft.col || "";
+      if (isHoriz) {
+        finalCol = "";
+      } else if (!finalCol) {
+        // 計算用倍率の袋項目（相手に同名のkgがあり倍率掛け算用）は、原本Excelに列がないため「なし」（空文字）とする
+        const cleanDraft = (draft.label || "").replace(/（計算用）/g, "").replace(/\(計算用\)/g, "").trim();
+        const hasKgPair = colSettingsState.draftFields.some(o => o.unit === "kg" && (o.label || "").replace(/（計算用）/g, "").replace(/\(計算用\)/g, "").trim() === cleanDraft);
+        const isCalcBag = (draft.unit === "袋" && hasKgPair && isMultiplierActive(draft, colSettingsState.draftFields));
+        if (!isCalcBag) {
+          finalCol = autoCols[idx] || "";
+        } else {
+          finalCol = ""; // 計算用倍率の袋項目は「なし」
+        }
+      }
+      let finalLabel = (draft.label || "").trim() || "（名称未設定）";
+      const cleanDraft = finalLabel.replace(/（計算用）/g, "").replace(/\(計算用\)/g, "").trim();
+      // 列番号が存在する項目（原本両方記入）は、倍率有効であっても「（計算用）」は絶対に付けない
+      const isCalcBag = (draft.unit === "袋" && hasKgPair && (!finalCol || String(finalCol).trim() === "") && isMultiplierActive(draft, colSettingsState.draftFields));
+      if (isCalcBag) {
+        if (!finalLabel.includes("（計算用）") && !finalLabel.includes("(計算用)")) {
+          finalLabel = `${cleanDraft}（計算用）`;
+        }
+      } else {
+        finalLabel = cleanDraft;
+      }
+      return {
+        label: finalLabel,
+        unit: draft.unit || "袋",
+        col: finalCol,
+        originalLabel: draft.originalLabel || draft.label || "",
+        hasMultiplier: draft.hasMultiplier !== undefined ? draft.hasMultiplier : isMultiplierActive(draft, colSettingsState.draftFields)
+      };
+    });
 
     saveJSON(LS_PROPERTIES, allProperties);
     updatePanelBookNameDisplay();

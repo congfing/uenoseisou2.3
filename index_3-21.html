@@ -268,12 +268,16 @@
 <!-- Screen 4: Data entry -->
 <div class="screen" id="screen4">
   <div style="padding-top:16px">
-    <div class="section-title" id="propEntryTitle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" id="propEntryTitle" style="margin-bottom:0"></div>
+      <button class="btn btn-secondary btn-sm" onclick="closePropertyEntry()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub">各項目に数値を入力してください</div>
     <div id="inputFields"></div>
     <div style="display:flex;gap:10px;margin-top:0">
       <button class="btn btn-primary" style="flex:2" onclick="savePropertyData()">保存 ✓</button>
-      <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去して戻る</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closePropertyEntry()">✕ 閉じる</button>
+      <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去</button>
     </div>
   </div>
 </div>
@@ -814,6 +818,44 @@ function setAutoMultiplier(prop,sourceKey,value){
   const numeric=parseFloat(value);
   saveJSON(autoMultiplierStorageKey(prop,sourceKey),Number.isNaN(numeric)?1:numeric);
 }
+
+function normalizeLabelForPair(label){
+  return (label || '').replace(/（計算用）/g, '').replace(/\(計算用\)/g, '').trim();
+}
+
+function isCalcBagField(prop, field){
+  if(!field || field.unit !== '袋') return false;
+  // 列番号が設定されている袋項目（原本に両方記入する物件）は、倍率を使っていても絶対に計算用とはしない
+  if(field.col && String(field.col).trim() !== '') return false;
+  if(field.hasMultiplier === false) return false;
+  if(prop && prop.name && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))) return false;
+  if((field.label || '').includes('（計算用）') || (field.label || '').includes('(計算用)')) return true;
+  if(prop && prop.fields && Array.isArray(prop.fields)){
+    const clean = normalizeLabelForPair(field.label);
+    const hasKg = prop.fields.some(o => o.unit === 'kg' && normalizeLabelForPair(o.label) === clean);
+    if(hasKg && (!field.col || String(field.col).trim() === '')) return true;
+  }
+  return false;
+}
+
+function getFieldMailLabel(prop, field){
+  if(!field) return '';
+  let label = field.label || '（名称未設定）';
+  // 列番号がある項目（原本両方記入）は、倍率を使っていても「（計算用）」は絶対に書かない
+  if(field.col && String(field.col).trim() !== ''){
+    return normalizeLabelForPair(label);
+  }
+  if(isCalcBagField(prop, field)){
+    if(!label.includes('（計算用）') && !label.includes('(計算用)')){
+      label = `${normalizeLabelForPair(label)}（計算用）`;
+    }
+  } else {
+    // 計算用ではない通常項目は（計算用）を取り除く
+    label = normalizeLabelForPair(label);
+  }
+  return label;
+}
+
 function getAutoKgRule(prop,sourceKey){
   if(!prop) return null;
   let rule = null;
@@ -871,12 +913,12 @@ function getAutoKgRule(prop,sourceKey){
 
   // 物件固有ルールが未設定でも、同名の「袋」と「kg」のペアが存在し倍率有効なら汎用連動（袋数×倍率＝kg）
   if(!rule && prop.fields && Array.isArray(prop.fields) && sourceKey.endsWith('__袋')){
-    const baseLabel = sourceKey.replace(/__袋$/, '');
-    const targetKey = `${baseLabel}__kg`;
+    const sourceLabel = sourceKey.replace(/__袋$/, '');
+    const cleanLabel = normalizeLabelForPair(sourceLabel);
     const sourceF = prop.fields.find(f => fieldKey(f) === sourceKey);
-    const targetF = prop.fields.find(f => fieldKey(f) === targetKey);
+    const targetF = prop.fields.find(f => f.unit === 'kg' && normalizeLabelForPair(f.label) === cleanLabel);
     if(sourceF && targetF && sourceF.hasMultiplier !== false && targetF.hasMultiplier !== false){
-      rule = { target: targetKey, multiplier: getAutoMultiplier(prop, sourceKey, null), selectable: true };
+      rule = { target: fieldKey(targetF), multiplier: getAutoMultiplier(prop, sourceKey, null), selectable: true };
     }
   }
 
@@ -1505,7 +1547,7 @@ function removeFieldInline(propIdx,fieldIdx,event){
 
 function addFieldInline(propIdx,event){
   event.stopPropagation();
-  allProperties[propIdx].fields.push({label:'',unit:'袋'});
+  allProperties[propIdx].fields.push({label:'',unit:'袋',col:''});
   saveJSON(LS_PROPERTIES,allProperties);
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
@@ -1623,8 +1665,9 @@ function openEntry(idx,event,returnScreen){
       return;
     }
 
-    const bagIdx=findFieldIndexByLabelUnit(prop,field.label,'袋');
-    const kgIdx=findFieldIndexByLabelUnit(prop,field.label,'kg');
+    const cleanLabel=normalizeLabelForPair(field.label);
+    const bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
+    const kgIdx=prop.fields.findIndex(f=>f.unit==='kg'&&normalizeLabelForPair(f.label)===cleanLabel);
     if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
       const bagField=prop.fields[bagIdx];
       const kgField=prop.fields[kgIdx];
@@ -1636,7 +1679,7 @@ function openEntry(idx,event,returnScreen){
       if(!rule || bagField.hasMultiplier===false || kgField.hasMultiplier===false){
         if(field.unit==='袋') return;
       } else {
-        const pairKey=`${field.label}__袋kg`;
+        const pairKey=`${cleanLabel}__袋kg`;
         if(renderedPairs.has(pairKey)) return;
         renderedPairs.add(pairKey);
 
@@ -1739,6 +1782,17 @@ function clearPropertyData(){
   saveSession();
   if((state.entryReturnScreen||9)===9){ renderPropertyListA();showScreen(9); }
   else { renderPropertyList();showScreen(3); }
+}
+
+function closePropertyEntry(){
+  const returnScreen = state.entryReturnScreen || 9;
+  if(returnScreen === 9){
+    renderPropertyListA();
+    showScreen(9);
+  } else {
+    renderPropertyList();
+    showScreen(3);
+  }
 }
 
 // ===== 曜日別・保存（シングルボタン） =====
@@ -2523,7 +2577,8 @@ function sendHistoryByMail(ri, event){
       if(val === '' || val === undefined) return;
       const extraColumn=incCol ? getSevenSeparateMaterialColumn(prop,f) : '';
       const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
-      propertyLines.push(`${f.label}：${val} ${f.unit}${sourceHint}`);
+      const mailLabel = getFieldMailLabel(prop, f);
+      propertyLines.push(`${mailLabel}：${val} ${f.unit}${sourceHint}`);
     });
     const combined=getSevenBottleCanPetTotal(prop,data);
     if(combined){
@@ -3555,15 +3610,24 @@ function renderColSettingPropDetail() {
     numBadge.textContent = `${idx + 1}`;
     leftWrap.appendChild(numBadge);
 
+    const isCalcBag = isCalcBagField({fields}, f);
+    const displayLabel = getFieldMailLabel({fields}, f);
     const nameSpan = document.createElement('span');
     nameSpan.style.cssText = 'font-size:14px;font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    nameSpan.textContent = f.label || '（名称未設定）';
+    nameSpan.textContent = displayLabel;
     leftWrap.appendChild(nameSpan);
 
     const unitSpan = document.createElement('span');
     unitSpan.style.cssText = 'font-size:12px;font-weight:600;color:#000;flex-shrink:0';
     unitSpan.textContent = `（${f.unit || ''}）`;
     leftWrap.appendChild(unitSpan);
+
+    if (isCalcBag) {
+      const calcBadge = document.createElement('span');
+      calcBadge.style.cssText = 'font-size:10px;font-weight:700;color:#000;border:1px solid #000;border-radius:4px;padding:1px 4px;background:#fff;white-space:nowrap;flex-shrink:0';
+      calcBadge.textContent = '倍率計算用';
+      leftWrap.appendChild(calcBadge);
+    }
 
     row.appendChild(leftWrap);
 
@@ -3717,9 +3781,15 @@ function saveColSettingCurrentProp() {
   prop.fields = (colSettingState.draftFields || []).map(draft => {
     const key = `${draft.label}__${draft.unit}`;
     const prev = existingMap.get(key) || {};
+    let saveLabel = draft.label || '';
+    if (isCalcBagField(prop, draft)) {
+      if (!saveLabel.includes('（計算用）') && !saveLabel.includes('(計算用)')) {
+        saveLabel = `${saveLabel}（計算用）`;
+      }
+    }
     return {
       ...prev,
-      label: draft.label,
+      label: saveLabel,
       unit: draft.unit,
       col: (draft.col || '').trim().toUpperCase(),
       row: draft.row || prev.row || '',
@@ -3841,7 +3911,8 @@ function sendColSettingMailForProp() {
   (colSettingState.draftFields || prop.fields || []).forEach(f => {
     const val = (data && data[fieldKey(f)] !== undefined && data[fieldKey(f)] !== '') ? data[fieldKey(f)] : '－';
     const colHint = f.col ? ` [${f.col}列]` : '';
-    lines.push(`${f.label}：${val} ${f.unit}${colHint}`);
+    const mailLabel = getFieldMailLabel(prop, f);
+    lines.push(`${mailLabel}：${val} ${f.unit}${colHint}`);
   });
 
   lines.push('─────────────────');
