@@ -707,66 +707,71 @@ function setAutoMultiplier(prop,sourceKey,value){
   saveJSON(autoMultiplierStorageKey(prop,sourceKey),Number.isNaN(numeric)?1:numeric);
 }
 function getAutoKgRule(prop,sourceKey){
-  if(!prop) return;
-  const propertyRules={};
+  if(!prop) return null;
+  let rule = null;
   if(prop.name==='すき家'){
     const targets={
       '可燃物__袋':'可燃物__kg',
       'ビン・缶・PET__袋':'ビン・缶・PET__kg'
     };
     if(targets[sourceKey]){
-      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
     }
-  }
-  if(prop.name==='古本市場 上野店'){
+  } else if(prop.name==='古本市場 上野店'){
     const targets={
       '可燃物__袋':'可燃物__kg',
       '資源物__袋':'資源物__kg'
     };
     if(targets[sourceKey]){
-      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
     }
-  }
-  if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
+  } else if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
     const targets={
       '生活ゴミ（可燃）__袋':'生活ゴミ（可燃）__kg',
       '生活ゴミ（不燃）__袋':'生活ゴミ（不燃）__kg'
     };
     if(targets[sourceKey]){
-      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
     }
-  }
-  if(prop.name==='イオンタウン伊賀'){
+  } else if(prop.name==='イオンタウン伊賀'){
     const targets={
       'ごみ__袋':'ごみ__kg',
       '生ごみ__袋':'生ごみ__kg'
     };
     if(targets[sourceKey]) {
       const defaultMultiplier=sourceKey==='ごみ__袋' ? 1 : null;
-      return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,defaultMultiplier),selectable:true};
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,defaultMultiplier),selectable:true};
     }
-  }
-  if(prop.name==='マックスバリュ佐那具店'){
+  } else if(prop.name==='マックスバリュ佐那具店'){
     const defaults={
       'ごみ__袋':{target:'ごみ__kg',multiplier:3},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
     };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name==='マックスバリュ上野店'){
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name==='マックスバリュ上野店'){
     const defaults={
       'ごみ__袋':{target:'ごみ__kg',multiplier:2},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
     };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name===SAKAKURA_PROPERTY_NAME){
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name===SAKAKURA_PROPERTY_NAME){
     const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===sourceKey);
-    if(pair) return {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    if(pair) rule = {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
   }
-  return propertyRules[prop.name]?.[sourceKey];
+
+  if(!rule) return null;
+
+  // 変換元（sourceKey）および相手側の項目（rule.target）の両方が現在の物件フィールドに存在するか確認。
+  // 削除ボタン等で片方が消されている場合はルール無効（単独項目として扱い、どちらかだけ残る設定にする）
+  if(prop.fields && Array.isArray(prop.fields)){
+    const hasSource = prop.fields.some(f => fieldKey(f) === sourceKey);
+    const hasTarget = prop.fields.some(f => fieldKey(f) === rule.target);
+    if(!hasSource || !hasTarget) return null;
+  }
+
+  return rule;
 }
 function getAutoMultiplierControl(prop,sourceKey){
   const rule=getAutoKgRule(prop,sourceKey);
@@ -792,7 +797,13 @@ function applyAutoKg(prop,sourceKey,sourceValue){
 }
 function getAutoKgNote(prop,field){
   if(!prop||!['マックスバリュ佐那具店','マックスバリュ上野店','イオンタウン伊賀'].includes(prop.name)) return '';
-  return ['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
+  if(!(['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg')) return '';
+  // 相手側の袋項目が存在する場合のみ注記を表示（袋が削除されている場合は単独kg項目なので注記不要）
+  if(prop.fields && Array.isArray(prop.fields)){
+    const hasBag = prop.fields.some(f => f.label === field.label && f.unit === '袋');
+    if(!hasBag) return '';
+  }
+  return '※自動入力しない場合は袋数を空白にする';
 }
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {

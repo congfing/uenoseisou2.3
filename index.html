@@ -2233,6 +2233,10 @@
       const isRenamed = f.originalLabel && f.originalLabel !== f.label;
       const currentOrder = idx + 1;
 
+      // 入り数ペア（袋とkgの連動ペア）の存在チェック
+      const otherUnit = (f.unit === "袋") ? "kg" : ((f.unit === "kg") ? "袋" : null);
+      const hasPair = otherUnit ? fields.some((other, oIdx) => oIdx !== idx && other.label === f.label && other.unit === otherUnit) : false;
+
       const row = document.createElement("div");
       row.style.cssText = "display:flex;flex-direction:column;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;gap:6px";
 
@@ -2251,6 +2255,14 @@
       nameInput.style.cssText = "flex:1;min-width:0;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none";
       nameInput.oninput = (e) => onFieldNameInput(idx, e.target.value);
       topRow.appendChild(nameInput);
+
+      if (hasPair) {
+        const pairBadge = document.createElement("span");
+        pairBadge.style.cssText = "font-size:11px;font-weight:700;color:#0d9488;background:#ccfbf1;border:1px solid #99f6e4;padding:3px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0";
+        pairBadge.title = "袋数を入力するとkgへ自動換算されます（どちらかを削除すると単独入力になります）";
+        pairBadge.textContent = "🔄 袋kg連動";
+        topRow.appendChild(pairBadge);
+      }
 
       const unitSelect = document.createElement("select");
       unitSelect.style.cssText = "width:68px;padding:6px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:14px;font-weight:700;background:#fff;outline:none;text-align:center";
@@ -2382,7 +2394,14 @@
   function deleteColField(fieldIndex) {
     if (!colSettingsState.draftFields[fieldIndex]) return;
     const f = colSettingsState.draftFields[fieldIndex];
-    if (!confirm(`「${f.label || "この項目"}」を削除しますか？`)) return;
+    const otherUnit = (f.unit === "袋") ? "kg" : ((f.unit === "kg") ? "袋" : null);
+    const hasPair = otherUnit ? colSettingsState.draftFields.some((other, oIdx) => oIdx !== fieldIndex && other.label === f.label && other.unit === otherUnit) : false;
+
+    let msg = `「${f.label || "この項目"}（${f.unit}）」を削除しますか？`;
+    if (hasPair) {
+      msg = `「${f.label}（${f.unit}）」を削除します。\n削除後は「${f.label}（${otherUnit}）」だけが残り、自動換算なしの単独入力項目として設定されます。\n削除してもよろしいですか？`;
+    }
+    if (!confirm(msg)) return;
 
     colSettingsState.draftFields.splice(fieldIndex, 1);
     renderColPropFields();
