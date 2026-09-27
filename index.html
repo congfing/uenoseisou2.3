@@ -1810,7 +1810,7 @@
     lines.push(`1. 本メールの設定内容に基づいて index_3-21.html を作成・更新して Push してください。`);
     lines.push(`2. index.html の計量データ入力のリンクおよびパネル設定を「3-${activeVer === "3-21" ? "21" : "20"}」に切り替えて Push してください。`);
     lines.push(`3. 新しいExcel表（${bookName}）には【${period}】の過去データを引き継いで作成してください。`);
-    lines.push(`4. 項目設定で「倍率: なし (単独枠)」が指定された項目は袋kg自動換算を行わない単独入力枠とし、「倍率: あり」の項目は袋kg連動（自動換算）を有効にしてください。`);
+    lines.push(`4. 項目設定で「倍率: あり」の項目は、袋数に入力された値に倍率を掛けてkgを算出する自動連動枠とし、袋入力枠を生成・連動してください。「倍率: なし (単独枠)」の項目は手入力の単独枠としてください。`);
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("");
     lines.push("■ 物件別 新項目・並び順設定一覧:");
@@ -2287,8 +2287,8 @@
         const multSelect = document.createElement("select");
         multSelect.style.cssText = `width:64px;padding:6px 4px;border:1.5px solid ${multActive ? "#0d9488" : "#cbd5e1"};border-radius:6px;font-size:13px;font-weight:700;background:${multActive ? "#f0fdfa" : "#fff"};color:${multActive ? "#0f766e" : "#475569"};outline:none;text-align:center`;
         multSelect.title = multActive
-          ? "倍率あり（自動換算連動中。「なし」にすると単独入力枠になります）"
-          : "倍率なし（単独枠。「あり」にすると相手側の項目が復活・自動換算連動します）";
+          ? "倍率あり（袋数を数えて倍率を掛け、kgへ自動換算します。「なし」にすると単独入力枠になります）"
+          : "倍率なし（単独枠。「あり」にすると自動的に袋入力枠が生成され、掛け算連動します）";
 
         ["あり", "なし"].forEach(optVal => {
           const opt = document.createElement("option");
@@ -2394,19 +2394,38 @@
       f.hasMultiplier = true;
       const otherUnit = (f.unit === "袋") ? "kg" : ((f.unit === "kg") ? "袋" : null);
       if (otherUnit) {
-        const pair = colSettingsState.draftFields.find(o => o.label === f.label && o.unit === otherUnit);
-        if (pair) {
-          pair.hasMultiplier = true;
+        const pairIdx = colSettingsState.draftFields.findIndex(o => o.label === f.label && o.unit === otherUnit);
+        if (pairIdx !== -1) {
+          colSettingsState.draftFields[pairIdx].hasMultiplier = true;
+          // 主にkgを出すために袋数で数えて掛け算するため、袋が先・kgが後になるよう並び順を整える
+          if (f.unit === "kg" && pairIdx > fieldIndex) {
+            const [bagItem] = colSettingsState.draftFields.splice(pairIdx, 1);
+            colSettingsState.draftFields.splice(fieldIndex, 0, bagItem);
+          }
         } else {
-          // 対になる相手項目が存在しない場合は自動復活・挿入
-          const newPairItem = {
-            label: f.label,
-            unit: otherUnit,
-            col: "",
-            originalLabel: f.originalLabel || f.label,
-            hasMultiplier: true
-          };
-          colSettingsState.draftFields.splice(fieldIndex + 1, 0, newPairItem);
+          // 対になる相手項目が存在しない場合:
+          // 主にkgを出すために袋数を数えて掛け算するため、自動的に袋入力枠（またはkg入力枠）を生成
+          if (f.unit === "kg") {
+            // kg項目で「倍率あり」にした場合、掛け算の元となる「袋入力枠」を直前（上）に自動生成！
+            const newBagItem = {
+              label: f.label,
+              unit: "袋",
+              col: "",
+              originalLabel: f.originalLabel || f.label,
+              hasMultiplier: true
+            };
+            colSettingsState.draftFields.splice(fieldIndex, 0, newBagItem);
+          } else {
+            // 袋項目で「倍率あり」にした場合、掛け算の計算先となる「kg入力枠」を直後（下）に自動生成！
+            const newKgItem = {
+              label: f.label,
+              unit: "kg",
+              col: "",
+              originalLabel: f.originalLabel || f.label,
+              hasMultiplier: true
+            };
+            colSettingsState.draftFields.splice(fieldIndex + 1, 0, newKgItem);
+          }
         }
       }
     } else {

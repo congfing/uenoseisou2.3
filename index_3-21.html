@@ -761,6 +761,17 @@ function getAutoKgRule(prop,sourceKey){
     if(pair) rule = {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
   }
 
+  // 物件固有ルールが未設定でも、同名の「袋」と「kg」のペアが存在し倍率有効なら汎用連動（袋数×倍率＝kg）
+  if(!rule && prop.fields && Array.isArray(prop.fields) && sourceKey.endsWith('__袋')){
+    const baseLabel = sourceKey.replace(/__袋$/, '');
+    const targetKey = `${baseLabel}__kg`;
+    const sourceF = prop.fields.find(f => fieldKey(f) === sourceKey);
+    const targetF = prop.fields.find(f => fieldKey(f) === targetKey);
+    if(sourceF && targetF && sourceF.hasMultiplier !== false && targetF.hasMultiplier !== false){
+      rule = { target: targetKey, multiplier: getAutoMultiplier(prop, sourceKey, null), selectable: true };
+    }
+  }
+
   if(!rule) return null;
 
   // 変換元（sourceKey）および相手側の項目（rule.target）の両方が現在の物件フィールドに存在するか確認。
