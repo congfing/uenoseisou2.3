@@ -764,11 +764,12 @@ function getAutoKgRule(prop,sourceKey){
   if(!rule) return null;
 
   // 変換元（sourceKey）および相手側の項目（rule.target）の両方が現在の物件フィールドに存在するか確認。
-  // 削除ボタン等で片方が消されている場合はルール無効（単独項目として扱い、どちらかだけ残る設定にする）
+  // 削除ボタン等で片方が消されている場合、または倍率「なし（単独枠）」に設定されている場合はルール無効（単独項目として扱い、どちらかだけ残る設定にする）
   if(prop.fields && Array.isArray(prop.fields)){
-    const hasSource = prop.fields.some(f => fieldKey(f) === sourceKey);
-    const hasTarget = prop.fields.some(f => fieldKey(f) === rule.target);
-    if(!hasSource || !hasTarget) return null;
+    const sourceF = prop.fields.find(f => fieldKey(f) === sourceKey);
+    const targetF = prop.fields.find(f => fieldKey(f) === rule.target);
+    if(!sourceF || !targetF) return null;
+    if(sourceF.hasMultiplier === false || targetF.hasMultiplier === false) return null;
   }
 
   return rule;
@@ -798,10 +799,11 @@ function applyAutoKg(prop,sourceKey,sourceValue){
 function getAutoKgNote(prop,field){
   if(!prop||!['マックスバリュ佐那具店','マックスバリュ上野店','イオンタウン伊賀'].includes(prop.name)) return '';
   if(!(['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg')) return '';
-  // 相手側の袋項目が存在する場合のみ注記を表示（袋が削除されている場合は単独kg項目なので注記不要）
+  // 相手側の袋項目が存在し、倍率「なし（単独枠）」に設定されていない場合のみ注記を表示
   if(prop.fields && Array.isArray(prop.fields)){
-    const hasBag = prop.fields.some(f => f.label === field.label && f.unit === '袋');
-    if(!hasBag) return '';
+    const bagF = prop.fields.find(f => f.label === field.label && f.unit === '袋');
+    if(!bagF) return '';
+    if(bagF.hasMultiplier === false || field.hasMultiplier === false) return '';
   }
   return '※自動入力しない場合は袋数を空白にする';
 }

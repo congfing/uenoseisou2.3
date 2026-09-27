@@ -1810,6 +1810,7 @@
     lines.push(`1. 本メールの設定内容に基づいて index_3-21.html を作成・更新して Push してください。`);
     lines.push(`2. index.html の計量データ入力のリンクおよびパネル設定を「3-${activeVer === "3-21" ? "21" : "20"}」に切り替えて Push してください。`);
     lines.push(`3. 新しいExcel表（${bookName}）には【${period}】の過去データを引き継いで作成してください。`);
+    lines.push(`4. 項目設定で「倍率: なし (単独枠)」が指定された項目は袋kg自動換算を行わない単独入力枠とし、「倍率: あり」の項目は袋kg連動（自動換算）を有効にしてください。`);
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("");
     lines.push("■ 物件別 新項目・並び順設定一覧:");
@@ -1820,7 +1821,11 @@
       (p.fields || []).forEach((f, fIdx) => {
         const orig = (f.originalLabel && f.originalLabel !== f.label) ? ` [旧:${f.originalLabel}]` : "";
         const colHint = f.col ? ` [${f.col}列]` : "";
-        lines.push(`   (${fIdx + 1}) ${f.label} (${f.unit})${colHint}${orig}`);
+        let multHint = "";
+        if (f.unit === "袋" || f.unit === "kg") {
+          multHint = (f.hasMultiplier === false) ? " [倍率: なし (単独枠)]" : " [倍率: あり]";
+        }
+        lines.push(`   (${fIdx + 1}) ${f.label} (${f.unit})${colHint}${multHint}${orig}`);
       });
       lines.push("");
     });
@@ -2110,7 +2115,8 @@
         label: f.label || "",
         unit: f.unit || "袋",
         col: f.col || "",
-        originalLabel: f.originalLabel || f.label || ""
+        originalLabel: f.originalLabel || f.label || "",
+        hasMultiplier: f.hasMultiplier
       }));
     } else {
       colSettingsState.draftFields = [];
@@ -2256,16 +2262,8 @@
       nameInput.oninput = (e) => onFieldNameInput(idx, e.target.value);
       topRow.appendChild(nameInput);
 
-      if (hasPair) {
-        const pairBadge = document.createElement("span");
-        pairBadge.style.cssText = "font-size:11px;font-weight:700;color:#0d9488;background:#ccfbf1;border:1px solid #99f6e4;padding:3px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0";
-        pairBadge.title = "袋数を入力するとkgへ自動換算されます（どちらかを削除すると単独入力になります）";
-        pairBadge.textContent = "🔄 袋kg連動";
-        topRow.appendChild(pairBadge);
-      }
-
       const unitSelect = document.createElement("select");
-      unitSelect.style.cssText = "width:68px;padding:6px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:14px;font-weight:700;background:#fff;outline:none;text-align:center";
+      unitSelect.style.cssText = "width:64px;padding:6px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:14px;font-weight:700;background:#fff;outline:none;text-align:center;flex-shrink:0";
       ["袋","kg","本","枚"].forEach(u => {
         const uOpt = document.createElement("option");
         uOpt.value = u;
@@ -2275,6 +2273,35 @@
       });
       unitSelect.onchange = (e) => onFieldUnitChange(idx, e.target.value);
       topRow.appendChild(unitSelect);
+
+      if (f.unit === "袋" || f.unit === "kg") {
+        const multActive = isMultiplierActive(f, fields);
+        const multWrap = document.createElement("div");
+        multWrap.style.cssText = "display:flex;align-items:center;gap:4px;flex-shrink:0";
+
+        const multLbl = document.createElement("span");
+        multLbl.style.cssText = "font-size:12px;font-weight:700;color:#334155;white-space:nowrap";
+        multLbl.textContent = "倍率:";
+        multWrap.appendChild(multLbl);
+
+        const multSelect = document.createElement("select");
+        multSelect.style.cssText = `width:64px;padding:6px 4px;border:1.5px solid ${multActive ? "#0d9488" : "#cbd5e1"};border-radius:6px;font-size:13px;font-weight:700;background:${multActive ? "#f0fdfa" : "#fff"};color:${multActive ? "#0f766e" : "#475569"};outline:none;text-align:center`;
+        multSelect.title = multActive
+          ? "倍率あり（自動換算連動中。「なし」にすると単独入力枠になります）"
+          : "倍率なし（単独枠。「あり」にすると相手側の項目が復活・自動換算連動します）";
+
+        ["あり", "なし"].forEach(optVal => {
+          const opt = document.createElement("option");
+          opt.value = optVal;
+          opt.textContent = optVal;
+          if (multActive ? optVal === "あり" : optVal === "なし") opt.selected = true;
+          multSelect.appendChild(opt);
+        });
+
+        multSelect.onchange = (e) => onFieldMultiplierChange(idx, e.target.value);
+        multWrap.appendChild(multSelect);
+        topRow.appendChild(multWrap);
+      }
 
       row.appendChild(topRow);
 
@@ -2349,9 +2376,58 @@
     setUnsavedState();
   }
 
+  function isMultiplierActive(f, allFields) {
+    if (f.hasMultiplier !== undefined) return f.hasMultiplier;
+    if (f.unit === "袋" || f.unit === "kg") {
+      const otherUnit = (f.unit === "袋") ? "kg" : "袋";
+      return (allFields || []).some(o => o !== f && o.label === f.label && o.unit === otherUnit);
+    }
+    return false;
+  }
+
+  function onFieldMultiplierChange(fieldIndex, val) {
+    if (!colSettingsState.draftFields[fieldIndex]) return;
+    const f = colSettingsState.draftFields[fieldIndex];
+    const isYes = (val === "あり");
+
+    if (isYes) {
+      f.hasMultiplier = true;
+      const otherUnit = (f.unit === "袋") ? "kg" : ((f.unit === "kg") ? "袋" : null);
+      if (otherUnit) {
+        const pair = colSettingsState.draftFields.find(o => o.label === f.label && o.unit === otherUnit);
+        if (pair) {
+          pair.hasMultiplier = true;
+        } else {
+          // 対になる相手項目が存在しない場合は自動復活・挿入
+          const newPairItem = {
+            label: f.label,
+            unit: otherUnit,
+            col: "",
+            originalLabel: f.originalLabel || f.label,
+            hasMultiplier: true
+          };
+          colSettingsState.draftFields.splice(fieldIndex + 1, 0, newPairItem);
+        }
+      }
+    } else {
+      f.hasMultiplier = false;
+      const otherUnit = (f.unit === "袋") ? "kg" : ((f.unit === "kg") ? "袋" : null);
+      if (otherUnit) {
+        const pair = colSettingsState.draftFields.find(o => o.label === f.label && o.unit === otherUnit);
+        if (pair) {
+          pair.hasMultiplier = false;
+        }
+      }
+    }
+
+    renderColPropFields();
+    setUnsavedState();
+  }
+
   function onFieldUnitChange(fieldIndex, newUnit) {
     if (!colSettingsState.draftFields[fieldIndex]) return;
     colSettingsState.draftFields[fieldIndex].unit = newUnit;
+    renderColPropFields();
     setUnsavedState();
   }
 
@@ -2399,11 +2475,17 @@
 
     let msg = `「${f.label || "この項目"}（${f.unit}）」を削除しますか？`;
     if (hasPair) {
-      msg = `「${f.label}（${f.unit}）」を削除します。\n削除後は「${f.label}（${otherUnit}）」だけが残り、自動換算なしの単独入力項目として設定されます。\n削除してもよろしいですか？`;
+      msg = `「${f.label}（${f.unit}）」を削除します。\n削除後は「${f.label}（${otherUnit}）」だけが残り、自動換算なしの単独入力項目（倍率: なし）として設定されます。\n削除してもよろしいですか？`;
     }
     if (!confirm(msg)) return;
 
     colSettingsState.draftFields.splice(fieldIndex, 1);
+    if (otherUnit) {
+      const remaining = colSettingsState.draftFields.find(o => o.label === f.label && o.unit === otherUnit);
+      if (remaining) {
+        remaining.hasMultiplier = false;
+      }
+    }
     renderColPropFields();
     setUnsavedState();
   }
@@ -2455,7 +2537,8 @@
       label: (draft.label || "").trim() || "（名称未設定）",
       unit: draft.unit || "袋",
       col: isHoriz ? "" : (draft.col || autoCols[idx] || ""),
-      originalLabel: draft.originalLabel || draft.label || ""
+      originalLabel: draft.originalLabel || draft.label || "",
+      hasMultiplier: draft.hasMultiplier !== undefined ? draft.hasMultiplier : isMultiplierActive(draft, colSettingsState.draftFields)
     }));
 
     saveJSON(LS_PROPERTIES, allProperties);
