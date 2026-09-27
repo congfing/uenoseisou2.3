@@ -1511,43 +1511,51 @@ function openEntry(idx,event,returnScreen){
     const bagIdx=findFieldIndexByLabelUnit(prop,field.label,'袋');
     const kgIdx=findFieldIndexByLabelUnit(prop,field.label,'kg');
     if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
-      const pairKey=`${field.label}__袋kg`;
-      if(renderedPairs.has(pairKey)) return;
-      renderedPairs.add(pairKey);
-
       const bagField=prop.fields[bagIdx];
       const kgField=prop.fields[kgIdx];
       const bagKey=fieldKey(bagField);
-      const kgKey=fieldKey(kgField);
-      const bagInputId=`ef_${bagIdx}`;
-      const kgInputId=`ef_${kgIdx}`;
-      const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
-      const kgNote=getAutoKgNote(prop,kgField);
-      const kgNoteHtml=kgNote ? `<span class="field-unit">${kgNote}</span>` : '';
-      const div=document.createElement('div');
-      div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row${multiplierHtml?'':' no-multiplier'}">
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
-          </div>
-          ${multiplierHtml}
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
-            ${getLastValueHint(lastSaved,kgField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
-          </div>
-        </div>`;
-      c.appendChild(div);
-      const bagInput=div.querySelector(`#${bagInputId}`);
-      const kgInput=div.querySelector(`#${kgInputId}`);
-      bindEntryInput(prop,bagInput,bagKey);
-      bindEntryInput(prop,kgInput,kgKey);
-      bindMultiplierControl(prop,div,bagInput,bagKey);
-      return;
+      const rule=getAutoKgRule(prop,bagKey);
+
+      // 倍率が「なし」の場合（rule===null または hasMultiplier===false）:
+      // 袋の入力枠はなくなり、kgだけの単独入力枠として表示する
+      if(!rule || bagField.hasMultiplier===false || kgField.hasMultiplier===false){
+        if(field.unit==='袋') return;
+      } else {
+        const pairKey=`${field.label}__袋kg`;
+        if(renderedPairs.has(pairKey)) return;
+        renderedPairs.add(pairKey);
+
+        const kgKey=fieldKey(kgField);
+        const bagInputId=`ef_${bagIdx}`;
+        const kgInputId=`ef_${kgIdx}`;
+        const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
+        const kgNote=getAutoKgNote(prop,kgField);
+        const kgNoteHtml=kgNote ? `<span class="field-unit">${kgNote}</span>` : '';
+        const div=document.createElement('div');
+        div.className='field-group card';
+        div.innerHTML=`<div class="combined-field-row">
+            <div class="combined-field-input">
+              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+              ${getLastValueHint(lastSaved,bagField,prop.name)}
+              <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+                id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
+            </div>
+            ${multiplierHtml}
+            <div class="combined-field-input">
+              <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
+              ${getLastValueHint(lastSaved,kgField,prop.name)}
+              <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+                id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
+            </div>
+          </div>`;
+        c.appendChild(div);
+        const bagInput=div.querySelector(`#${bagInputId}`);
+        const kgInput=div.querySelector(`#${kgInputId}`);
+        bindEntryInput(prop,bagInput,bagKey);
+        bindEntryInput(prop,kgInput,kgKey);
+        bindMultiplierControl(prop,div,bagInput,bagKey);
+        return;
+      }
     }
 
     const key=fieldKey(field);
