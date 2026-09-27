@@ -199,6 +199,7 @@
     <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
     <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
     <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="navColSettings" onclick="navTo(10)">🔢 列番号設定</button>
     <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
     <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
     <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
@@ -409,6 +410,113 @@
         <button class="btn btn-secondary btn-sm" onclick="addStaffFromSettings()">追加</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Screen 10: Email Column Settings (白、黒の文字、枠線デザイン) -->
+<div class="screen" id="screen10" style="background:#fff;color:#000;">
+  <div style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;color:#000;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+      <span>🔢 メール列番号設定（本Sheet用）</span>
+    </div>
+    <div style="font-size:12px;color:#000;margin-bottom:14px;line-height:1.5">
+      メール本文に付与する列番号（[C列]など）を設定・変更します。
+    </div>
+
+    <!-- 物件検索枠 -->
+    <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:6px">🔍 物件検索</div>
+      <input type="text" id="colPropSearchInput" placeholder="物件名で検索..." 
+        style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #000;border-radius:6px;font-size:14px;font-weight:600;background:#fff;color:#000;outline:none"
+        oninput="onColPropSearchInput(this.value)">
+    </div>
+
+    <!-- 物件名枠（物件選択枠） -->
+    <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:#000">🏢 物件選択</span>
+        <span id="colPropCountBadge" style="font-size:11px;font-weight:700;color:#000;border:1px solid #000;padding:1px 6px;border-radius:4px"></span>
+      </div>
+      <select id="colPropSelect" onchange="onColPropSelectChange(this.value)"
+        style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #000;border-radius:6px;font-size:15px;font-weight:700;background:#fff;color:#000;outline:none">
+      </select>
+    </div>
+
+    <!-- 各物件の画面（選択された物件の項目列名リスト＋操作ボタン枠） -->
+    <div id="colPropDetailContainer" style="display:none;background:#fff;border:2px solid #000;border-radius:8px;padding:14px;margin-bottom:14px">
+      
+      <!-- 物件ヘッダー -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:12px;border-bottom:2px solid #000">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#000">選択中の物件</div>
+          <div id="colSelectedPropTitle" style="font-size:17px;font-weight:800;color:#000"></div>
+        </div>
+        <div id="colPropSaveNotice" style="display:none;font-size:12px;font-weight:700;color:#000;border:1.5px solid #000;padding:2px 8px;border-radius:4px;background:#fff">
+          ✅ 保存完了
+        </div>
+      </div>
+
+      <!-- 項目列名一覧（縦並び、横に選択枠プルダウン） -->
+      <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:8px">📋 項目列名一覧と選択枠</div>
+      <div id="colPropFieldsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+
+      <!-- 統合操作枠（仕切り線で個別操作と全体操作を分割） -->
+      <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:14px;margin-bottom:14px">
+        
+        <!-- 【仕切りの上】：選択中物件の個別操作 -->
+        <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:4px">🏢 選択中物件の操作（個別）</div>
+        <div style="font-size:12px;color:#000;margin-bottom:10px;line-height:1.4">
+          列番号変更後、「変更」で列順（A→Z順）に並び変わります。確認後に保存または個別で元に戻せます。
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button type="button" id="colReorderBtn" onclick="applyColSettingReorder(false)"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            🔄 変更（並び順反映）
+          </button>
+          <button type="button" id="colReorderSaveBtn" onclick="applyColSettingReorder(true)"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            💾 変更して保存
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button type="button" id="colRevertBtn" onclick="revertColSettingCurrentProp()"
+            style="padding:10px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ↩️ 元に戻す（個別）
+          </button>
+          <button type="button" id="colMailBtn" onclick="sendColSettingMailForProp()"
+            style="padding:10px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ✉️ メール送信
+          </button>
+        </div>
+
+        <div id="colReorderNotice" style="display:none;margin-top:10px;padding:8px 10px;font-size:12px;font-weight:700;color:#000;border:1.5px solid #000;border-radius:6px;background:#fff;text-align:center"></div>
+
+        <!-- ──── 仕切り線 ──── -->
+        <div style="border-top:2px solid #000;margin:14px 0 12px 0"></div>
+
+        <!-- 【仕切りの下】：全体操作（全Sheet一括・閉じる） -->
+        <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:4px">⚙️ 全体操作</div>
+        <div style="font-size:12px;color:#000;margin-bottom:10px;line-height:1.4">
+          全Sheet（全物件）の列番号・並び順を一括で初期状態に戻すか、画面を閉じます。
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button type="button" id="colRevertAllBtn" onclick="revertAllColSettingsToDefault()"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ↩️ 全Sheet一括で戻す
+          </button>
+          <button type="button" id="colCloseBtn" onclick="closeColSettingScreen()"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ✖️ 閉じる
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 </div>
 
@@ -845,7 +953,8 @@ function getAllHistory(){
 // 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
 function mergeDefaultProperty(savedProp,defaultProp){
   if(!defaultProp) return savedProp;
-  return {...defaultProp,
+  return {
+    ...JSON.parse(JSON.stringify(defaultProp)),
     order:savedProp.order||defaultProp.order,
     days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days
   };
@@ -857,9 +966,10 @@ const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260927_seven_no_col';
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
   if (!Array.isArray(saved)) {
-    saveJSON(LS_PROPERTIES, DEFAULT_PROPERTIES.slice());
+    const freshDefaults = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+    saveJSON(LS_PROPERTIES, freshDefaults);
     localStorage.setItem(LS_PROPERTIES_VERSION, 'done');
-    return DEFAULT_PROPERTIES.slice();
+    return freshDefaults;
   }
   const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
   const defaultByName = new Map(DEFAULT_PROPERTIES.map(p => [p.name,p]));
@@ -1020,7 +1130,10 @@ function updateNav(n){
   const dl=document.getElementById('headerDateLabel');
   dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
   // tabs active
-  ['navDate','navStaff','navProps','navPropsA','navHistory','navSettings','navMail','navConvert'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['navDate','navStaff','navProps','navPropsA','navColSettings','navHistory','navSettings','navMail','navConvert'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
   if(n===0) document.getElementById('navSettings').classList.add('active');
   else if(n===1) document.getElementById('navDate').classList.add('active');
   else if(n===2) document.getElementById('navStaff').classList.add('active');
@@ -1029,6 +1142,7 @@ function updateNav(n){
   else if(n===6) document.getElementById('navHistory').classList.add('active');
   else if(n===7){ document.getElementById('navMail').classList.add('active'); loadMailSettings(); }
   else if(n===8) document.getElementById('navConvert').classList.add('active');
+  else if(n===10){ document.getElementById('navColSettings').classList.add('active'); }
   // enabled/disabled
   document.getElementById('navStaff').className='nav-tab'+(n===2?' active':'')+(state.date?'':' disabled');
   document.getElementById('navProps').className='nav-tab'+((n===3||n===5)?' active':'')+(state.selectedStaff?'':' disabled');
@@ -1054,7 +1168,7 @@ function showScreen(n){
 
 function goBack(){
   if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
-  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7){ showScreen(state.prevScreen||1); return; }
+  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7||state.currentScreen===10){ showScreen(state.prevScreen||1); return; }
   if(state.currentScreen===4){ showScreen(state.entryReturnScreen||9); return; }
   if(state.currentScreen>1) showScreen(state.currentScreen-1);
 }
@@ -1070,6 +1184,7 @@ function navTo(n){
   if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
   if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
   if(n===8){ showScreen(8); initConvertScreen(); return; }
+  if(n===10){ state.prevScreen=state.currentScreen; initColSettingScreen(); showScreen(10); return; }
 }
 
 // ===== SCREEN 1→2 =====
@@ -2449,13 +2564,12 @@ const LS_MAIL_INCLUDE_COLUMNS = 'keiryo_mail_include_columns';
 const MAIL_COUNT = 4;
 
 function shouldIncludeMailColumns(prop){
-  // 全ての列番号の付与を一度停止（ユーザー指示：全ての列番号の付与を一度停止してください）
-  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, false);
-  if(!enabled) return false;
   // セブン-イレブン・セカンドストリートは横書き形式のため常に列番号を付与しない
   if(prop && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))){
     return false;
   }
+  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, true);
+  if(!enabled) return false;
   return true;
 }
 const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
@@ -3286,6 +3400,459 @@ function addNewProperty(){
   // 定期チェック（保険）
   setInterval(tryRenderMailList, 1200);
 })();
+
+// ===== メール列番号設定（Screen 10）制御ロジック =====
+const colSettingState = {
+  searchQuery: '',
+  selectedPropName: '',
+  draftFields: []
+};
+
+// 列候補の生成（A〜Z, AA〜AZ）
+const AVAILABLE_EXCEL_COLS = (() => {
+  const cols = [];
+  // A - Z
+  for (let i = 0; i < 26; i++) {
+    cols.push(String.fromCharCode(65 + i));
+  }
+  // AA - AZ
+  for (let i = 0; i < 26; i++) {
+    cols.push('A' + String.fromCharCode(65 + i));
+  }
+  return cols;
+})();
+
+function initColSettingScreen() {
+  const searchInput = document.getElementById('colPropSearchInput');
+  if (searchInput) {
+    searchInput.value = colSettingState.searchQuery || '';
+  }
+  renderColPropSelect();
+  if (colSettingState.selectedPropName) {
+    selectColSettingProperty(colSettingState.selectedPropName);
+  } else if (allProperties && allProperties.length > 0) {
+    selectColSettingProperty(allProperties[0].name);
+  }
+}
+
+function onColPropSearchInput(val) {
+  colSettingState.searchQuery = (val || '').trim();
+  renderColPropSelect();
+  const selectEl = document.getElementById('colPropSelect');
+  if (selectEl && selectEl.value) {
+    selectColSettingProperty(selectEl.value);
+  } else {
+    const container = document.getElementById('colPropDetailContainer');
+    if (container) container.style.display = 'none';
+  }
+}
+
+function renderColPropSelect() {
+  const selectEl = document.getElementById('colPropSelect');
+  const countBadge = document.getElementById('colPropCountBadge');
+  if (!selectEl) return;
+
+  const q = (colSettingState.searchQuery || '').toLowerCase();
+  const filtered = (allProperties || []).filter(p => {
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q);
+  });
+
+  if (countBadge) {
+    countBadge.textContent = q ? `${filtered.length} / 全${allProperties.length}件` : `全${allProperties.length}件`;
+  }
+
+  selectEl.innerHTML = '';
+  if (filtered.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '一致する物件がありません';
+    selectEl.appendChild(opt);
+    selectEl.value = '';
+    return;
+  }
+
+  let hasSelected = false;
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    const fieldCount = (p.fields || []).length;
+    const colsCount = (p.fields || []).filter(f => !!f.col).length;
+    opt.textContent = `${p.name}（${fieldCount}項目 / ${colsCount}列設定済）`;
+    if (p.name === colSettingState.selectedPropName) {
+      opt.selected = true;
+      hasSelected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+
+  if (!hasSelected && filtered.length > 0) {
+    selectEl.value = filtered[0].name;
+    if (selectEl.children[0]) selectEl.children[0].selected = true;
+  }
+}
+
+function onColPropSelectChange(propName) {
+  selectColSettingProperty(propName);
+}
+
+function selectColSettingProperty(propName) {
+  if (!propName) return;
+  colSettingState.selectedPropName = propName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  const container = document.getElementById('colPropDetailContainer');
+  if (!prop) {
+    if (container) container.style.display = 'none';
+    return;
+  }
+
+  // draftFields にクローン
+  colSettingState.draftFields = (prop.fields || []).map(f => ({
+    label: f.label || '',
+    unit: f.unit || '',
+    col: f.col || '',
+    row: f.row || '',
+    originalLabel: f.originalLabel || f.label || '',
+    hasMultiplier: f.hasMultiplier
+  }));
+
+  if (container) container.style.display = 'block';
+  renderColSettingPropDetail();
+  resetColReorderBtn();
+
+  // セレクトボックスの選択状態を同期
+  const selectEl = document.getElementById('colPropSelect');
+  if (selectEl && selectEl.value !== propName) {
+    selectEl.value = propName;
+  }
+}
+
+function renderColSettingPropDetail() {
+  const titleEl = document.getElementById('colSelectedPropTitle');
+  const listEl = document.getElementById('colPropFieldsList');
+  const noticeEl = document.getElementById('colPropSaveNotice');
+  if (noticeEl) noticeEl.style.display = 'none';
+  if (titleEl) titleEl.textContent = colSettingState.selectedPropName;
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  const fields = colSettingState.draftFields || [];
+
+  if (fields.length === 0) {
+    listEl.innerHTML = '<div style="color:#000;font-size:13px;padding:12px;text-align:center;border:1px dashed #000;border-radius:6px;background:#fff">登録されている項目がありません</div>';
+    return;
+  }
+
+  fields.forEach((f, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1.5px solid #000;border-radius:6px;background:#fff';
+
+    const leftWrap = document.createElement('div');
+    leftWrap.style.cssText = 'flex:1;min-width:0;display:flex;align-items:center;gap:6px';
+
+    const numBadge = document.createElement('span');
+    numBadge.style.cssText = 'font-size:11px;font-weight:700;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;flex-shrink:0';
+    numBadge.textContent = `${idx + 1}`;
+    leftWrap.appendChild(numBadge);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:14px;font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    nameSpan.textContent = f.label || '（名称未設定）';
+    leftWrap.appendChild(nameSpan);
+
+    const unitSpan = document.createElement('span');
+    unitSpan.style.cssText = 'font-size:12px;font-weight:600;color:#000;flex-shrink:0';
+    unitSpan.textContent = `（${f.unit || ''}）`;
+    leftWrap.appendChild(unitSpan);
+
+    row.appendChild(leftWrap);
+
+    // 列選択枠（プルダウン）
+    const rightWrap = document.createElement('div');
+    rightWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0';
+
+    const colLbl = document.createElement('span');
+    colLbl.style.cssText = 'font-size:12px;font-weight:700;color:#000';
+    colLbl.textContent = '列:';
+    rightWrap.appendChild(colLbl);
+
+    const colSelect = document.createElement('select');
+    colSelect.style.cssText = 'padding:6px 6px;font-size:14px;font-weight:700;background:#fff;color:#000;border:1.5px solid #000;border-radius:6px;outline:none;text-align:center;min-width:82px';
+    
+    // 空オプション（列なし）
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = 'なし';
+    if (!f.col) emptyOpt.selected = true;
+    colSelect.appendChild(emptyOpt);
+
+    // A〜Z, AA〜AZ
+    AVAILABLE_EXCEL_COLS.forEach(col => {
+      const opt = document.createElement('option');
+      opt.value = col;
+      opt.textContent = `${col}列`;
+      if ((f.col || '').toUpperCase() === col) {
+        opt.selected = true;
+      }
+      colSelect.appendChild(opt);
+    });
+    colSelect.value = (f.col || '').toUpperCase();
+
+    colSelect.onchange = (e) => {
+      f.col = e.target.value;
+      if (noticeEl) noticeEl.style.display = 'none';
+      resetColReorderBtn();
+    };
+
+    rightWrap.appendChild(colSelect);
+    row.appendChild(rightWrap);
+
+    listEl.appendChild(row);
+  });
+}
+
+// Excel列記号（A〜Z, AA〜AZ等）をソート用の数値インデックスに変換
+function colToExcelIndex(col) {
+  if (!col) return 999999;
+  const s = String(col).trim().toUpperCase();
+  if (!s) return 999999;
+  let idx = 0;
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code >= 65 && code <= 90) {
+      idx = idx * 26 + (code - 64);
+    } else {
+      return 999999;
+    }
+  }
+  return idx;
+}
+
+// 変更ボタン（並び替え・確認、または並び替えて即時保存）
+function applyColSettingReorder(andSave = false) {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が選択されていません');
+    return;
+  }
+
+  // 画面上の現在の select 値をすべて draftFields に同期
+  const listEl = document.getElementById('colPropFieldsList');
+  if (listEl) {
+    const selects = listEl.querySelectorAll('select');
+    selects.forEach((sel, idx) => {
+      if (colSettingState.draftFields && colSettingState.draftFields[idx]) {
+        colSettingState.draftFields[idx].col = (sel.value || '').trim().toUpperCase();
+      }
+    });
+  }
+
+  // 列順（A→Z、AA→AZ、なしは末尾）でソート
+  colSettingState.draftFields.sort((a, b) => {
+    const idxA = colToExcelIndex(a.col);
+    const idxB = colToExcelIndex(b.col);
+    return idxA - idxB;
+  });
+
+  // 画面の項目リストを新しい並び順で再描画
+  renderColSettingPropDetail();
+
+  const noticeEl = document.getElementById('colReorderNotice');
+  const btn = document.getElementById('colReorderBtn');
+
+  if (andSave) {
+    // 変更して保存
+    saveColSettingCurrentProp();
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = '✅ 新しい列順で並び替えて保存しました！';
+      setTimeout(() => {
+        if (noticeEl) noticeEl.style.display = 'none';
+      }, 2500);
+    }
+  } else {
+    // 並び順のみ変更して確認状態にする
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = '✅ 設定した列番号順（A→Z順）に並び替えました。<br>並び順をご確認の上、「💾 この並びで保存」または「💾 変更して保存」を押してください。';
+    }
+    // 変更ボタン自身でも保存できるようにボタン表示・動作を切り替え
+    if (btn) {
+      btn.innerHTML = '💾 この並びで保存';
+      btn.onclick = () => {
+        saveColSettingCurrentProp();
+      };
+    }
+  }
+}
+
+function resetColReorderBtn() {
+  const btn = document.getElementById('colReorderBtn');
+  if (btn) {
+    btn.innerHTML = '🔄 変更（並び順反映）';
+    btn.onclick = () => applyColSettingReorder(false);
+  }
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'none';
+    noticeEl.innerHTML = '';
+  }
+}
+
+function saveColSettingCurrentProp() {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が見つかりません');
+    return;
+  }
+
+  // draftFields の新しい並び順および col を prop.fields に完全同期
+  const existingMap = new Map();
+  (prop.fields || []).forEach(f => {
+    existingMap.set(`${f.label}__${f.unit}`, f);
+  });
+
+  prop.fields = (colSettingState.draftFields || []).map(draft => {
+    const key = `${draft.label}__${draft.unit}`;
+    const prev = existingMap.get(key) || {};
+    return {
+      ...prev,
+      label: draft.label,
+      unit: draft.unit,
+      col: (draft.col || '').trim().toUpperCase(),
+      row: draft.row || prev.row || '',
+      originalLabel: draft.originalLabel || prev.originalLabel || draft.label,
+      hasMultiplier: draft.hasMultiplier !== undefined ? draft.hasMultiplier : prev.hasMultiplier
+    };
+  });
+
+  // 全体保存
+  saveJSON(LS_PROPERTIES, allProperties);
+  // メール送信時に列番号を反映できるようにフラグも有効化
+  saveJSON(LS_MAIL_INCLUDE_COLUMNS, true);
+
+  // 通知表示
+  const noticeEl = document.getElementById('colPropSaveNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.textContent = '✅ 保存完了';
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 1800);
+  }
+
+  resetColReorderBtn();
+
+  // セレクトボックスの表示（設定済件数など）を更新
+  renderColPropSelect();
+}
+
+function revertColSettingCurrentProp() {
+  const propName = colSettingState.selectedPropName;
+  if (!propName) return;
+  if (!confirm(`「${propName}」の列設定・並び順を元に戻しますか？\n（編集中の変更を破棄して、保存済みの状態に戻します）`)) return;
+  selectColSettingProperty(propName);
+  resetColReorderBtn();
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.innerHTML = `↩️ 「${propName}」の設定を元に戻しました。`;
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 2000);
+  }
+}
+
+// 全Sheet（全物件）の列番号・並び順設定を一括で初期状態（デフォルト）に復元
+function revertAllColSettingsToDefault() {
+  const count = DEFAULT_PROPERTIES.length;
+  if (!confirm(`【確認】全Sheet（全物件）の列番号・並び順設定を一括で初期状態（デフォルト）に戻しますか？\n\n※すべての物件の列設定・並び順が初期値にリセットされます。\nよろしいですか？`)) {
+    return;
+  }
+
+  // DEFAULT_PROPERTIES をディープコピーして allProperties を復元
+  allProperties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+  saveJSON(LS_PROPERTIES, allProperties);
+
+  // 現在選択中の物件があればそのドラフトもデフォルトで再初期化
+  if (colSettingState.selectedPropName) {
+    selectColSettingProperty(colSettingState.selectedPropName);
+  } else if (allProperties.length > 0) {
+    selectColSettingProperty(allProperties[0].name);
+  }
+
+  renderColPropSelect();
+  resetColReorderBtn();
+
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.innerHTML = `↩️ 全Sheet（全${count}物件）の設定を一括でデフォルトに戻しました。`;
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 2500);
+  }
+
+  alert(`全Sheet（全${count}物件）の列番号・並び順を一括で初期状態に戻しました。`);
+}
+
+function closeColSettingScreen() {
+  if (state.prevScreen && state.prevScreen !== 10) {
+    if ((state.prevScreen === 3 || state.prevScreen === 9) && !state.selectedStaff) {
+      showScreen(1);
+    } else {
+      showScreen(state.prevScreen);
+    }
+  } else {
+    showScreen(state.selectedStaff ? 3 : 1);
+  }
+}
+
+function sendColSettingMailForProp() {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が選択されていません');
+    return;
+  }
+
+  const to = getMailTo();
+  if (!to) {
+    alert('送信先アドレスが未登録です。\n「✉️ メール」タブでアドレスを設定してください。');
+    return;
+  }
+
+  const dateStr = state.date ? state.date.replace(/-/g, '/') : new Date().toLocaleDateString('ja-JP');
+  const staffStr = state.selectedStaff || '担当未設定';
+  const dayStr = state.dayName ? `（${state.dayName}曜日）` : '';
+
+  const lineBreak = '\r\n';
+  const lines = [
+    '【計量データ（列設定確認・送信）】',
+    `日付：${dateStr}${dayStr}`,
+    `担当：${staffStr}`,
+    '─────────────────',
+    `【${prop.name}】`
+  ];
+
+  const data = (state.entryData && state.entryData[prop.name]) ? state.entryData[prop.name] : {};
+  (colSettingState.draftFields || prop.fields || []).forEach(f => {
+    const val = (data && data[fieldKey(f)] !== undefined && data[fieldKey(f)] !== '') ? data[fieldKey(f)] : '－';
+    const colHint = f.col ? ` [${f.col}列]` : '';
+    lines.push(`${f.label}：${val} ${f.unit}${colHint}`);
+  });
+
+  lines.push('─────────────────');
+  lines.push(`送信日時：${new Date().toLocaleString('ja-JP')}`);
+
+  const body = lines.join(lineBreak);
+  const subject = encodeURIComponent(`計量データ ${prop.name} ${dateStr}`);
+  const bodyEncoded = encodeURIComponent(body);
+
+  openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
+}
 </script>
 
 </body>
