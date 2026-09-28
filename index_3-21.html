@@ -1473,7 +1473,10 @@ function renderPropertyList(){
         <div class="day-checkboxes">${dayCBs}</div>
         <div class="fields-label">入力項目</div>
         <div id="pfields_${idx}">${fieldRows}</div>
-        <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="margin-top:4px">＋ 項目追加</button>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1">＋ 項目追加</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="入力項目を初期状態に戻す">↩️ 元に戻す</button>
+        </div>
         <div style="margin-top:8px;display:flex;gap:8px">
           <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'📝 入力する'}</button>
         </div>
@@ -1551,6 +1554,26 @@ function addFieldInline(propIdx,event){
   event.stopPropagation();
   allProperties[propIdx].fields.push({label:'',unit:'袋',col:''});
   saveJSON(LS_PROPERTIES,allProperties);
+  renderPropertyList();
+  document.getElementById(`pbody_${propIdx}`).classList.add('open');
+  document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
+  setTimeout(() => focusPropCard(propIdx), 80);
+}
+
+function resetPropFieldsToDefault(propIdx,event){
+  if(event) event.stopPropagation();
+  const prop = allProperties[propIdx];
+  if(!prop) return;
+  const defaultProp = DEFAULT_PROPERTIES.find(p => p.name === prop.name);
+  if(!defaultProp){
+    alert(`「${prop.name}」の初期設定データが見つかりません。`);
+    return;
+  }
+  if(!confirm(`「${prop.name}」の入力項目を初期状態に戻しますか？\n（削除した項目や編集内容が初期値に復元されます）`)){
+    return;
+  }
+  prop.fields = JSON.parse(JSON.stringify(defaultProp.fields));
+  saveJSON(LS_PROPERTIES, allProperties);
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
   document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
