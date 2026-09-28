@@ -1542,7 +1542,13 @@ function updateFU(propIdx,fieldIdx,val){allProperties[propIdx].fields[fieldIdx].
 
 function removeFieldInline(propIdx,fieldIdx,event){
   event.stopPropagation();
-  allProperties[propIdx].fields.splice(fieldIdx,1);
+  const prop = allProperties[propIdx];
+  if(!prop || !prop.fields) return;
+  const removed = prop.fields.splice(fieldIdx,1)[0];
+  if(removed && (removed.label || '').trim()){
+    if(!prop._deletedFields) prop._deletedFields = [];
+    prop._deletedFields.push({ field: JSON.parse(JSON.stringify(removed)), index: fieldIdx });
+  }
   saveJSON(LS_PROPERTIES,allProperties);
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
@@ -1565,14 +1571,40 @@ function resetPropFieldsToDefault(propIdx,event){
   const prop = allProperties[propIdx];
   if(!prop) return;
   const defaultProp = DEFAULT_PROPERTIES.find(p => p.name === prop.name);
-  if(!defaultProp){
-    alert(`「${prop.name}」の初期設定データが見つかりません。`);
+
+  function hasSameField(fields, target){
+    return fields.some(f => (f.label || '').trim() === (target.label || '').trim() && f.unit === target.unit);
+  }
+
+  // 復元候補の特定（削除された項目のみ）
+  let toRestore = [];
+  if (prop._deletedFields && prop._deletedFields.length > 0) {
+    toRestore = prop._deletedFields.filter(item => item && item.field && !hasSameField(prop.fields, item.field));
+  } else if (defaultProp && defaultProp.fields) {
+    defaultProp.fields.forEach((df, dfIdx) => {
+      if (!hasSameField(prop.fields, df)) {
+        toRestore.push({ field: JSON.parse(JSON.stringify(df)), index: dfIdx });
+      }
+    });
+  }
+
+  if (toRestore.length === 0) {
+    alert(`「${prop.name}」には復元可能な削除項目がありません。\n（追加した項目はそのまま保持されています）`);
     return;
   }
-  if(!confirm(`「${prop.name}」の入力項目を初期状態に戻しますか？\n（削除した項目や編集内容が初期値に復元されます）`)){
+
+  const restoreNames = toRestore.map(item => `・${item.field.label}（${item.field.unit}）`).join('\n');
+  if(!confirm(`「${prop.name}」の削除した項目を元に戻しますか？\n\n【戻す項目】:\n${restoreNames}\n\n※追加した項目は削除されず、そのまま残ります。`)){
     return;
   }
-  prop.fields = JSON.parse(JSON.stringify(defaultProp.fields));
+
+  // 削除された項目のみを元の位置（または現在リスト）へ差し戻す（追加項目は一切削除しない）
+  toRestore.forEach(item => {
+    const insertIdx = Math.min(Math.max(0, item.index !== undefined ? item.index : prop.fields.length), prop.fields.length);
+    prop.fields.splice(insertIdx, 0, item.field);
+  });
+  prop._deletedFields = [];
+
   saveJSON(LS_PROPERTIES, allProperties);
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
