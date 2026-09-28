@@ -1428,7 +1428,11 @@ function renderPropertyList(){
     }).join('');
 
     // Field editor rows for body
-    const fieldRows=prop.fields.map((f,fi)=>`
+    const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
+    const fieldRows=prop.fields.map((f,fi)=>{
+      const fKey=fieldKey(f);
+      const curVal=(existing[fKey]!==undefined && existing[fKey]!=='')?existing[fKey]:'';
+      return `
       <div class="field-edit-row">
         <div class="field-name-wrap">
           <input type="text" value="${f.label}" placeholder="項目名" onfocus="showFieldDropdown(this)"
@@ -1436,12 +1440,19 @@ function renderPropertyList(){
             onchange="updateFL(${idx},${fi},this.value)" onblur="hideFieldDropdown(this)">
           <div class="field-dropdown"></div>
         </div>
-        <select onchange="updateFU(${idx},${fi},this.value)">
+        <input type="number" class="field-val-input" inputmode="decimal" min="0" step="any"
+          id="inline_val_${idx}_${fi}" data-field-key="${fKey}"
+          placeholder="0" value="${curVal}"
+          oninput="onInlineValInput(${idx},${fi},this.value)"
+          onclick="event.stopPropagation()"
+          style="width:68px;padding:7px 4px;font-size:15px;font-weight:700;text-align:right;border:1.5px solid #000;border-radius:6px;outline:none;background:#fff">
+        <select onchange="updateFU(${idx},${fi},this.value)" onclick="event.stopPropagation()">
           <option value="袋" ${f.unit==='袋'?'selected':''}>袋</option>
           <option value="kg" ${f.unit==='kg'?'selected':''}>kg</option>
         </select>
         <button class="btn btn-danger btn-sm" onclick="removeFieldInline(${idx},${fi},event)">✕</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     // Day checkboxes for body
     const dayCBs=ORDERED_DAYS.map(d=>{
@@ -1471,14 +1482,17 @@ function renderPropertyList(){
       <div class="prop-card-body" id="pbody_${idx}">
         <div class="fields-label">収集曜日（今日の曜日が青）</div>
         <div class="day-checkboxes">${dayCBs}</div>
-        <div class="fields-label">入力項目</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="fields-label" style="margin-bottom:0">入力項目</div>
+          <div style="font-size:11px;color:#888">項目名 ／ 数値 ／ 単位</div>
+        </div>
         <div id="pfields_${idx}">${fieldRows}</div>
-        <div style="display:flex;gap:8px;margin-top:4px">
+        <div style="display:flex;gap:8px;margin-top:6px">
           <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1">＋ 項目追加</button>
           <button class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="削除前に戻す">↩️ 削除前に戻す</button>
         </div>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'保存'}</button>
+          <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)">${done?'💾 保存（修正）':'💾 保存'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
@@ -1618,6 +1632,79 @@ function deleteProp(idx,event){
   allProperties.splice(idx,1);
   saveJSON(LS_PROPERTIES,allProperties);
   renderPropertyList();
+}
+
+function onInlineValInput(propIdx, fieldIdx, val){
+  const prop = allProperties[propIdx];
+  if(!prop) return;
+  const field = prop.fields[fieldIdx];
+  if(!field) return;
+  const fKey = fieldKey(field);
+  if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
+  state.entryDraft[prop.name][fKey] = val !== '' ? parseFloat(val) : '';
+
+  // 倍率連動があれば kg の入力欄にも自動計算反映
+  if(field.unit === '袋'){
+    const cleanLabel = normalizeLabelForPair(field.label);
+    const kgIdx = prop.fields.findIndex(f => f.unit === 'kg' && normalizeLabelForPair(f.label) === cleanLabel);
+    if(kgIdx !== -1){
+      const rule = getAutoKgRule(prop, fKey);
+      if(rule && field.hasMultiplier !== false && prop.fields[kgIdx].hasMultiplier !== false){
+        const multiplier = getAutoMultiplier(prop, fKey);
+        const kgInput = document.getElementById(`inline_val_${propIdx}_${kgIdx}`);
+        if(val !== '' && !isNaN(val)){
+          const kgVal = Math.round(parseFloat(val) * multiplier * 100) / 100;
+          if(kgInput){
+            kgInput.value = kgVal;
+            const kgKey = fieldKey(prop.fields[kgIdx]);
+            state.entryDraft[prop.name][kgKey] = kgVal;
+          }
+        } else {
+          if(kgInput){
+            kgInput.value = '';
+            const kgKey = fieldKey(prop.fields[kgIdx]);
+            delete state.entryDraft[prop.name][kgKey];
+          }
+        }
+      }
+    }
+  }
+  saveSession();
+}
+
+function saveInlinePropertyData(idx, event){
+  if(event) event.stopPropagation();
+  const prop = allProperties[idx];
+  if(!prop) return;
+
+  const data = {};
+  let hasVal = false;
+  prop.fields.forEach((f, fi) => {
+    const input = document.getElementById(`inline_val_${idx}_${fi}`);
+    const v = input ? input.value : '';
+    if(v !== ''){
+      data[fieldKey(f)] = parseFloat(v);
+      hasVal = true;
+    } else {
+      data[fieldKey(f)] = '';
+    }
+  });
+
+  if(!hasVal && !confirm('値が入力されていません。空のまま保存しますか？')) return;
+
+  state.entryData[prop.name] = data;
+  if(state.entryDraft) delete state.entryDraft[prop.name];
+  setLastData(prop.name, data, state.selectedStaff, state.date);
+  if(!state.entryOrder.includes(prop.name)) state.entryOrder.push(prop.name);
+  saveSession();
+  saveHistory(state.date, state.selectedStaff, state.entryData);
+
+  renderPropertyList();
+  const body = document.getElementById(`pbody_${idx}`);
+  if(body) body.classList.add('open');
+  const toggle = document.getElementById(`ptoggle_${idx}`);
+  if(toggle) toggle.textContent = '▲';
+  setTimeout(() => focusPropCard(idx), 80);
 }
 
 // ===== OPEN ENTRY =====
