@@ -1176,19 +1176,21 @@ function updateNav(n){
     const el = document.getElementById(id);
     if(el) el.classList.remove('active');
   });
+  const isPropsActive = (n===3||n===5||(n===4&&(state.entryReturnScreen||3)===3));
+  const isPropsAActive = (n===9||(n===4&&state.entryReturnScreen===9));
   if(n===0) document.getElementById('navSettings').classList.add('active');
   else if(n===1) document.getElementById('navDate').classList.add('active');
   else if(n===2) document.getElementById('navStaff').classList.add('active');
-  else if(n===3||n===5) document.getElementById('navProps').classList.add('active');
-  else if(n===4||n===9) document.getElementById('navPropsA').classList.add('active');
+  else if(isPropsActive) document.getElementById('navProps').classList.add('active');
+  else if(isPropsAActive) document.getElementById('navPropsA').classList.add('active');
   else if(n===6) document.getElementById('navHistory').classList.add('active');
   else if(n===7){ document.getElementById('navMail').classList.add('active'); loadMailSettings(); }
   else if(n===8) document.getElementById('navConvert').classList.add('active');
   else if(n===10){ document.getElementById('navColSettings').classList.add('active'); }
   // enabled/disabled
   document.getElementById('navStaff').className='nav-tab'+(n===2?' active':'')+(state.date?'':' disabled');
-  document.getElementById('navProps').className='nav-tab'+((n===3||n===5)?' active':'')+(state.selectedStaff?'':' disabled');
-  document.getElementById('navPropsA').className='nav-tab'+((n===4||n===9)?' active':'')+(state.selectedStaff?'':' disabled');
+  document.getElementById('navProps').className='nav-tab'+(isPropsActive?' active':'')+(state.selectedStaff?'':' disabled');
+  document.getElementById('navPropsA').className='nav-tab'+(isPropsAActive?' active':'')+(state.selectedStaff?'':' disabled');
 }
 
 function showScreen(n){
@@ -1211,7 +1213,7 @@ function showScreen(n){
 function goBack(){
   if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
   if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7||state.currentScreen===10){ showScreen(state.prevScreen||1); return; }
-  if(state.currentScreen===4){ showScreen(state.entryReturnScreen||9); return; }
+  if(state.currentScreen===4){ closePropertyEntry(); return; }
   if(state.currentScreen>1) showScreen(state.currentScreen-1);
 }
 
@@ -1473,7 +1475,7 @@ function renderPropertyList(){
         <div id="pfields_${idx}">${fieldRows}</div>
         <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="margin-top:4px">＋ 項目追加</button>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="openEntry(${idx},event)">${done?'✏️ 修正する':'📝 入力する'}</button>
+          <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'📝 入力する'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
@@ -1616,7 +1618,7 @@ function bindMultiplierControl(prop,container,input,key){
 
 function openEntry(idx,event,returnScreen){
   if(event) event.stopPropagation();
-  state.entryReturnScreen=returnScreen||3;
+  state.entryReturnScreen=returnScreen!==undefined?returnScreen:(state.currentScreen===9?9:3);
   state.currentPropertyIndex=idx;
   const prop=allProperties[idx];
   document.getElementById('propEntryTitle').textContent=prop.name;
@@ -1746,7 +1748,7 @@ function savePropertyData(){
   if(state.entryDraft) delete state.entryDraft[prop.name];
   setLastData(prop.name,data,state.selectedStaff,state.date);
   if(!state.entryOrder.includes(prop.name)) state.entryOrder.push(prop.name);
-  const returnScreen=state.entryReturnScreen||9;
+  const returnScreen=state.entryReturnScreen!==undefined?state.entryReturnScreen:3;
   if(returnScreen===9) autoSavePropertyListAOrder();
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
@@ -1778,18 +1780,32 @@ function clearPropertyData(){
   if(state.entryDraft) delete state.entryDraft[prop.name];
   state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
   saveSession();
-  if((state.entryReturnScreen||9)===9){ renderPropertyListA();showScreen(9); }
+  const ret = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
+  if(ret===9){ renderPropertyListA();showScreen(9); }
   else { renderPropertyList();showScreen(3); }
 }
 
 function closePropertyEntry(){
-  const returnScreen = state.entryReturnScreen || 9;
+  const returnScreen = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
+  const currentPropName = allProperties[state.currentPropertyIndex]?.name;
   if(returnScreen === 9){
     renderPropertyListA();
     showScreen(9);
   } else {
     renderPropertyList();
     showScreen(3);
+    if(currentPropName){
+      setTimeout(()=>{
+        const cards = document.querySelectorAll('.prop-card');
+        let targetCard = null;
+        cards.forEach(c=>{ if(c.dataset.propname===currentPropName) targetCard=c; });
+        if(targetCard){
+          const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
+          const top = targetCard.getBoundingClientRect().top + window.scrollY - headerH - 8;
+          window.scrollTo({ top, behavior:'instant' });
+        }
+      }, 50);
+    }
   }
 }
 

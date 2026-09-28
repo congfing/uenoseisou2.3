@@ -199,6 +199,7 @@
     <button class="nav-tab disabled" id="navStaff" onclick="navTo(2)">👤 担当者</button>
     <button class="nav-tab disabled" id="navProps" onclick="navTo(3)">🏢 物件リスト<span id="entryCountBadge" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
     <button class="nav-tab disabled" id="navPropsA" onclick="navTo(9)">物件リスト２列<span id="entryCountBadgeA" style="display:none;background:#fff;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:bold;margin-left:4px;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="navColSettings" onclick="navTo(10)">🔢 列番号設定</button>
     <button class="nav-tab" id="navHistory" onclick="navTo(6)">📋 履歴</button>
     <button class="nav-tab" id="navSettings" onclick="navTo(0)">⚙️ 設定</button>
     <button class="nav-tab" id="navMail" onclick="navTo(7)">✉️ メール</button>
@@ -267,12 +268,16 @@
 <!-- Screen 4: Data entry -->
 <div class="screen" id="screen4">
   <div style="padding-top:16px">
-    <div class="section-title" id="propEntryTitle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" id="propEntryTitle" style="margin-bottom:0"></div>
+      <button class="btn btn-secondary btn-sm" onclick="closePropertyEntry()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub">各項目に数値を入力してください</div>
     <div id="inputFields"></div>
     <div style="display:flex;gap:10px;margin-top:0">
       <button class="btn btn-primary" style="flex:2" onclick="savePropertyData()">保存 ✓</button>
-      <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去して戻る</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closePropertyEntry()">✕ 閉じる</button>
+      <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去</button>
     </div>
   </div>
 </div>
@@ -310,6 +315,18 @@
       <div style="font-size:15px;font-weight:700;margin-bottom:14px">📮 送信先アドレス</div>
       <div id="mailAddressList"></div>
       <button class="btn btn-success" style="margin-top:8px" onclick="saveMailSettings()">保存する</button>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px">🏷️ メール本文の列番号設定</div>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="includeColChk" style="width:20px;height:20px;accent-color:#000">
+        <span style="font-weight:600">メール本文に列番号（[C列]など）を付与する</span>
+      </label>
+      <div style="font-size:12px;color:#888;margin-top:6px;line-height:1.6">
+        ※現在はご指示により<b>全ての列番号付与を停止</b>しています（チェックなし）。<br>
+        ※「セブン-イレブン」「セカンドストリート」は横書き形式のため、本設定に関わらず常に列番号は付与されません。
+      </div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -397,6 +414,113 @@
         <button class="btn btn-secondary btn-sm" onclick="addStaffFromSettings()">追加</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Screen 10: Email Column Settings (白、黒の文字、枠線デザイン) -->
+<div class="screen" id="screen10" style="background:#fff;color:#000;">
+  <div style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;color:#000;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+      <span>🔢 メール列番号設定（本Sheet用）</span>
+    </div>
+    <div style="font-size:12px;color:#000;margin-bottom:14px;line-height:1.5">
+      メール本文に付与する列番号（[C列]など）を設定・変更します。
+    </div>
+
+    <!-- 物件検索枠 -->
+    <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:6px">🔍 物件検索</div>
+      <input type="text" id="colPropSearchInput" placeholder="物件名で検索..." 
+        style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #000;border-radius:6px;font-size:14px;font-weight:600;background:#fff;color:#000;outline:none"
+        oninput="onColPropSearchInput(this.value)">
+    </div>
+
+    <!-- 物件名枠（物件選択枠） -->
+    <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:#000">🏢 物件選択</span>
+        <span id="colPropCountBadge" style="font-size:11px;font-weight:700;color:#000;border:1px solid #000;padding:1px 6px;border-radius:4px"></span>
+      </div>
+      <select id="colPropSelect" onchange="onColPropSelectChange(this.value)"
+        style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #000;border-radius:6px;font-size:15px;font-weight:700;background:#fff;color:#000;outline:none">
+      </select>
+    </div>
+
+    <!-- 各物件の画面（選択された物件の項目列名リスト＋操作ボタン枠） -->
+    <div id="colPropDetailContainer" style="display:none;background:#fff;border:2px solid #000;border-radius:8px;padding:14px;margin-bottom:14px">
+      
+      <!-- 物件ヘッダー -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:12px;border-bottom:2px solid #000">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#000">選択中の物件</div>
+          <div id="colSelectedPropTitle" style="font-size:17px;font-weight:800;color:#000"></div>
+        </div>
+        <div id="colPropSaveNotice" style="display:none;font-size:12px;font-weight:700;color:#000;border:1.5px solid #000;padding:2px 8px;border-radius:4px;background:#fff">
+          ✅ 保存完了
+        </div>
+      </div>
+
+      <!-- 項目列名一覧（縦並び、横に選択枠プルダウン） -->
+      <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:8px">📋 項目列名一覧と選択枠</div>
+      <div id="colPropFieldsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+
+      <!-- 統合操作枠（仕切り線で個別操作と全体操作を分割） -->
+      <div style="background:#fff;border:2px solid #000;border-radius:8px;padding:14px;margin-bottom:14px">
+        
+        <!-- 【仕切りの上】：選択中物件の個別操作 -->
+        <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:4px">🏢 選択中物件の操作（個別）</div>
+        <div style="font-size:12px;color:#000;margin-bottom:10px;line-height:1.4">
+          列番号変更後、「変更」で列順（A→Z順）に並び変わります。確認後に保存または個別で元に戻せます。
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button type="button" id="colReorderBtn" onclick="applyColSettingReorder(false)"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            🔄 変更（並び順反映）
+          </button>
+          <button type="button" id="colReorderSaveBtn" onclick="applyColSettingReorder(true)"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            💾 変更して保存
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button type="button" id="colRevertBtn" onclick="revertColSettingCurrentProp()"
+            style="padding:10px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ↩️ 元に戻す（個別）
+          </button>
+          <button type="button" id="colMailBtn" onclick="sendColSettingMailForProp()"
+            style="padding:10px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ✉️ メール送信
+          </button>
+        </div>
+
+        <div id="colReorderNotice" style="display:none;margin-top:10px;padding:8px 10px;font-size:12px;font-weight:700;color:#000;border:1.5px solid #000;border-radius:6px;background:#fff;text-align:center"></div>
+
+        <!-- ──── 仕切り線 ──── -->
+        <div style="border-top:2px solid #000;margin:14px 0 12px 0"></div>
+
+        <!-- 【仕切りの下】：全体操作（全Sheet一括・閉じる） -->
+        <div style="font-size:13px;font-weight:700;color:#000;margin-bottom:4px">⚙️ 全体操作</div>
+        <div style="font-size:12px;color:#000;margin-bottom:10px;line-height:1.4">
+          全Sheet（全物件）の列番号・並び順を一括で初期状態に戻すか、画面を閉じます。
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button type="button" id="colRevertAllBtn" onclick="revertAllColSettingsToDefault()"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ↩️ 全Sheet一括で戻す
+          </button>
+          <button type="button" id="colCloseBtn" onclick="closeColSettingScreen()"
+            style="padding:11px 6px;font-size:13px;font-weight:700;background:#fff;color:#000;border:2px solid #000;border-radius:6px;cursor:pointer">
+            ✖️ 閉じる
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 </div>
 
@@ -568,47 +692,48 @@ const LEGACY_FIELD_VALUE_SUM_KEYS={
   ['7.11 伊賀忍者市駅南店::不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)__袋']:['ビン__袋','缶__袋','PET__袋']
 };
 const DEFAULT_PROPERTIES = [
-  { name:'ほっともっと 伊賀桑町店', order:1, days:[], fields:[{label:'紙屑',unit:'kg',col:'C'},{label:'厨芥（生ごみ）',unit:'kg',col:'D'},{label:'木屑',unit:'kg',col:'E'},{label:'金属缶',unit:'kg',col:'F'},{label:'ビン・ガラス',unit:'kg',col:'G'},{label:'廃プラ',unit:'kg',col:'H'},{label:'ハッポウ',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'K'}] },
-  { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg',col:'C'},{label:'厨芥（生ごみ）',unit:'kg',col:'D'},{label:'木屑',unit:'kg',col:'E'},{label:'金属缶',unit:'kg',col:'F'},{label:'ビン・ガラス',unit:'kg',col:'G'},{label:'廃プラ',unit:'kg',col:'H'},{label:'ハッポウ',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'K'}] },
-  { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'D'}] },
+  { name:'ほっともっと 伊賀桑町店', order:1, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
+  { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
+  { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'G'}] },
   { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'金属',unit:'kg',col:'I'},{label:'ビン・割れ物',unit:'kg',col:'M'},{label:'硬質プラスチック',unit:'kg',col:'R'}] },
-  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'ビン・缶・PET',unit:'袋',col:'E'},{label:'ビン・缶・PET',unit:'kg',col:'F'},{label:'われもの等',unit:'袋',col:'G'},{label:'われもの等',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'}] },
-  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'不燃物(ﾋﾞﾝ缶ﾍﾟｯﾄ)',unit:'袋',col:'D'},{label:'PET',unit:'袋',col:'E'},{label:'ビン',unit:'袋',col:'F'},{label:'缶',unit:'袋',col:'G'},{label:'ダンボール',unit:'kg',col:'H'}] },
-  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋',col:'C'},{label:'不燃ビン缶PET',unit:'袋',col:'D'},{label:'段ボール',unit:'kg',col:'E'}] },
-  { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'D'},{label:'発泡スチロール',unit:'kg',col:'E'},{label:'木くず',unit:'kg',col:'F'},{label:'その他',unit:'kg',col:'G'}] },
-  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'}] },
-  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'袋',col:'D'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
+  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'O'}] },
+  { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野北谷店', order:9, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀緑ヶ丘本町店', order:10, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀平野東町店', order:11, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'7.11 伊賀忍者市駅南店', order:13, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
+  { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
+
+  { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'F'},{label:'発泡スチロール',unit:'kg',col:'I'},{label:'木くず',unit:'kg',col:'K'},{label:'その他',unit:'kg',col:'M'}] },
+  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'}] },
+  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
   { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
-  { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'I'}] },
+  { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'J'}] },
   { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
   { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物',unit:'袋',col:'E'},{label:'不燃物',unit:'kg',col:'F'},{label:'ダンボール',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'カン',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'}] },
-  { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'D'},{label:'不燃ごみ（ビン）',unit:'袋',col:'E'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'F'}] },
-  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'E'},{label:'不燃ごみ（ビン）',unit:'袋',col:'G'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'I'}] },
+  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
-  { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'C'}] },
-  { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥',col:'C'},{label:'可燃物収集',unit:'kg',col:'D'},{label:'フィルター紙収集',unit:'㎥',col:'E'},{label:'フィルター紙収集',unit:'kg',col:'F'}] },
+  { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'H'}] },
+  { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥',col:'B'},{label:'可燃物収集',unit:'kg',col:'C'},{label:'フィルター紙収集',unit:'㎥',col:'D'},{label:'フィルター紙収集',unit:'kg',col:'E'}] },
   { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
   { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
-  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'生ごみ',unit:'袋',col:'D'}] },
-  { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'E'},{label:'資源物',unit:'袋',col:'F'},{label:'資源物',unit:'kg',col:'G'}] },
-  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'D'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'F'},{label:'図書館（青）可燃ごみ',unit:'袋'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'H'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'J'},{label:'物販（透明）可燃ごみ',unit:'袋'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'L'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'N'},{label:'カフェ（黒）可燃ごみ',unit:'袋'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'P'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'R'}] },
+  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'D'},{label:'生ごみ',unit:'袋',col:'L'}] },
+  { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋',col:'D'},{label:'可燃物',unit:'kg',col:'F'},{label:'古紙',unit:'kg',col:'H'},{label:'資源物',unit:'袋',col:'J'},{label:'資源物',unit:'kg',col:'L'}] },
+  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'T'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'E'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'G'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'U'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'I'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'K'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'V'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'M'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'O'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'W'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'Q'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'S'}] },
   { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg',col:'C'},{label:'紙類',unit:'kg',col:'D'},{label:'他可燃ゴミ',unit:'kg',col:'E'},{label:'不燃(ビニール等)',unit:'kg',col:'F'},{label:'カン',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'},{label:'割れ物',unit:'kg',col:'J'},{label:'発泡',unit:'kg',col:'K'},{label:'食品リサイクル',unit:'kg',col:'L'}] },
-  { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
-  { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
+  { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'kg',col:'H'}] },
+  { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
   { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg',col:'B'},{label:'不燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'F'}] },
-  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'D'}] },
-  { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'C'}] },
-  { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
+  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
+  { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'I'}] },
+  { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'I'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
   { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
   { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
-  { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物１（ビン・缶・PET）',unit:'袋',col:'E'},{label:'不燃物１（ビン・缶・PET）',unit:'kg',col:'F'},{label:'不燃物２（容器包装系）',unit:'袋',col:'G'},{label:'不燃物２（容器包装系）',unit:'kg',col:'H'},{label:'粗大ごみ／その他',unit:'袋',col:'I'},{label:'粗大ごみ／その他',unit:'kg',col:'J'}] },
+  { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'不燃物１（ビン・缶・PET）',unit:'袋',col:'G'},{label:'不燃物１（ビン・缶・PET）',unit:'kg',col:'I'},{label:'不燃物２（容器包装系）',unit:'袋',col:'K'},{label:'不燃物２（容器包装系）',unit:'kg',col:'M'},{label:'粗大ごみ／その他',unit:'袋',col:'O'},{label:'粗大ごみ／その他',unit:'kg',col:'Q'}] },
 ];
 const DEFAULT_STAFF = ['担当者A','担当者B'];
 
@@ -643,6 +768,11 @@ function getFieldValue(data,field,propName=''){
   if(!data) return '';
   const key=fieldKey(field);
   if(data[key]!==undefined) return data[key];
+  if(field.originalLabel && field.originalLabel !== field.label){
+    const origKey = `${field.originalLabel}__${field.unit}`;
+    if(data[origKey]!==undefined) return data[origKey];
+    if(data[field.originalLabel]!==undefined) return data[field.originalLabel];
+  }
   if(['マックスバリュ佐那具店','マックスバリュ上野店'].includes(propName)&&key.startsWith('ごみ__')){
     for(const legacyKey of [`可燃__${field.unit}`,`可燃袋__${field.unit}`]){
       if(data[legacyKey]!==undefined) return data[legacyKey];
@@ -688,37 +818,122 @@ function setAutoMultiplier(prop,sourceKey,value){
   const numeric=parseFloat(value);
   saveJSON(autoMultiplierStorageKey(prop,sourceKey),Number.isNaN(numeric)?1:numeric);
 }
+
+function normalizeLabelForPair(label){
+  return (label || '').replace(/（計算用）/g, '').replace(/\(計算用\)/g, '').trim();
+}
+
+function isCalcBagField(prop, field){
+  if(!field || field.unit !== '袋') return false;
+  // 列番号が設定されている袋項目（原本に両方記入する物件）は、倍率を使っていても絶対に計算用とはしない
+  if(field.col && String(field.col).trim() !== '') return false;
+  if(field.hasMultiplier === false) return false;
+  if(prop && prop.name && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))) return false;
+  if((field.label || '').includes('（計算用）') || (field.label || '').includes('(計算用)')) return true;
+  if(prop && prop.fields && Array.isArray(prop.fields)){
+    const clean = normalizeLabelForPair(field.label);
+    const hasKg = prop.fields.some(o => o.unit === 'kg' && normalizeLabelForPair(o.label) === clean);
+    if(hasKg && (!field.col || String(field.col).trim() === '')) return true;
+  }
+  return false;
+}
+
+function getFieldMailLabel(prop, field){
+  if(!field) return '';
+  let label = field.label || '（名称未設定）';
+  // 列番号がある項目（原本両方記入）は、倍率を使っていても「（計算用）」は絶対に書かない
+  if(field.col && String(field.col).trim() !== ''){
+    return normalizeLabelForPair(label);
+  }
+  if(isCalcBagField(prop, field)){
+    if(!label.includes('（計算用）') && !label.includes('(計算用)')){
+      label = `${normalizeLabelForPair(label)}（計算用）`;
+    }
+  } else {
+    // 計算用ではない通常項目は（計算用）を取り除く
+    label = normalizeLabelForPair(label);
+  }
+  return label;
+}
+
 function getAutoKgRule(prop,sourceKey){
-  if(!prop) return;
-  const propertyRules={};
-  if(prop.name==='イオンタウン伊賀'){
+  if(!prop) return null;
+  let rule = null;
+  if(prop.name==='すき家'){
+    const targets={
+      '可燃物__袋':'可燃物__kg',
+      'ビン・缶・PET__袋':'ビン・缶・PET__kg'
+    };
+    if(targets[sourceKey]){
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  } else if(prop.name==='古本市場 上野店'){
+    const targets={
+      '可燃物__袋':'可燃物__kg',
+      '資源物__袋':'資源物__kg'
+    };
+    if(targets[sourceKey]){
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  } else if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
+    const targets={
+      '生活ゴミ（可燃）__袋':'生活ゴミ（可燃）__kg',
+      '生活ゴミ（不燃）__袋':'生活ゴミ（不燃）__kg'
+    };
+    if(targets[sourceKey]){
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    }
+  } else if(prop.name==='イオンタウン伊賀'){
     const targets={
       'ごみ__袋':'ごみ__kg',
       '生ごみ__袋':'生ごみ__kg'
     };
-    if(targets[sourceKey]) return {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,1),selectable:true};
-  }
-  if(prop.name==='マックスバリュ佐那具店'){
+    if(targets[sourceKey]) {
+      const defaultMultiplier=sourceKey==='ごみ__袋' ? 1 : null;
+      rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,defaultMultiplier),selectable:true};
+    }
+  } else if(prop.name==='マックスバリュ佐那具店'){
     const defaults={
       'ごみ__袋':{target:'ごみ__kg',multiplier:3},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:4}
     };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name==='マックスバリュ上野店'){
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name==='マックスバリュ上野店'){
     const defaults={
       'ごみ__袋':{target:'ごみ__kg',multiplier:2},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
     };
-    const rule=defaults[sourceKey];
-    if(rule) return {...rule,multiplier:getAutoMultiplier(prop,sourceKey,rule.multiplier),selectable:true};
-  }
-  if(prop.name===SAKAKURA_PROPERTY_NAME){
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name===SAKAKURA_PROPERTY_NAME){
     const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===sourceKey);
-    if(pair) return {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
+    if(pair) rule = {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
   }
-  return propertyRules[prop.name]?.[sourceKey];
+
+  // 物件固有ルールが未設定でも、同名の「袋」と「kg」のペアが存在し倍率有効なら汎用連動（袋数×倍率＝kg）
+  if(!rule && prop.fields && Array.isArray(prop.fields) && sourceKey.endsWith('__袋')){
+    const sourceLabel = sourceKey.replace(/__袋$/, '');
+    const cleanLabel = normalizeLabelForPair(sourceLabel);
+    const sourceF = prop.fields.find(f => fieldKey(f) === sourceKey);
+    const targetF = prop.fields.find(f => f.unit === 'kg' && normalizeLabelForPair(f.label) === cleanLabel);
+    if(sourceF && targetF && sourceF.hasMultiplier !== false && targetF.hasMultiplier !== false){
+      rule = { target: fieldKey(targetF), multiplier: getAutoMultiplier(prop, sourceKey, null), selectable: true };
+    }
+  }
+
+  if(!rule) return null;
+
+  // 変換元（sourceKey）および相手側の項目（rule.target）の両方が現在の物件フィールドに存在するか確認。
+  // 削除ボタン等で片方が消されている場合、または倍率「なし（単独枠）」に設定されている場合はルール無効（単独項目として扱い、どちらかだけ残る設定にする）
+  if(prop.fields && Array.isArray(prop.fields)){
+    const sourceF = prop.fields.find(f => fieldKey(f) === sourceKey);
+    const targetF = prop.fields.find(f => fieldKey(f) === rule.target);
+    if(!sourceF || !targetF) return null;
+    if(sourceF.hasMultiplier === false || targetF.hasMultiplier === false) return null;
+  }
+
+  return rule;
 }
 function getAutoMultiplierControl(prop,sourceKey){
   const rule=getAutoKgRule(prop,sourceKey);
@@ -744,7 +959,14 @@ function applyAutoKg(prop,sourceKey,sourceValue){
 }
 function getAutoKgNote(prop,field){
   if(!prop||!['マックスバリュ佐那具店','マックスバリュ上野店','イオンタウン伊賀'].includes(prop.name)) return '';
-  return ['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg' ? '※自動入力しない場合は袋数を空白にする' : '';
+  if(!(['ごみ','生ごみ'].includes(field.label)&&field.unit==='kg')) return '';
+  // 相手側の袋項目が存在し、倍率「なし（単独枠）」に設定されていない場合のみ注記を表示
+  if(prop.fields && Array.isArray(prop.fields)){
+    const bagF = prop.fields.find(f => f.label === field.label && f.unit === '袋');
+    if(!bagF) return '';
+    if(bagF.hasMultiplier === false || field.hasMultiplier === false) return '';
+  }
+  return '※自動入力しない場合は袋数を空白にする';
 }
 function saveHistory(date,staff,entryData){
   saveJSON(LS_HISTORY_PREFIX+date+'_'+staff, {
@@ -773,20 +995,23 @@ function getAllHistory(){
 // 保存済みの追加物件を残しつつ、コード側で増えた標準物件を補完する
 function mergeDefaultProperty(savedProp,defaultProp){
   if(!defaultProp) return savedProp;
-  return {...defaultProp,
+  return {
+    ...JSON.parse(JSON.stringify(defaultProp)),
     order:savedProp.order||defaultProp.order,
     days:Array.isArray(savedProp.days)?savedProp.days:defaultProp.days
   };
 }
 
-const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260922_kensatsucho_all3';
+const LS_PROPERTIES_VERSION = 'keiryo_prop_ver_20260927_seven_no_col';
+
 
 let allProperties = (() => {
   const saved = loadJSON(LS_PROPERTIES, null);
   if (!Array.isArray(saved)) {
-    saveJSON(LS_PROPERTIES, DEFAULT_PROPERTIES.slice());
+    const freshDefaults = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+    saveJSON(LS_PROPERTIES, freshDefaults);
     localStorage.setItem(LS_PROPERTIES_VERSION, 'done');
-    return DEFAULT_PROPERTIES.slice();
+    return freshDefaults;
   }
   const defaultNames = new Set(DEFAULT_PROPERTIES.map(p => p.name));
   const defaultByName = new Map(DEFAULT_PROPERTIES.map(p => [p.name,p]));
@@ -947,19 +1172,25 @@ function updateNav(n){
   const dl=document.getElementById('headerDateLabel');
   dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
   // tabs active
-  ['navDate','navStaff','navProps','navPropsA','navHistory','navSettings','navMail','navConvert'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['navDate','navStaff','navProps','navPropsA','navColSettings','navHistory','navSettings','navMail','navConvert'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  const isPropsActive = (n===3||n===5||(n===4&&(state.entryReturnScreen||3)===3));
+  const isPropsAActive = (n===9||(n===4&&state.entryReturnScreen===9));
   if(n===0) document.getElementById('navSettings').classList.add('active');
   else if(n===1) document.getElementById('navDate').classList.add('active');
   else if(n===2) document.getElementById('navStaff').classList.add('active');
-  else if(n===3||n===5) document.getElementById('navProps').classList.add('active');
-  else if(n===4||n===9) document.getElementById('navPropsA').classList.add('active');
+  else if(isPropsActive) document.getElementById('navProps').classList.add('active');
+  else if(isPropsAActive) document.getElementById('navPropsA').classList.add('active');
   else if(n===6) document.getElementById('navHistory').classList.add('active');
   else if(n===7){ document.getElementById('navMail').classList.add('active'); loadMailSettings(); }
   else if(n===8) document.getElementById('navConvert').classList.add('active');
+  else if(n===10){ document.getElementById('navColSettings').classList.add('active'); }
   // enabled/disabled
   document.getElementById('navStaff').className='nav-tab'+(n===2?' active':'')+(state.date?'':' disabled');
-  document.getElementById('navProps').className='nav-tab'+((n===3||n===5)?' active':'')+(state.selectedStaff?'':' disabled');
-  document.getElementById('navPropsA').className='nav-tab'+((n===4||n===9)?' active':'')+(state.selectedStaff?'':' disabled');
+  document.getElementById('navProps').className='nav-tab'+(isPropsActive?' active':'')+(state.selectedStaff?'':' disabled');
+  document.getElementById('navPropsA').className='nav-tab'+(isPropsAActive?' active':'')+(state.selectedStaff?'':' disabled');
 }
 
 function showScreen(n){
@@ -981,8 +1212,8 @@ function showScreen(n){
 
 function goBack(){
   if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
-  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7){ showScreen(state.prevScreen||1); return; }
-  if(state.currentScreen===4){ showScreen(state.entryReturnScreen||9); return; }
+  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7||state.currentScreen===10){ showScreen(state.prevScreen||1); return; }
+  if(state.currentScreen===4){ closePropertyEntry(); return; }
   if(state.currentScreen>1) showScreen(state.currentScreen-1);
 }
 
@@ -997,6 +1228,7 @@ function navTo(n){
   if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
   if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
   if(n===8){ showScreen(8); initConvertScreen(); return; }
+  if(n===10){ state.prevScreen=state.currentScreen; initColSettingScreen(); showScreen(10); return; }
 }
 
 // ===== SCREEN 1→2 =====
@@ -1243,7 +1475,7 @@ function renderPropertyList(){
         <div id="pfields_${idx}">${fieldRows}</div>
         <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="margin-top:4px">＋ 項目追加</button>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="openEntry(${idx},event)">${done?'✏️ 修正する':'📝 入力する'}</button>
+          <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'📝 入力する'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
@@ -1317,7 +1549,7 @@ function removeFieldInline(propIdx,fieldIdx,event){
 
 function addFieldInline(propIdx,event){
   event.stopPropagation();
-  allProperties[propIdx].fields.push({label:'',unit:'袋'});
+  allProperties[propIdx].fields.push({label:'',unit:'袋',col:''});
   saveJSON(LS_PROPERTIES,allProperties);
   renderPropertyList();
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
@@ -1386,7 +1618,7 @@ function bindMultiplierControl(prop,container,input,key){
 
 function openEntry(idx,event,returnScreen){
   if(event) event.stopPropagation();
-  state.entryReturnScreen=returnScreen||3;
+  state.entryReturnScreen=returnScreen!==undefined?returnScreen:(state.currentScreen===9?9:3);
   state.currentPropertyIndex=idx;
   const prop=allProperties[idx];
   document.getElementById('propEntryTitle').textContent=prop.name;
@@ -1435,46 +1667,53 @@ function openEntry(idx,event,returnScreen){
       return;
     }
 
-    const bagIdx=findFieldIndexByLabelUnit(prop,field.label,'袋');
-    const kgIdx=findFieldIndexByLabelUnit(prop,field.label,'kg');
+    const cleanLabel=normalizeLabelForPair(field.label);
+    const bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
+    const kgIdx=prop.fields.findIndex(f=>f.unit==='kg'&&normalizeLabelForPair(f.label)===cleanLabel);
     if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
-      const pairKey=`${field.label}__袋kg`;
-      if(renderedPairs.has(pairKey)) return;
-      renderedPairs.add(pairKey);
-
       const bagField=prop.fields[bagIdx];
       const kgField=prop.fields[kgIdx];
       const bagKey=fieldKey(bagField);
-      const kgKey=fieldKey(kgField);
-      const bagInputId=`ef_${bagIdx}`;
-      const kgInputId=`ef_${kgIdx}`;
-      const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
-      const kgNote=getAutoKgNote(prop,kgField);
-      const kgNoteHtml=kgNote ? `<span class="field-unit">${kgNote}</span>` : '';
-      const div=document.createElement('div');
-      div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row${multiplierHtml?'':' no-multiplier'}">
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
-            ${getLastValueHint(lastSaved,bagField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
-          </div>
-          ${multiplierHtml}
-          <div class="combined-field-input">
-            <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
-            ${getLastValueHint(lastSaved,kgField,prop.name)}
-            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
-              id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
-          </div>
-        </div>`;
-      c.appendChild(div);
-      const bagInput=div.querySelector(`#${bagInputId}`);
-      const kgInput=div.querySelector(`#${kgInputId}`);
-      bindEntryInput(prop,bagInput,bagKey);
-      bindEntryInput(prop,kgInput,kgKey);
-      bindMultiplierControl(prop,div,bagInput,bagKey);
-      return;
+      const rule=getAutoKgRule(prop,bagKey);
+
+      // 倍率が有効な場合のみ、袋数×倍率＝kg の横並び連動枠として表示
+      if(rule && bagField.hasMultiplier!==false && kgField.hasMultiplier!==false){
+        const pairKey=`${cleanLabel}__袋kg`;
+        if(renderedPairs.has(pairKey)) return;
+        renderedPairs.add(pairKey);
+
+        const kgKey=fieldKey(kgField);
+        const bagInputId=`ef_${bagIdx}`;
+        const kgInputId=`ef_${kgIdx}`;
+        const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
+        const kgNote=getAutoKgNote(prop,kgField);
+        const kgNoteHtml=kgNote ? `<span class="field-unit">${kgNote}</span>` : '';
+        const div=document.createElement('div');
+        div.className='field-group card';
+        div.innerHTML=`<div class="combined-field-row">
+            <div class="combined-field-input">
+              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+              ${getLastValueHint(lastSaved,bagField,prop.name)}
+              <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+                id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
+            </div>
+            ${multiplierHtml}
+            <div class="combined-field-input">
+              <div class="combined-field-unit">${kgField.label}<span class="field-unit">（kg）</span>${kgNoteHtml}</div>
+              ${getLastValueHint(lastSaved,kgField,prop.name)}
+              <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+                id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
+            </div>
+          </div>`;
+        c.appendChild(div);
+        const bagInput=div.querySelector(`#${bagInputId}`);
+        const kgInput=div.querySelector(`#${kgInputId}`);
+        bindEntryInput(prop,bagInput,bagKey);
+        bindEntryInput(prop,kgInput,kgKey);
+        bindMultiplierControl(prop,div,bagInput,bagKey);
+        return;
+      }
+      // 倍率が「なし」の場合は連動枠を作らず、通常の個別入力枠として袋・kgの両方を手入力可能にする
     }
 
     const key=fieldKey(field);
@@ -1509,7 +1748,7 @@ function savePropertyData(){
   if(state.entryDraft) delete state.entryDraft[prop.name];
   setLastData(prop.name,data,state.selectedStaff,state.date);
   if(!state.entryOrder.includes(prop.name)) state.entryOrder.push(prop.name);
-  const returnScreen=state.entryReturnScreen||9;
+  const returnScreen=state.entryReturnScreen!==undefined?state.entryReturnScreen:3;
   if(returnScreen===9) autoSavePropertyListAOrder();
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
@@ -1541,8 +1780,33 @@ function clearPropertyData(){
   if(state.entryDraft) delete state.entryDraft[prop.name];
   state.entryOrder=state.entryOrder.filter(n=>n!==prop.name);
   saveSession();
-  if((state.entryReturnScreen||9)===9){ renderPropertyListA();showScreen(9); }
+  const ret = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
+  if(ret===9){ renderPropertyListA();showScreen(9); }
   else { renderPropertyList();showScreen(3); }
+}
+
+function closePropertyEntry(){
+  const returnScreen = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
+  const currentPropName = allProperties[state.currentPropertyIndex]?.name;
+  if(returnScreen === 9){
+    renderPropertyListA();
+    showScreen(9);
+  } else {
+    renderPropertyList();
+    showScreen(3);
+    if(currentPropName){
+      setTimeout(()=>{
+        const cards = document.querySelectorAll('.prop-card');
+        let targetCard = null;
+        cards.forEach(c=>{ if(c.dataset.propname===currentPropName) targetCard=c; });
+        if(targetCard){
+          const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
+          const top = targetCard.getBoundingClientRect().top + window.scrollY - headerH - 8;
+          window.scrollTo({ top, behavior:'instant' });
+        }
+      }, 50);
+    }
+  }
 }
 
 // ===== 曜日別・保存（シングルボタン） =====
@@ -1601,6 +1865,21 @@ function goToScreen5(){
   showScreen(5);
 }
 
+function getSevenSeparateMaterialColumn(prop, field){
+  if(!prop.name.startsWith('7.11 ')) return '';
+  return ({'ビン':'F','PET':'D','缶':'E'})[field.label] || '';
+}
+
+function getSevenBottleCanPetTotal(prop, data){
+  if(!prop.name.startsWith('7.11 ')) return null;
+  const fields=prop.fields.filter(f=>['ビン','PET','缶'].includes(f.label));
+  const values=fields.map(f=>getFieldValue(data,f,prop.name)).filter(v=>v!==''&&v!==undefined);
+  if(values.length===0) return null;
+  const total=values.reduce((sum,value)=>sum+Number(value),0);
+  if(!Number.isFinite(total)) return null;
+  return {total:Math.round(total*1000)/1000,col:'G'};
+}
+
 function exportText(){
   const props = getSortedProps();
   const entered = props.filter(p => state.entryData[p.name]);
@@ -1616,12 +1895,19 @@ function exportText(){
   entered.forEach((prop, idx) => {
     const data = state.entryData[prop.name];
     lines.push((idx+1) + '．' + prop.name);
+    const incCol = shouldIncludeMailColumns(prop);
     prop.fields.forEach(f => {
       const fieldValue=getFieldValue(data,f,prop.name);
       const val = fieldValue !== '' ? fieldValue : '－';
-      const colHint = f.col ? ` [${f.col}列]` : '';
-      lines.push('　　' + f.label + '：' + val + ' ' + f.unit + colHint);
+      const extraColumn=incCol ? getSevenSeparateMaterialColumn(prop,f) : '';
+      const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
+      lines.push('　　' + f.label + '：' + val + ' ' + f.unit + sourceHint);
     });
+    const combined=getSevenBottleCanPetTotal(prop,data);
+    if(combined){
+      const hint = shouldIncludeMailColumns(prop) ? ` [${combined.col}列]` : '';
+      lines.push(`　　ビン缶PET 合計（原本入力）：${combined.total} 袋${hint}`);
+    }
     lines.push('');
   });
   lines.push('━━━━━━━━━━━━━━━━━');
@@ -1650,7 +1936,12 @@ function exportXlsx(){
   XLSX.utils.book_append_sheet(wb,ws,'計量データ');
   const safeDate = (state.date || 'nodate').replace(/-/g,'');
   const safeStaff = state.selectedStaff || '未設定';
-  XLSX.writeFile(wb,`計量データ_${safeDate}_${safeStaff}.xlsx`);
+  let filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  if (isContinueNewTableEnabled()) {
+    const bookName = getSavedExcelBookName();
+    if (bookName) filename = bookName;
+  }
+  XLSX.writeFile(wb, filename);
 }
 
 // ===== CONVERT SCREEN =====
@@ -2256,7 +2547,11 @@ function shareHistoryAsExcel(ri, event){
 
   const safeDate = (record.date || 'nodate').replace(/-/g,'');
   const safeStaff = record.staffName || '未設定';
-  const filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  let filename = `計量データ_${safeDate}_${safeStaff}.xlsx`;
+  if (isContinueNewTableEnabled()) {
+    const bookName = getSavedExcelBookName();
+    if (bookName) filename = bookName;
+  }
 
   // ダウンロード → iPhoneでは「ファイル」アプリのDownloadsに保存される
   XLSX.writeFile(wb, filename);
@@ -2290,12 +2585,20 @@ function sendHistoryByMail(ri, event){
     });
     if(!hasVal) return;
     const propertyLines = [`【${prop.name}】`];
+    const incCol = shouldIncludeMailColumns(prop);
     prop.fields.forEach(f => {
       const val = getFieldValue(data,f,prop.name);
       if(val === '' || val === undefined) return;
-      const colHint = f.col ? ` [${f.col}列]` : '';
-      propertyLines.push(`${f.label}：${val} ${f.unit}${colHint}`);
+      const extraColumn=incCol ? getSevenSeparateMaterialColumn(prop,f) : '';
+      const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
+      const mailLabel = getFieldMailLabel(prop, f);
+      propertyLines.push(`${mailLabel}：${val} ${f.unit}${sourceHint}`);
     });
+    const combined=getSevenBottleCanPetTotal(prop,data);
+    if(combined){
+      const hint = shouldIncludeMailColumns(prop) ? ` [${combined.col}列]` : '';
+      propertyLines.push(`ビン缶PET 合計（原本入力）：${combined.total} 袋${hint}`);
+    }
     bodyBlocks.push(propertyLines.join(lineBreak));
   });
   bodyBlocks.push('─────────────────');
@@ -2326,7 +2629,18 @@ function openMailComposer(mailtoUrl){
 
 // ===== MAIL SETTINGS =====
 const LS_MAIL_LIST = 'keiryo_mail_list';
+const LS_MAIL_INCLUDE_COLUMNS = 'keiryo_mail_include_columns';
 const MAIL_COUNT = 4;
+
+function shouldIncludeMailColumns(prop){
+  // セブン-イレブン・セカンドストリートは横書き形式のため常に列番号を付与しない
+  if(prop && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))){
+    return false;
+  }
+  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, true);
+  if(!enabled) return false;
+  return true;
+}
 const REMOVED_MAIL_LOCALPART = 'yo.' + '91863391';
 const REMOVED_MAIL_DOMAIN = 'gmail' + '.com';
 // 使われていない/誤りのアドレス。端末に残っていても開いた時点で自動的に空欄にする。
@@ -2398,6 +2712,8 @@ function loadMailSettings(){
         style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;outline:none">`;
     c.appendChild(row);
   });
+  const colChk = document.getElementById('includeColChk');
+  if(colChk) colChk.checked = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, false);
 }
 
 function saveMailSettings(){
@@ -2406,8 +2722,511 @@ function saveMailSettings(){
     enabled: document.getElementById(`mailChk_${i}`).checked
   }));
   saveMailList(list);
+  const colChk = document.getElementById('includeColChk');
+  if(colChk) saveJSON(LS_MAIL_INCLUDE_COLUMNS, colChk.checked);
   const active = list.filter(m=>m.addr&&m.enabled).map(m=>m.addr);
   alert('保存しました。\n送信先：\n' + (active.length ? active.join('\n') : '（なし）'));
+}
+
+// ===== 新計量データ表の作成 モーダル制御 =====
+const LS_CONTINUE_NEW_TABLE = 'keiryo_continue_new_table';
+const LS_NEW_EXCEL_BOOK_NAME = 'keiryo_new_excel_book_name';
+const DEFAULT_NEW_EXCEL_BOOK_NAME = '計量データ表物件別8月9月.xlsx';
+
+function isContinueNewTableEnabled() {
+  const val = localStorage.getItem(LS_CONTINUE_NEW_TABLE);
+  return val === null ? true : (val === '1' || val === 'true');
+}
+
+let colSettingsState = {
+  selectedPropName: '',
+  searchQuery: '',
+  draftBookName: '',
+  draftFields: []
+};
+
+function getSavedExcelBookName() {
+  const saved = loadJSON(LS_NEW_EXCEL_BOOK_NAME, '');
+  return saved || DEFAULT_NEW_EXCEL_BOOK_NAME;
+}
+
+function getDefaultFileName(propName) {
+  return colSettingsState.draftBookName || getSavedExcelBookName();
+}
+
+function normalizePropSearch(str) {
+  let s = (str || '')
+    .toLowerCase()
+    .replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60))
+    .replace(/[\s　\-_]/g, '');
+  return s.replace(/(?:せぶん|7\.11|711|seven)/g, '7.11');
+}
+
+function isHorizontalProperty(name) {
+  if (!name) return false;
+  return name.startsWith('7.11') || name.includes('セブン') || name.includes('セカンドストリート');
+}
+
+function openColumnSettingsModal() {
+  const modal = document.getElementById('colSettingsModal');
+  if (!modal) return;
+
+  colSettingsState.searchQuery = '';
+  colSettingsState.draftBookName = getSavedExcelBookName();
+
+  const searchInput = document.getElementById('colPropSearchInput');
+  if (searchInput) searchInput.value = '';
+
+  const fileNameInput = document.getElementById('colPropFileNameInput');
+  if (fileNameInput) {
+    fileNameInput.value = colSettingsState.draftBookName;
+    fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
+  }
+
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  if (props.length > 0) {
+    const exists = props.find(p => p.name === colSettingsState.selectedPropName);
+    if (!exists) {
+      colSettingsState.selectedPropName = props[0].name;
+    }
+    selectColProp(colSettingsState.selectedPropName, true);
+  }
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeColumnSettingsModal() {
+  const modal = document.getElementById('colSettingsModal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function onColPropSearch(query) {
+  colSettingsState.searchQuery = query || '';
+  renderColPropChips();
+}
+
+function renderColPropChips() {
+  const container = document.getElementById('colPropChipsContainer');
+  const countBadge = document.getElementById('colPropCountBadge');
+  if (!container) return;
+
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  const qNorm = normalizePropSearch(colSettingsState.searchQuery);
+
+  const filtered = props.filter(p => {
+    if (!qNorm) return true;
+    const nameNorm = normalizePropSearch(p.name);
+    return nameNorm.includes(qNorm);
+  });
+
+  if (countBadge) {
+    countBadge.textContent = `${filtered.length} / ${props.length}件`;
+  }
+
+  container.innerHTML = '';
+  if (filtered.length === 0) {
+    container.innerHTML = '<span style="font-size:12px;color:#94a3b8;padding:6px 4px">該当する物件がありません</span>';
+    return;
+  }
+
+  filtered.forEach(p => {
+    const isSelected = p.name === colSettingsState.selectedPropName;
+    const isHoriz = isHorizontalProperty(p.name);
+    const count = (p.fields || []).length;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = `flex-shrink:0;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${isSelected ? '#2563eb' : '#cbd5e1'};background:${isSelected ? '#2563eb' : (isHoriz ? '#f8fafc' : '#fff')};color:${isSelected ? '#fff' : (isHoriz ? '#64748b' : '#1e293b')};box-shadow:${isSelected ? '0 2px 4px rgba(37,99,235,0.25)' : 'none'};transition:all 0.15s`;
+
+    let label = p.name;
+    if (isHoriz) {
+      label += ' (横)';
+    } else if (count > 0) {
+      label += ` (${count})`;
+    }
+    btn.textContent = label;
+    btn.onclick = () => selectColProp(p.name, true);
+    container.appendChild(btn);
+
+    if (isSelected) {
+      setTimeout(() => {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }, 50);
+    }
+  });
+}
+
+function selectColProp(propName, clearSaveStatus) {
+  colSettingsState.selectedPropName = propName;
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  const prop = props.find(p => p.name === propName);
+
+  if (prop) {
+    colSettingsState.draftFields = (prop.fields || []).map(f => ({
+      label: f.label || '',
+      unit: f.unit || '袋',
+      col: f.col || '',
+      originalLabel: f.originalLabel || f.label || ''
+    }));
+  } else {
+    colSettingsState.draftFields = [];
+  }
+
+  // ブック名は全物件共通のため、保持されている値または保存済みの値を使用
+  if (!colSettingsState.draftBookName) {
+    colSettingsState.draftBookName = getSavedExcelBookName();
+  }
+  const fileNameInput = document.getElementById('colPropFileNameInput');
+  if (fileNameInput) {
+    fileNameInput.value = colSettingsState.draftBookName;
+    fileNameInput.placeholder = DEFAULT_NEW_EXCEL_BOOK_NAME;
+  }
+
+  const newOrderInput = document.getElementById('newOrderInput');
+  if (newOrderInput) {
+    newOrderInput.value = colSettingsState.draftFields.length + 1;
+    newOrderInput.max = colSettingsState.draftFields.length + 1;
+  }
+
+  renderColPropChips();
+  renderColPropFields();
+
+  if (clearSaveStatus) {
+    const statusEl = document.getElementById('colSaveStatus');
+    if (statusEl) statusEl.style.display = 'none';
+    const saveBtn = document.getElementById('colSaveBtn');
+    if (saveBtn) {
+      saveBtn.textContent = '💾 保存する';
+      saveBtn.style.background = '#16a34a';
+    }
+  }
+}
+
+function resetCurrentPropToSaved() {
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+  if (!prop) return;
+  if (!confirm(`「${prop.name}」の変更を破棄して、保存済みの設定に戻しますか？`)) return;
+
+  colSettingsState.draftBookName = getSavedExcelBookName();
+  selectColProp(prop.name, true);
+}
+
+function onPropFileNameChange(val) {
+  colSettingsState.draftBookName = (val || '').trim();
+  setUnsavedState();
+}
+
+function addNewOrderItem() {
+  const nameInput = document.getElementById('newColLabelInput');
+  const unitInput = document.getElementById('newColUnitInput');
+  const orderInput = document.getElementById('newOrderInput');
+
+  const label = nameInput ? nameInput.value.trim() : '';
+  if (!label) {
+    alert('新しい項目名を入力してください');
+    if (nameInput) nameInput.focus();
+    return;
+  }
+  const unit = unitInput ? unitInput.value : '袋';
+  const total = colSettingsState.draftFields.length;
+  let targetOrder = orderInput ? parseInt(orderInput.value, 10) : (total + 1);
+  if (isNaN(targetOrder) || targetOrder < 1) {
+    targetOrder = total + 1;
+  }
+
+  const insertIdx = Math.max(0, Math.min(total, targetOrder - 1));
+
+  colSettingsState.draftFields.splice(insertIdx, 0, {
+    label: label,
+    unit: unit,
+    col: '',
+    originalLabel: label
+  });
+
+  if (nameInput) nameInput.value = '';
+
+  renderColPropFields();
+  setUnsavedState();
+}
+
+function renderColPropFields() {
+  const nameEl = document.getElementById('colPropDetailName');
+  const countBadge = document.getElementById('colPropFieldCountBadge');
+  const noticeEl = document.getElementById('colPropHorizontalNotice');
+  const listEl = document.getElementById('colPropFieldsList');
+  const newOrderInput = document.getElementById('newOrderInput');
+  if (!listEl) return;
+
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+
+  if (!prop) {
+    if (nameEl) nameEl.textContent = '物件が選択されていません';
+    if (countBadge) countBadge.textContent = '';
+    if (noticeEl) noticeEl.style.display = 'none';
+    listEl.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:20px;text-align:center">上の物件一覧から物件を選択してください</div>';
+    return;
+  }
+
+  if (nameEl) nameEl.textContent = prop.name;
+  const fields = colSettingsState.draftFields || [];
+  if (countBadge) countBadge.textContent = `${fields.length}項目`;
+  if (newOrderInput) {
+    newOrderInput.value = fields.length + 1;
+    newOrderInput.max = fields.length + 1;
+  }
+
+  const isHoriz = isHorizontalProperty(prop.name);
+  if (noticeEl) noticeEl.style.display = isHoriz ? 'block' : 'none';
+
+  listEl.innerHTML = '';
+  if (fields.length === 0) {
+    listEl.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:16px;text-align:center">登録されている項目はありません。「項目を追加」枠から追加してください。</div>';
+    return;
+  }
+
+  fields.forEach((f, idx) => {
+    const isRenamed = f.originalLabel && f.originalLabel !== f.label;
+    const currentOrder = idx + 1;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-direction:column;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;gap:6px';
+
+    // 上段: 項目名入力（手動書き換え） + 単位
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+    const numBadge = document.createElement('span');
+    numBadge.style.cssText = 'font-size:13px;font-weight:700;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:12px;border:1px solid #bfdbfe;flex-shrink:0';
+    numBadge.textContent = `${currentOrder}`;
+    topRow.appendChild(numBadge);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = f.label || '';
+    nameInput.placeholder = '項目名を入力';
+    nameInput.style.cssText = 'flex:1;min-width:0;padding:6px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none';
+    nameInput.oninput = (e) => onFieldNameInput(idx, e.target.value);
+    topRow.appendChild(nameInput);
+
+    const unitSelect = document.createElement('select');
+    unitSelect.style.cssText = 'width:68px;padding:6px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:14px;font-weight:700;background:#fff;outline:none;text-align:center';
+    ['袋','kg','本','枚'].forEach(u => {
+      const uOpt = document.createElement('option');
+      uOpt.value = u;
+      uOpt.textContent = u;
+      if ((f.unit || '袋') === u) uOpt.selected = true;
+      unitSelect.appendChild(uOpt);
+    });
+    unitSelect.onchange = (e) => onFieldUnitChange(idx, e.target.value);
+    topRow.appendChild(unitSelect);
+
+    row.appendChild(topRow);
+
+    // 下段: 並び順番号入力枠 + 変更ボタン + 元の名前表示 + 元に戻すボタン + 削除ボタン
+    const btmRow = document.createElement('div');
+    btmRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;border-top:1px dashed #e2e8f0;flex-wrap:wrap';
+
+    const orderWrap = document.createElement('div');
+    orderWrap.style.cssText = 'display:flex;align-items:center;gap:6px';
+
+    const orderLbl = document.createElement('span');
+    orderLbl.style.cssText = 'font-size:13px;font-weight:700;color:#334155;flex-shrink:0';
+    orderLbl.textContent = '並び順:';
+    orderWrap.appendChild(orderLbl);
+
+    const orderInput = document.createElement('input');
+    orderInput.type = 'number';
+    orderInput.id = `orderInput_${idx}`;
+    orderInput.value = currentOrder;
+    orderInput.min = 1;
+    orderInput.max = fields.length;
+    orderInput.style.cssText = 'width:52px;padding:6px 4px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:6px;background:#fff;outline:none';
+    orderWrap.appendChild(orderInput);
+
+    const changeBtn = document.createElement('button');
+    changeBtn.type = 'button';
+    changeBtn.id = `orderChangeBtn_${idx}`;
+    changeBtn.textContent = '変更';
+    changeBtn.title = '入力した番号に移動し、全体の並び順を変更します';
+    changeBtn.style.cssText = 'padding:6px 12px;font-size:13px;font-weight:700;background:#2563eb!important;color:#fff!important;border:none!important;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(37,99,235,0.25);';
+    changeBtn.onclick = () => applyItemOrderChange(idx);
+    orderWrap.appendChild(changeBtn);
+
+    btmRow.appendChild(orderWrap);
+
+    // 右側アクション（元の名前バッジ、元の名に戻す、削除）
+    const actWrap = document.createElement('div');
+    actWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:auto';
+
+    if (isRenamed) {
+      const origHint = document.createElement('span');
+      origHint.style.cssText = 'font-size:11px;color:#0369a1;background:#e0f2fe;padding:2px 6px;border-radius:4px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis';
+      origHint.title = `元の名前: ${f.originalLabel}`;
+      origHint.textContent = `旧: ${f.originalLabel}`;
+      actWrap.appendChild(origHint);
+
+      const revBtn = document.createElement('button');
+      revBtn.type = 'button';
+      revBtn.title = '元の名前に戻す';
+      revBtn.style.cssText = 'padding:5px 8px;font-size:11px;font-weight:700;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer';
+      revBtn.textContent = '↩️ 元の名';
+      revBtn.onclick = () => revertSingleFieldName(idx);
+      actWrap.appendChild(revBtn);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.title = 'この項目を削除';
+    delBtn.style.cssText = 'padding:5px 9px;font-size:13px;font-weight:700;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer';
+    delBtn.textContent = '🗑️ 削除';
+    delBtn.onclick = () => deleteColField(idx);
+    actWrap.appendChild(delBtn);
+
+    btmRow.appendChild(actWrap);
+    row.appendChild(btmRow);
+
+    listEl.appendChild(row);
+  });
+}
+
+function onFieldNameInput(fieldIndex, newName) {
+  if (!colSettingsState.draftFields[fieldIndex]) return;
+  colSettingsState.draftFields[fieldIndex].label = newName;
+  setUnsavedState();
+}
+
+function onFieldUnitChange(fieldIndex, newUnit) {
+  if (!colSettingsState.draftFields[fieldIndex]) return;
+  colSettingsState.draftFields[fieldIndex].unit = newUnit;
+  setUnsavedState();
+}
+
+function revertSingleFieldName(fieldIndex) {
+  if (!colSettingsState.draftFields[fieldIndex]) return;
+  const f = colSettingsState.draftFields[fieldIndex];
+  if (f.originalLabel) {
+    f.label = f.originalLabel;
+    renderColPropFields();
+    setUnsavedState();
+  }
+}
+
+function applyItemOrderChange(fromIdx) {
+  const inputEl = document.getElementById(`orderInput_${fromIdx}`);
+  if (!inputEl) return;
+  const targetOrder = parseInt(inputEl.value, 10);
+  const total = colSettingsState.draftFields.length;
+
+  if (isNaN(targetOrder) || targetOrder < 1) {
+    alert('1以上の有効な順番を入力してください');
+    inputEl.value = fromIdx + 1;
+    return;
+  }
+
+  // 1始まりから0始まりインデックスへ（0 〜 total-1 の範囲に収める）
+  const toIdx = Math.max(0, Math.min(total - 1, targetOrder - 1));
+
+  if (fromIdx === toIdx) {
+    renderColPropFields();
+    return;
+  }
+
+  // 配列から fromIdx の項目を取り出し、toIdx に挿入！
+  const [movedItem] = colSettingsState.draftFields.splice(fromIdx, 1);
+  colSettingsState.draftFields.splice(toIdx, 0, movedItem);
+
+  // 画面再描画（全体の順番が自動で再計算・更新される）
+  renderColPropFields();
+  setUnsavedState();
+}
+
+function deleteColField(fieldIndex) {
+  if (!colSettingsState.draftFields[fieldIndex]) return;
+  const f = colSettingsState.draftFields[fieldIndex];
+  if (!confirm(`「${f.label || 'この項目'}」を削除しますか？`)) return;
+
+  colSettingsState.draftFields.splice(fieldIndex, 1);
+  renderColPropFields();
+  setUnsavedState();
+}
+
+function setUnsavedState() {
+  const statusEl = document.getElementById('colSaveStatus');
+  if (statusEl) statusEl.style.display = 'none';
+
+  const saveBtn = document.getElementById('colSaveBtn');
+  if (saveBtn) {
+    saveBtn.textContent = '💾 変更を保存する';
+    saveBtn.style.background = '#2563eb';
+  }
+}
+
+function saveCurrentPropColumns() {
+  const props = (typeof allProperties !== 'undefined' && Array.isArray(allProperties)) ? allProperties : [];
+  const prop = props.find(p => p.name === colSettingsState.selectedPropName);
+  if (!prop) {
+    alert('物件が見つかりません');
+    return;
+  }
+
+  const isHoriz = isHorizontalProperty(prop.name);
+
+  // Excelブック名（Book名）設定の処理
+  let bookName = (colSettingsState.draftBookName || '').trim();
+  if (!bookName) {
+    bookName = DEFAULT_NEW_EXCEL_BOOK_NAME;
+  } else if (!bookName.toLowerCase().endsWith('.xlsx')) {
+    bookName += '.xlsx';
+  }
+  colSettingsState.draftBookName = bookName;
+  saveJSON(LS_NEW_EXCEL_BOOK_NAME, bookName);
+
+  // 互換性のため各物件プロパティにもセット
+  prop.newFileName = bookName;
+
+  const fileNameInput = document.getElementById('colPropFileNameInput');
+  if (fileNameInput) {
+    fileNameInput.value = bookName;
+  }
+
+  // 後方互換性用の列記号リスト
+  const autoCols = [
+    'C','D','E','F','G','H','I','J','K','L','M','N',
+    'O','P','Q','R','S','T','U','V','W','X','Y','Z',
+    'AA','AB','AC','AD','AE'
+  ];
+
+  // fields の更新（現在のドラフト順序通りに保存）
+  prop.fields = colSettingsState.draftFields.map((draft, idx) => ({
+    label: (draft.label || '').trim() || '（名称未設定）',
+    unit: draft.unit || '袋',
+    col: isHoriz ? '' : (draft.col || autoCols[idx] || ''),
+    originalLabel: draft.originalLabel || draft.label || ''
+  }));
+
+  saveJSON(LS_PROPERTIES, allProperties);
+
+  const statusEl = document.getElementById('colSaveStatus');
+  if (statusEl) {
+    statusEl.innerHTML = `✅ 「${prop.name}」の設定を保存しました<br><span style="font-size:12px;color:#15803d">📗 新Excelブック名: ${bookName}</span>`;
+    statusEl.style.display = 'block';
+  }
+
+  const saveBtn = document.getElementById('colSaveBtn');
+  if (saveBtn) {
+    saveBtn.textContent = '✅ 保存済み';
+    saveBtn.style.background = '#16a34a';
+    setTimeout(() => {
+      if (saveBtn.textContent === '✅ 保存済み') {
+        saveBtn.textContent = '💾 保存する';
+      }
+    }, 1800);
+  }
+
+  renderColPropChips();
 }
 
 function getMailTo(){
@@ -2489,6 +3308,128 @@ function addNewProperty(){
 })();
 </script>
 <div id="drag-ghost"></div>
+
+<!-- ===== 新計量データ表の作成 モーダル（別画面） ===== -->
+<div id="colSettingsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);z-index:99999;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;">
+  <div style="width:100%;max-width:540px;height:100%;max-height:100%;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+    <!-- ヘッダー -->
+    <div style="background:#fff;border-bottom:1px solid #cbd5e1;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,0.04)">
+      <div>
+        <div style="font-size:17px;font-weight:700;color:#0f172a">📊 新計量データ表の作成</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Excelブック名設定（.xlsx）・項目の追加・削除・手動編集・並び順</div>
+      </div>
+      <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer" onclick="closeColumnSettingsModal()">
+        ✕ 閉じる
+      </button>
+    </div>
+
+    <!-- 物件選択エリア（検索＆枠タップ） -->
+    <div style="background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 16px;flex-shrink:0;">
+      <div style="position:relative;margin-bottom:8px">
+        <input type="text" id="colPropSearchInput" placeholder="🔍 物件名で検索（ひらがな可）..." oninput="onColPropSearch(this.value)"
+          style="width:100%;padding:10px 12px 10px 34px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;background:#f8fafc;outline:none">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;pointer-events:none">🔍</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:700;color:#475569">🏢 物件一覧（枠をタップで選択）:</span>
+        <span id="colPropCountBadge" style="font-size:11px;color:#64748b;font-weight:600"></span>
+      </div>
+      <div id="colPropChipsContainer" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
+        <!-- 物件枠（チップ）が動的に挿入される -->
+      </div>
+    </div>
+
+    <!-- メインコンテンツ（スクロール可能） -->
+    <div style="flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;">
+      <!-- Excelブック名（Book名）設定カード（全体共通） -->
+      <div class="card" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label style="font-size:13px;font-weight:700;color:#166534">📗 作成するExcelブックの名前 (.xlsx):</label>
+          <span style="font-size:11px;color:#15803d;font-weight:600">※Book名（全体ファイル名）</span>
+        </div>
+        <input type="text" id="colPropFileNameInput" placeholder="計量データ表物件別8月9月.xlsx"
+          style="width:100%;padding:9px 12px;border:2px solid #86efac;border-radius:8px;font-size:15px;font-weight:700;color:#0f172a;background:#fff;outline:none"
+          oninput="onPropFileNameChange(this.value)">
+        <div style="font-size:11px;color:#166534;margin-top:5px;line-height:1.4">
+          ※作成するExcel全体のBook名を指定します（例: 計量データ表物件別8月9月.xlsx）
+        </div>
+      </div>
+
+      <!-- 物件情報カード -->
+      <div class="card" style="background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f1f5f9">
+          <div>
+            <span style="font-size:12px;color:#64748b;font-weight:600">設定中の物件:</span>
+            <div id="colPropDetailName" style="font-size:18px;font-weight:700;color:#0f172a;margin-top:2px"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="colPropFieldCountBadge" style="font-size:12px;background:#e2e8f0;color:#334155;padding:3px 8px;border-radius:10px;font-weight:600"></span>
+            <button type="button" class="btn btn-sm" id="colResetPropBtn" style="background:#fef2f2!important;color:#b91c1c!important;border:1px solid #fca5a5!important;padding:5px 10px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer" onclick="resetCurrentPropToSaved()">
+              ↩️ 元に戻す
+            </button>
+          </div>
+        </div>
+
+        <!-- 項目を追加枠 -->
+        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <span>➕ 項目を追加する</span>
+            <span style="font-size:11px;font-weight:normal;color:#3b82f6">（指定した番号に挿入され、以降は1つずつずれます）</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px">
+              <input type="text" id="newColLabelInput" placeholder="新しい項目名（例: プラスチック）"
+                style="flex:2;padding:8px 10px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:600;outline:none;background:#fff">
+              <select id="newColUnitInput" style="flex:1;padding:8px 8px;border:2px solid #cbd5e1;border-radius:8px;font-size:15px;font-weight:700;background:#fff;outline:none">
+                <option value="袋">袋</option>
+                <option value="kg">kg</option>
+                <option value="本">本</option>
+                <option value="枚">枚</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:13px;font-weight:700;color:#334155;white-space:nowrap">挿入番号:</span>
+              <input type="number" id="newOrderInput" value="1" min="1"
+                style="width:65px;padding:8px 6px;text-align:center;font-size:16px;font-weight:700;border:2px solid #cbd5e1;border-radius:8px;background:#fff;outline:none">
+              <button type="button" class="btn" style="flex:1;background:#2563eb!important;color:#fff!important;border:none!important;padding:8px 14px;font-size:15px;font-weight:700;border-radius:8px;cursor:pointer" onclick="addNewOrderItem()">
+                ➕ 追加する
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 横書き物件用の案内 -->
+        <div id="colPropHorizontalNotice" style="display:none;background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:12px">
+          ℹ️ <b>横書き形式の物件です</b>（セブン-イレブン・セカンドストリート）
+        </div>
+
+        <!-- 項目一覧 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:#334155">📋 現在の項目一覧（希望の番号を入れて変更ボタンで全体の並び順を変更）:</div>
+        </div>
+        <div id="colPropFieldsList" style="display:flex;flex-direction:column;gap:8px">
+          <!-- 各項目の枠が動的に生成される -->
+        </div>
+      </div>
+    </div>
+
+    <!-- フッター（保存＆閉じる） -->
+    <div style="background:#fff;border-top:1px solid #cbd5e1;padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;box-shadow:0 -2px 6px rgba(0,0,0,0.03)">
+      <div id="colSaveStatus" style="font-size:13px;font-weight:700;color:#16a34a;text-align:center;min-height:18px;display:none;line-height:1.4">
+        ✅ 保存しました
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="button" id="colSaveBtn" class="btn" style="flex:2;background:#16a34a!important;color:#fff!important;border:none!important;padding:12px;font-size:16px;font-weight:700;border-radius:10px;box-shadow:0 2px 4px rgba(22,163,74,0.3);cursor:pointer" onclick="saveCurrentPropColumns()">
+          💾 保存する
+        </button>
+        <button type="button" class="btn" style="flex:1;background:#f1f5f9!important;color:#334155!important;border:1px solid #cbd5e1!important;padding:12px;font-size:16px;font-weight:600;border-radius:10px;cursor:pointer" onclick="closeColumnSettingsModal()">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- app-tabs.js 参照を削除（ファイルが存在しないため）。タブバー機能は ueno-tabbar.js がグローバルで提供。 -->
 
 <script>
@@ -2528,6 +3469,475 @@ function addNewProperty(){
   // 定期チェック（保険）
   setInterval(tryRenderMailList, 1200);
 })();
+
+// ===== メール列番号設定（Screen 10）制御ロジック =====
+const colSettingState = {
+  searchQuery: '',
+  selectedPropName: '',
+  draftFields: []
+};
+
+// 列候補の生成（A〜Z, AA〜AZ）
+const AVAILABLE_EXCEL_COLS = (() => {
+  const cols = [];
+  // A - Z
+  for (let i = 0; i < 26; i++) {
+    cols.push(String.fromCharCode(65 + i));
+  }
+  // AA - AZ
+  for (let i = 0; i < 26; i++) {
+    cols.push('A' + String.fromCharCode(65 + i));
+  }
+  return cols;
+})();
+
+function initColSettingScreen() {
+  const searchInput = document.getElementById('colPropSearchInput');
+  if (searchInput) {
+    searchInput.value = colSettingState.searchQuery || '';
+  }
+  renderColPropSelect();
+  if (colSettingState.selectedPropName) {
+    selectColSettingProperty(colSettingState.selectedPropName);
+  } else if (allProperties && allProperties.length > 0) {
+    selectColSettingProperty(allProperties[0].name);
+  }
+}
+
+function onColPropSearchInput(val) {
+  colSettingState.searchQuery = (val || '').trim();
+  renderColPropSelect();
+  const selectEl = document.getElementById('colPropSelect');
+  if (selectEl && selectEl.value) {
+    selectColSettingProperty(selectEl.value);
+  } else {
+    const container = document.getElementById('colPropDetailContainer');
+    if (container) container.style.display = 'none';
+  }
+}
+
+function renderColPropSelect() {
+  const selectEl = document.getElementById('colPropSelect');
+  const countBadge = document.getElementById('colPropCountBadge');
+  if (!selectEl) return;
+
+  const q = (colSettingState.searchQuery || '').toLowerCase();
+  const filtered = (allProperties || []).filter(p => {
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q);
+  });
+
+  if (countBadge) {
+    countBadge.textContent = q ? `${filtered.length} / 全${allProperties.length}件` : `全${allProperties.length}件`;
+  }
+
+  selectEl.innerHTML = '';
+  if (filtered.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '一致する物件がありません';
+    selectEl.appendChild(opt);
+    selectEl.value = '';
+    return;
+  }
+
+  let hasSelected = false;
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    const fieldCount = (p.fields || []).length;
+    const colsCount = (p.fields || []).filter(f => !!f.col).length;
+    opt.textContent = `${p.name}（${fieldCount}項目 / ${colsCount}列設定済）`;
+    if (p.name === colSettingState.selectedPropName) {
+      opt.selected = true;
+      hasSelected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+
+  if (!hasSelected && filtered.length > 0) {
+    selectEl.value = filtered[0].name;
+    if (selectEl.children[0]) selectEl.children[0].selected = true;
+  }
+}
+
+function onColPropSelectChange(propName) {
+  selectColSettingProperty(propName);
+}
+
+function selectColSettingProperty(propName) {
+  if (!propName) return;
+  colSettingState.selectedPropName = propName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  const container = document.getElementById('colPropDetailContainer');
+  if (!prop) {
+    if (container) container.style.display = 'none';
+    return;
+  }
+
+  // draftFields にクローン
+  colSettingState.draftFields = (prop.fields || []).map(f => ({
+    label: f.label || '',
+    unit: f.unit || '',
+    col: f.col || '',
+    row: f.row || '',
+    originalLabel: f.originalLabel || f.label || '',
+    hasMultiplier: f.hasMultiplier
+  }));
+
+  if (container) container.style.display = 'block';
+  renderColSettingPropDetail();
+  resetColReorderBtn();
+
+  // セレクトボックスの選択状態を同期
+  const selectEl = document.getElementById('colPropSelect');
+  if (selectEl && selectEl.value !== propName) {
+    selectEl.value = propName;
+  }
+}
+
+function renderColSettingPropDetail() {
+  const titleEl = document.getElementById('colSelectedPropTitle');
+  const listEl = document.getElementById('colPropFieldsList');
+  const noticeEl = document.getElementById('colPropSaveNotice');
+  if (noticeEl) noticeEl.style.display = 'none';
+  if (titleEl) titleEl.textContent = colSettingState.selectedPropName;
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  const fields = colSettingState.draftFields || [];
+
+  if (fields.length === 0) {
+    listEl.innerHTML = '<div style="color:#000;font-size:13px;padding:12px;text-align:center;border:1px dashed #000;border-radius:6px;background:#fff">登録されている項目がありません</div>';
+    return;
+  }
+
+  fields.forEach((f, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1.5px solid #000;border-radius:6px;background:#fff';
+
+    const leftWrap = document.createElement('div');
+    leftWrap.style.cssText = 'flex:1;min-width:0;display:flex;align-items:center;gap:6px';
+
+    const numBadge = document.createElement('span');
+    numBadge.style.cssText = 'font-size:11px;font-weight:700;color:#000;border:1px solid #000;border-radius:10px;padding:1px 6px;flex-shrink:0';
+    numBadge.textContent = `${idx + 1}`;
+    leftWrap.appendChild(numBadge);
+
+    const isCalcBag = isCalcBagField({fields}, f);
+    const displayLabel = getFieldMailLabel({fields}, f);
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:14px;font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    nameSpan.textContent = displayLabel;
+    leftWrap.appendChild(nameSpan);
+
+    const unitSpan = document.createElement('span');
+    unitSpan.style.cssText = 'font-size:12px;font-weight:600;color:#000;flex-shrink:0';
+    unitSpan.textContent = `（${f.unit || ''}）`;
+    leftWrap.appendChild(unitSpan);
+
+    if (isCalcBag) {
+      const calcBadge = document.createElement('span');
+      calcBadge.style.cssText = 'font-size:10px;font-weight:700;color:#000;border:1px solid #000;border-radius:4px;padding:1px 4px;background:#fff;white-space:nowrap;flex-shrink:0';
+      calcBadge.textContent = '倍率計算用';
+      leftWrap.appendChild(calcBadge);
+    }
+
+    row.appendChild(leftWrap);
+
+    // 列選択枠（プルダウン）
+    const rightWrap = document.createElement('div');
+    rightWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0';
+
+    const colLbl = document.createElement('span');
+    colLbl.style.cssText = 'font-size:12px;font-weight:700;color:#000';
+    colLbl.textContent = '列:';
+    rightWrap.appendChild(colLbl);
+
+    const colSelect = document.createElement('select');
+    colSelect.style.cssText = 'padding:6px 6px;font-size:14px;font-weight:700;background:#fff;color:#000;border:1.5px solid #000;border-radius:6px;outline:none;text-align:center;min-width:82px';
+    
+    // 空オプション（列なし）
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = 'なし';
+    if (!f.col) emptyOpt.selected = true;
+    colSelect.appendChild(emptyOpt);
+
+    // A〜Z, AA〜AZ
+    AVAILABLE_EXCEL_COLS.forEach(col => {
+      const opt = document.createElement('option');
+      opt.value = col;
+      opt.textContent = `${col}列`;
+      if ((f.col || '').toUpperCase() === col) {
+        opt.selected = true;
+      }
+      colSelect.appendChild(opt);
+    });
+    colSelect.value = (f.col || '').toUpperCase();
+
+    colSelect.onchange = (e) => {
+      f.col = e.target.value;
+      if (noticeEl) noticeEl.style.display = 'none';
+      resetColReorderBtn();
+    };
+
+    rightWrap.appendChild(colSelect);
+    row.appendChild(rightWrap);
+
+    listEl.appendChild(row);
+  });
+}
+
+// Excel列記号（A〜Z, AA〜AZ等）をソート用の数値インデックスに変換
+function colToExcelIndex(col) {
+  if (!col) return 999999;
+  const s = String(col).trim().toUpperCase();
+  if (!s) return 999999;
+  let idx = 0;
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code >= 65 && code <= 90) {
+      idx = idx * 26 + (code - 64);
+    } else {
+      return 999999;
+    }
+  }
+  return idx;
+}
+
+// 変更ボタン（並び替え・確認、または並び替えて即時保存）
+function applyColSettingReorder(andSave = false) {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が選択されていません');
+    return;
+  }
+
+  // 画面上の現在の select 値をすべて draftFields に同期
+  const listEl = document.getElementById('colPropFieldsList');
+  if (listEl) {
+    const selects = listEl.querySelectorAll('select');
+    selects.forEach((sel, idx) => {
+      if (colSettingState.draftFields && colSettingState.draftFields[idx]) {
+        colSettingState.draftFields[idx].col = (sel.value || '').trim().toUpperCase();
+      }
+    });
+  }
+
+  // 列順（A→Z、AA→AZ、なしは末尾）でソート
+  colSettingState.draftFields.sort((a, b) => {
+    const idxA = colToExcelIndex(a.col);
+    const idxB = colToExcelIndex(b.col);
+    return idxA - idxB;
+  });
+
+  // 画面の項目リストを新しい並び順で再描画
+  renderColSettingPropDetail();
+
+  const noticeEl = document.getElementById('colReorderNotice');
+  const btn = document.getElementById('colReorderBtn');
+
+  if (andSave) {
+    // 変更して保存
+    saveColSettingCurrentProp();
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = '✅ 新しい列順で並び替えて保存しました！';
+      setTimeout(() => {
+        if (noticeEl) noticeEl.style.display = 'none';
+      }, 2500);
+    }
+  } else {
+    // 並び順のみ変更して確認状態にする
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = '✅ 設定した列番号順（A→Z順）に並び替えました。<br>並び順をご確認の上、「💾 この並びで保存」または「💾 変更して保存」を押してください。';
+    }
+    // 変更ボタン自身でも保存できるようにボタン表示・動作を切り替え
+    if (btn) {
+      btn.innerHTML = '💾 この並びで保存';
+      btn.onclick = () => {
+        saveColSettingCurrentProp();
+      };
+    }
+  }
+}
+
+function resetColReorderBtn() {
+  const btn = document.getElementById('colReorderBtn');
+  if (btn) {
+    btn.innerHTML = '🔄 変更（並び順反映）';
+    btn.onclick = () => applyColSettingReorder(false);
+  }
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'none';
+    noticeEl.innerHTML = '';
+  }
+}
+
+function saveColSettingCurrentProp() {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が見つかりません');
+    return;
+  }
+
+  // draftFields の新しい並び順および col を prop.fields に完全同期
+  const existingMap = new Map();
+  (prop.fields || []).forEach(f => {
+    existingMap.set(`${f.label}__${f.unit}`, f);
+  });
+
+  prop.fields = (colSettingState.draftFields || []).map(draft => {
+    const key = `${draft.label}__${draft.unit}`;
+    const prev = existingMap.get(key) || {};
+    let saveLabel = draft.label || '';
+    if (isCalcBagField(prop, draft)) {
+      if (!saveLabel.includes('（計算用）') && !saveLabel.includes('(計算用)')) {
+        saveLabel = `${saveLabel}（計算用）`;
+      }
+    }
+    return {
+      ...prev,
+      label: saveLabel,
+      unit: draft.unit,
+      col: (draft.col || '').trim().toUpperCase(),
+      row: draft.row || prev.row || '',
+      originalLabel: draft.originalLabel || prev.originalLabel || draft.label,
+      hasMultiplier: draft.hasMultiplier !== undefined ? draft.hasMultiplier : prev.hasMultiplier
+    };
+  });
+
+  // 全体保存
+  saveJSON(LS_PROPERTIES, allProperties);
+  // メール送信時に列番号を反映できるようにフラグも有効化
+  saveJSON(LS_MAIL_INCLUDE_COLUMNS, true);
+
+  // 通知表示
+  const noticeEl = document.getElementById('colPropSaveNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.textContent = '✅ 保存完了';
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 1800);
+  }
+
+  resetColReorderBtn();
+
+  // セレクトボックスの表示（設定済件数など）を更新
+  renderColPropSelect();
+}
+
+function revertColSettingCurrentProp() {
+  const propName = colSettingState.selectedPropName;
+  if (!propName) return;
+  if (!confirm(`「${propName}」の列設定・並び順を元に戻しますか？\n（編集中の変更を破棄して、保存済みの状態に戻します）`)) return;
+  selectColSettingProperty(propName);
+  resetColReorderBtn();
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.innerHTML = `↩️ 「${propName}」の設定を元に戻しました。`;
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 2000);
+  }
+}
+
+// 全Sheet（全物件）の列番号・並び順設定を一括で初期状態（デフォルト）に復元
+function revertAllColSettingsToDefault() {
+  const count = DEFAULT_PROPERTIES.length;
+  if (!confirm(`【確認】全Sheet（全物件）の列番号・並び順設定を一括で初期状態（デフォルト）に戻しますか？\n\n※すべての物件の列設定・並び順が初期値にリセットされます。\nよろしいですか？`)) {
+    return;
+  }
+
+  // DEFAULT_PROPERTIES をディープコピーして allProperties を復元
+  allProperties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+  saveJSON(LS_PROPERTIES, allProperties);
+
+  // 現在選択中の物件があればそのドラフトもデフォルトで再初期化
+  if (colSettingState.selectedPropName) {
+    selectColSettingProperty(colSettingState.selectedPropName);
+  } else if (allProperties.length > 0) {
+    selectColSettingProperty(allProperties[0].name);
+  }
+
+  renderColPropSelect();
+  resetColReorderBtn();
+
+  const noticeEl = document.getElementById('colReorderNotice');
+  if (noticeEl) {
+    noticeEl.style.display = 'block';
+    noticeEl.innerHTML = `↩️ 全Sheet（全${count}物件）の設定を一括でデフォルトに戻しました。`;
+    setTimeout(() => {
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 2500);
+  }
+
+  alert(`全Sheet（全${count}物件）の列番号・並び順を一括で初期状態に戻しました。`);
+}
+
+function closeColSettingScreen() {
+  if (state.prevScreen && state.prevScreen !== 10) {
+    if ((state.prevScreen === 3 || state.prevScreen === 9) && !state.selectedStaff) {
+      showScreen(1);
+    } else {
+      showScreen(state.prevScreen);
+    }
+  } else {
+    showScreen(state.selectedStaff ? 3 : 1);
+  }
+}
+
+function sendColSettingMailForProp() {
+  const propName = colSettingState.selectedPropName;
+  const prop = (allProperties || []).find(p => p.name === propName);
+  if (!prop) {
+    alert('物件が選択されていません');
+    return;
+  }
+
+  const to = getMailTo();
+  if (!to) {
+    alert('送信先アドレスが未登録です。\n「✉️ メール」タブでアドレスを設定してください。');
+    return;
+  }
+
+  const dateStr = state.date ? state.date.replace(/-/g, '/') : new Date().toLocaleDateString('ja-JP');
+  const staffStr = state.selectedStaff || '担当未設定';
+  const dayStr = state.dayName ? `（${state.dayName}曜日）` : '';
+
+  const lineBreak = '\r\n';
+  const lines = [
+    '【計量データ（列設定確認・送信）】',
+    `日付：${dateStr}${dayStr}`,
+    `担当：${staffStr}`,
+    '─────────────────',
+    `【${prop.name}】`
+  ];
+
+  const data = (state.entryData && state.entryData[prop.name]) ? state.entryData[prop.name] : {};
+  (colSettingState.draftFields || prop.fields || []).forEach(f => {
+    const val = (data && data[fieldKey(f)] !== undefined && data[fieldKey(f)] !== '') ? data[fieldKey(f)] : '－';
+    const colHint = f.col ? ` [${f.col}列]` : '';
+    const mailLabel = getFieldMailLabel(prop, f);
+    lines.push(`${mailLabel}：${val} ${f.unit}${colHint}`);
+  });
+
+  lines.push('─────────────────');
+  lines.push(`送信日時：${new Date().toLocaleString('ja-JP')}`);
+
+  const body = lines.join(lineBreak);
+  const subject = encodeURIComponent(`計量データ ${prop.name} ${dateStr}`);
+  const bodyEncoded = encodeURIComponent(body);
+
+  openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
+}
 </script>
 
 </body>
