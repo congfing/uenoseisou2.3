@@ -1475,10 +1475,10 @@ function renderPropertyList(){
         <div id="pfields_${idx}">${fieldRows}</div>
         <div style="display:flex;gap:8px;margin-top:4px">
           <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1">＋ 項目追加</button>
-          <button class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="入力項目を初期状態に戻す">↩️ 元に戻す</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="削除前に戻す">↩️ 削除前に戻す</button>
         </div>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'📝 入力する'}</button>
+          <button class="btn-enter" onclick="openEntry(${idx},event,3)">${done?'✏️ 修正する':'保存'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
@@ -1594,7 +1594,7 @@ function resetPropFieldsToDefault(propIdx,event){
   }
 
   const restoreNames = toRestore.map(item => `・${item.field.label}（${item.field.unit}）`).join('\n');
-  if(!confirm(`「${prop.name}」の削除した項目を元に戻しますか？\n\n【戻す項目】:\n${restoreNames}\n\n※追加した項目は削除されず、そのまま残ります。`)){
+  if(!confirm(`「${prop.name}」を削除前の状態に戻しますか？\n\n【戻す項目】:\n${restoreNames}\n\n※追加した項目は削除されず、そのまま残ります。`)){
     return;
   }
 
