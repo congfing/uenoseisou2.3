@@ -726,7 +726,7 @@ const DEFAULT_PROPERTIES = [
   { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'E'},{label:'不燃ごみ（ビン）',unit:'袋',col:'G'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'I'}] },
   { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
-  { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'H'}] },
   { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥',col:'B'},{label:'可燃物収集',unit:'kg',col:'C'},{label:'フィルター紙収集',unit:'㎥',col:'D'},{label:'フィルター紙収集',unit:'kg',col:'E'}] },
   { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
@@ -1037,6 +1037,19 @@ let allProperties = (() => {
   const retainedNames = new Set(retained.map(p => p.name));
   const newProps = DEFAULT_PROPERTIES.filter(p => !retainedNames.has(p.name));
   const merged = [...retained, ...newProps];
+
+  // KFC イオンタウン伊賀上野店に「ごみ（kg）」を一番上（先頭）に確実に配置
+  const kfc = merged.find(p => p.name === 'KFC イオンタウン伊賀上野店');
+  if (kfc && Array.isArray(kfc.fields)) {
+    const gomiIdx = kfc.fields.findIndex(f => (f.label || '').trim() === 'ごみ' && f.unit === 'kg');
+    if (gomiIdx === -1) {
+      kfc.fields.unshift({ label: 'ごみ', unit: 'kg', col: 'D' });
+    } else if (gomiIdx > 0) {
+      const [gomiItem] = kfc.fields.splice(gomiIdx, 1);
+      kfc.fields.unshift(gomiItem);
+    }
+  }
+
   saveJSON(LS_PROPERTIES,merged);
   localStorage.setItem(LS_PROPERTIES_VERSION, 'done');
   return merged;
