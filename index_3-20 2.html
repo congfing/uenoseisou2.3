@@ -1481,7 +1481,7 @@ function renderPropertyList(){
         </div>
       </div>
       <div class="prop-card-body" id="pbody_${idx}">
-        <div class="fields-label">収集曜日（今日の曜日が青）</div>
+        <div class="fields-label">収集曜日</div>
         <div class="day-checkboxes">${dayCBs}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <div class="fields-label" style="margin-bottom:0">入力項目</div>
@@ -1489,13 +1489,13 @@ function renderPropertyList(){
         </div>
         <div id="pfields_${idx}">${fieldRows}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px">＋ 項目追加</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="削除前に戻す">↩️ 削除前に戻す</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px;background:#fff;color:#000;border:1.5px solid #000">＋ 項目追加</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px;background:#fff;color:#000;border:1.5px solid #000" title="削除前に戻す">↩️ 削除前に戻す</button>
         </div>
         <div style="margin-top:6px">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="savePropSettingsOnly(${idx},event)" style="width:100%;padding:9px 8px;font-size:13px;background:#e0f2fe;color:#0369a1;border:1.5px solid #0284c7;font-weight:700;border-radius:8px" title="変更した項目設定を保存">⚙️ 項目設定を保存</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="savePropSettingsOnly(${idx},event)" style="width:100%;padding:9px 8px;font-size:13px;background:#fff;color:#000;border:2px solid #000;font-weight:700;border-radius:8px" title="変更した項目設定を保存">⚙️ 項目設定を保存</button>
         </div>
-        <div id="prop_setting_msg_${idx}" style="display:none;color:#0369a1;font-size:12px;font-weight:700;margin-top:4px;text-align:center;padding:5px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd">✓ 項目設定を保存しました</div>
+        <div id="prop_setting_msg_${idx}" style="display:none;color:#000;font-size:12px;font-weight:700;margin-top:4px;text-align:center;padding:5px;background:#fff;border-radius:4px;border:1.5px solid #000">✓ 項目設定を保存しました</div>
         <div style="margin-top:12px;display:flex;gap:8px">
           <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)">${done?'💾 データを修正':'💾 データを保存'}</button>
         </div>
