@@ -111,6 +111,13 @@
   /* Field editor */
   .fields-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 600; }
   .field-edit-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+  .field-order-input { width: 36px !important; max-width: 36px !important; min-width: 36px !important;
+    padding: 7px 2px; text-align: center; font-size: 14px; font-weight: bold;
+    border: 1.5px solid #000; border-radius: 6px; color: #000; background: #fff;
+    flex-shrink: 0; outline: none; -moz-appearance: textfield; }
+  .field-order-input::-webkit-outer-spin-button,
+  .field-order-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field-order-input:focus { outline: 2px solid #000; outline-offset: 1px; }
   .field-name-wrap { flex: 1; position: relative; }
   .field-name-wrap input { padding: 7px; font-size: 14px; border: 1px solid #ddd; border-radius: 6px; width: 100%; outline: none; }
   .field-name-wrap input:focus { border-color: #000; }
@@ -1437,6 +1444,13 @@ function renderPropertyList(){
       const curVal=(existing[fKey]!==undefined && existing[fKey]!=='')?existing[fKey]:'';
       return `
       <div class="field-edit-row">
+        <input type="number" class="field-order-input" value="${fi+1}" min="1" max="${prop.fields.length}" inputmode="numeric"
+          title="並び順（数字を入力して移動）"
+          onclick="event.stopPropagation()"
+          onfocus="event.stopPropagation();this.select()"
+          onkeydown="if(event.key==='Enter'){event.stopPropagation();this.blur();}"
+          onchange="event.stopPropagation();moveFieldToPos(${idx},${fi},this)"
+          onblur="event.stopPropagation();handleFieldOrderBlur(${idx},${fi},this)">
         <div class="field-name-wrap">
           <input type="text" value="${f.label}" placeholder="項目名" onfocus="showFieldDropdown(this)"
             oninput="filterFieldDropdown(this);updateFL(${idx},${fi},this.value)"
@@ -1489,7 +1503,7 @@ function renderPropertyList(){
         <div class="day-checkboxes">${dayCBs}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <div class="fields-label" style="margin-bottom:0">入力項目</div>
-          <div style="font-size:11px;color:#888">項目名 ／ 数値 ／ 単位</div>
+          <div style="font-size:11px;color:#888">順番 ／ 項目名 ／ 数値 ／ 単位</div>
         </div>
         <div id="pfields_${idx}">${fieldRows}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
@@ -1633,6 +1647,92 @@ function resetPropFieldsToDefault(propIdx,event){
   document.getElementById(`pbody_${propIdx}`).classList.add('open');
   document.getElementById(`ptoggle_${propIdx}`).textContent='▲';
   setTimeout(() => focusPropCard(propIdx), 80);
+}
+
+let _fieldOrderMoving = false;
+function moveFieldToPos(propIdx, fromFieldIdx, input){
+  if(_fieldOrderMoving) return;
+  const prop = allProperties[propIdx];
+  if(!prop || !prop.fields) return;
+
+  const rawVal = (input.value || '').trim();
+  const toPos = parseInt(rawVal, 10);
+  if(isNaN(toPos) || toPos < 1){
+    input.value = fromFieldIdx + 1;
+    return;
+  }
+  if(toPos === fromFieldIdx + 1) return;
+
+  _fieldOrderMoving = true;
+  setTimeout(() => { _fieldOrderMoving = false; }, 300);
+
+  const toIdx = Math.max(0, Math.min(toPos - 1, prop.fields.length - 1));
+  if(toIdx === fromFieldIdx){
+    input.value = fromFieldIdx + 1;
+    return;
+  }
+
+  // 1. DOM上の最新値（項目名、単位、数値）を回収して同期
+  const card = document.getElementById(`propcard_${propIdx}`);
+  if(card){
+    if(!state.entryDraft[prop.name]) state.entryDraft[prop.name] = {};
+    const rows = card.querySelectorAll('.field-edit-row');
+    rows.forEach((row, fi) => {
+      if(prop.fields[fi]){
+        const labelInp = row.querySelector('.field-name-wrap input');
+        const unitSel = row.querySelector('select');
+        const valInp = row.querySelector('.field-val-input');
+        if(labelInp && labelInp.value.trim()) prop.fields[fi].label = labelInp.value.trim();
+        if(unitSel) prop.fields[fi].unit = unitSel.value;
+        if(valInp && valInp.value !== ''){
+          state.entryDraft[prop.name][fieldKey(prop.fields[fi])] = parseFloat(valInp.value);
+        }
+      }
+    });
+  }
+
+  // 2. 項目の並び替え（指定位置へ挿入）
+  const moved = prop.fields.splice(fromFieldIdx, 1)[0];
+  prop.fields.splice(toIdx, 0, moved);
+
+  // 3. 物件設定とセッションを保存
+  saveJSON(LS_PROPERTIES, allProperties);
+  saveSession();
+
+  // 4. 画面再描画
+  renderPropertyList();
+
+  // 5. カードを開いた状態を維持
+  const body = document.getElementById(`pbody_${propIdx}`);
+  if(body) body.classList.add('open');
+  const toggle = document.getElementById(`ptoggle_${propIdx}`);
+  if(toggle) toggle.textContent = '▲';
+
+  // 6. 移動した行をハイライト
+  setTimeout(() => {
+    focusPropCard(propIdx);
+    const updatedCard = document.getElementById(`propcard_${propIdx}`);
+    if(updatedCard){
+      const updatedRows = updatedCard.querySelectorAll('.field-edit-row');
+      if(updatedRows[toIdx]){
+        updatedRows[toIdx].style.transition = 'background 0.3s';
+        updatedRows[toIdx].style.background = '#f0f0f0';
+        setTimeout(() => { updatedRows[toIdx].style.background = ''; }, 1200);
+      }
+    }
+  }, 60);
+}
+
+function handleFieldOrderBlur(propIdx, fieldIdx, input){
+  const rawVal = (input.value || '').trim();
+  const toPos = parseInt(rawVal, 10);
+  if(isNaN(toPos) || toPos < 1){
+    input.value = fieldIdx + 1;
+    return;
+  }
+  if(toPos !== fieldIdx + 1){
+    moveFieldToPos(propIdx, fieldIdx, input);
+  }
 }
 
 function savePropSettingsOnly(propIdx, event){
