@@ -1488,12 +1488,16 @@ function renderPropertyList(){
           <div style="font-size:11px;color:#888">項目名 ／ 数値 ／ 単位</div>
         </div>
         <div id="pfields_${idx}">${fieldRows}</div>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1">＋ 項目追加</button>
-          <button class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="削除前に戻す">↩️ 削除前に戻す</button>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addFieldInline(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px">＋ 項目追加</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetPropFieldsToDefault(${idx},event)" style="flex:1;padding:8px 4px;font-size:13px;background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1" title="削除前に戻す">↩️ 削除前に戻す</button>
         </div>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)">${done?'💾 保存（修正）':'💾 保存'}</button>
+        <div style="margin-top:6px">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="savePropSettingsOnly(${idx},event)" style="width:100%;padding:9px 8px;font-size:13px;background:#e0f2fe;color:#0369a1;border:1.5px solid #0284c7;font-weight:700;border-radius:8px" title="変更した項目設定を保存">⚙️ 項目設定を保存</button>
+        </div>
+        <div id="prop_setting_msg_${idx}" style="display:none;color:#0369a1;font-size:12px;font-weight:700;margin-top:4px;text-align:center;padding:5px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd">✓ 項目設定を保存しました</div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)">${done?'💾 データを修正':'💾 データを保存'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
@@ -1627,6 +1631,41 @@ function resetPropFieldsToDefault(propIdx,event){
   setTimeout(() => focusPropCard(propIdx), 80);
 }
 
+function savePropSettingsOnly(propIdx, event){
+  if(event) event.stopPropagation();
+  const prop = allProperties[propIdx];
+  if(!prop) return;
+
+  // 画面上の最新項目名・単位を反映
+  const card = document.getElementById(`propcard_${propIdx}`);
+  if(card){
+    const rows = card.querySelectorAll('.field-edit-row');
+    rows.forEach((row, fi) => {
+      if(prop.fields && prop.fields[fi]){
+        const labelInp = row.querySelector('.field-name-wrap input');
+        const unitSel = row.querySelector('select');
+        if(labelInp) prop.fields[fi].label = labelInp.value.trim();
+        if(unitSel) prop.fields[fi].unit = unitSel.value;
+        const valInp = document.getElementById(`inline_val_${propIdx}_${fi}`);
+        if(valInp) valInp.dataset.fieldKey = fieldKey(prop.fields[fi]);
+      }
+    });
+  }
+
+  saveJSON(LS_PROPERTIES, allProperties);
+
+  // 成功メッセージ表示（2.5秒間）
+  const msg = document.getElementById(`prop_setting_msg_${propIdx}`);
+  if(msg){
+    msg.style.display = 'block';
+    msg.textContent = '✓ 項目設定を保存しました';
+    setTimeout(() => {
+      const m = document.getElementById(`prop_setting_msg_${propIdx}`);
+      if(m) m.style.display = 'none';
+    }, 2500);
+  }
+}
+
 function deleteProp(idx,event){
   event.stopPropagation();
   if(!confirm(`「${allProperties[idx].name}」を削除しますか？`))return;
@@ -1677,6 +1716,21 @@ function saveInlinePropertyData(idx, event){
   if(event) event.stopPropagation();
   const prop = allProperties[idx];
   if(!prop) return;
+
+  // 画面上の最新項目名・単位も同期
+  const card = document.getElementById(`propcard_${idx}`);
+  if(card){
+    const rows = card.querySelectorAll('.field-edit-row');
+    rows.forEach((row, fi) => {
+      if(prop.fields && prop.fields[fi]){
+        const labelInp = row.querySelector('.field-name-wrap input');
+        const unitSel = row.querySelector('select');
+        if(labelInp && labelInp.value.trim()) prop.fields[fi].label = labelInp.value.trim();
+        if(unitSel) prop.fields[fi].unit = unitSel.value;
+      }
+    });
+    saveJSON(LS_PROPERTIES, allProperties);
+  }
 
   const data = {};
   let hasVal = false;
