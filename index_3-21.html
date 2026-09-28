@@ -1610,17 +1610,26 @@ function resetPropFieldsToDefault(propIdx,event){
   const defaultProp = DEFAULT_PROPERTIES.find(p => p.name === prop.name);
 
   function hasSameField(fields, target){
+    if(!target) return false;
     return fields.some(f => (f.label || '').trim() === (target.label || '').trim() && f.unit === target.unit);
   }
 
-  // 復元候補の特定（削除された項目のみ）
+  // 復元候補の特定：
+  // 1. 初期設定（defaultProp）に存在し、現在リストにない項目をすべて復元対象とする
   let toRestore = [];
-  if (prop._deletedFields && prop._deletedFields.length > 0) {
-    toRestore = prop._deletedFields.filter(item => item && item.field && !hasSameField(prop.fields, item.field));
-  } else if (defaultProp && defaultProp.fields) {
+  if (defaultProp && defaultProp.fields) {
     defaultProp.fields.forEach((df, dfIdx) => {
       if (!hasSameField(prop.fields, df)) {
-        toRestore.push({ field: JSON.parse(JSON.stringify(df)), index: dfIdx });
+        toRestore.push({ field: JSON.parse(JSON.stringify(df)), index: dfIdx, isDefault: true });
+      }
+    });
+  }
+
+  // 2. さらにユーザーが削除した履歴（_deletedFields）にある項目で、現在リストおよびすでに復元候補にあるもの以外を追加
+  if (prop._deletedFields && prop._deletedFields.length > 0) {
+    prop._deletedFields.forEach(item => {
+      if (item && item.field && !hasSameField(prop.fields, item.field) && !hasSameField(toRestore.map(r => r.field), item.field)) {
+        toRestore.push({ field: JSON.parse(JSON.stringify(item.field)), index: item.index, isDefault: false });
       }
     });
   }
@@ -1631,13 +1640,41 @@ function resetPropFieldsToDefault(propIdx,event){
   }
 
   const restoreNames = toRestore.map(item => `・${item.field.label}（${item.field.unit}）`).join('\n');
-  if(!confirm(`「${prop.name}」を削除前の状態に戻しますか？\n\n【戻す項目】:\n${restoreNames}\n\n※追加した項目は削除されず、そのまま残ります。`)){
+  if(!confirm(`「${prop.name}」の削除された項目（全${toRestore.length}件）をすべて元に戻しますか？\n\n【戻す項目】:\n${restoreNames}\n\n※追加した項目は削除されず、そのまま残ります。`)){
     return;
   }
 
-  // 削除された項目のみを元の位置（または現在リスト）へ差し戻す（追加項目は一切削除しない）
+  // 元の並び順（index昇順）でソート
+  toRestore.sort((a, b) => (a.index !== undefined ? a.index : 999) - (b.index !== undefined ? b.index : 999));
+
+  // 削除された項目のみを適切な位置へ差し戻す（追加項目は一切削除しない）
   toRestore.forEach(item => {
-    const insertIdx = Math.min(Math.max(0, item.index !== undefined ? item.index : prop.fields.length), prop.fields.length);
+    let insertIdx = -1;
+    if (defaultProp && defaultProp.fields && item.isDefault) {
+      // defaultProp 内で item より前にある項目で、現在 prop.fields に存在する最後のものの直後を探す
+      for (let i = item.index - 1; i >= 0; i--) {
+        const prevDf = defaultProp.fields[i];
+        const pIdx = prop.fields.findIndex(f => (f.label || '').trim() === (prevDf.label || '').trim() && f.unit === prevDf.unit);
+        if (pIdx !== -1) {
+          insertIdx = pIdx + 1;
+          break;
+        }
+      }
+      // もし前に存在するものがなければ、defaultProp 内で item より後ろにある項目の直前を探す
+      if (insertIdx === -1) {
+        for (let i = item.index + 1; i < defaultProp.fields.length; i++) {
+          const nextDf = defaultProp.fields[i];
+          const nIdx = prop.fields.findIndex(f => (f.label || '').trim() === (nextDf.label || '').trim() && f.unit === nextDf.unit);
+          if (nIdx !== -1) {
+            insertIdx = nIdx;
+            break;
+          }
+        }
+      }
+    }
+    if (insertIdx === -1) {
+      insertIdx = Math.min(Math.max(0, item.index !== undefined ? item.index : prop.fields.length), prop.fields.length);
+    }
     prop.fields.splice(insertIdx, 0, item.field);
   });
   prop._deletedFields = [];
