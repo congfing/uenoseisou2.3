@@ -68,11 +68,13 @@
   .prop-card { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
   .prop-card.done { border-color: #000; }
   .prop-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
-  .prop-order-input { width: 40px !important; max-width: 40px !important; min-width: 40px !important;
-    padding: 5px 3px; text-align: center; font-size: 15px; font-weight: bold;
-    border: 2px solid #ddd; border-radius: 8px; color: #000;
-    flex-shrink: 0; outline: none; }
-  .prop-order-input:focus { border-color: #000; }
+  .prop-order-input { width: 44px !important; max-width: 44px !important; min-width: 44px !important;
+    padding: 5px 2px; text-align: center; font-size: 15px; font-weight: bold;
+    border: 2px solid #000; border-radius: 8px; color: #000; background: #fff;
+    flex-shrink: 0; outline: none; -moz-appearance: textfield; }
+  .prop-order-input::-webkit-outer-spin-button,
+  .prop-order-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .prop-order-input:focus { border-color: #000; outline: 2px solid #000; outline-offset: 1px; }
   .prop-seq-num { width: 30px; min-width: 30px; text-align: center; font-size: 15px; font-weight: bold;
     color: #000; flex-shrink: 0; }
   .drag-handle { color: #bbb; font-size: 20px; cursor: grab; padding: 0 6px; user-select: none;
@@ -1391,13 +1393,13 @@ function renderPropertyList(){
 
   const hasSaved=!!getSavedOrder(state.selectedStaff,state.dayName);
   if(state.customOrder){
-    hint.textContent='↕ ドラッグで並び替え中';
+    hint.textContent='↕ 並び替え順で表示中（番号入力で変更可能）';
   } else if(state.entryOrder.length>0){
-    hint.textContent='✅ 入力済みが上に並んでいます';
+    hint.textContent='✅ 入力済みが上に並んでいます（番号入力で並び替え可能）';
   } else if(hasSaved){
-    hint.textContent='📌 前回の入力順で表示中';
+    hint.textContent='📌 前回の入力順で表示中（番号入力で並び替え可能）';
   } else {
-    hint.textContent='五十音順で表示中';
+    hint.textContent='五十音順で表示中（番号入力で並び替え可能）';
   }
   renderDaySaveSingle();
 
@@ -1467,10 +1469,11 @@ function renderPropertyList(){
     div.innerHTML=`
       <div class="prop-card-header" onclick="togglePropCard(${idx})">
         <button class="drag-handle" data-propname="${prop.name.replace(/"/g,'&quot;')}" ontouchstart="dragHandleStart(event,this)" onmousedown="dragHandleStart(event,this)">≡</button>
-        <input type="number" class="prop-order-input" value="${di+1}" min="1" max="${displayList.length}"
+        <input type="number" class="prop-order-input" value="${di+1}" min="1" max="${displayList.length}" inputmode="numeric"
           onclick="event.stopPropagation()"
-          onkeydown="if(event.key==='Enter'){event.stopPropagation();movePropToPos(${di},this);this.blur();}"
-          onblur="resetPropOrderInput(${di},this)"
+          onkeydown="if(event.key==='Enter'){event.stopPropagation();this.blur();}"
+          onchange="event.stopPropagation();movePropToPos(${di},this)"
+          onblur="event.stopPropagation();handlePropOrderBlur(${di},this)"
           onfocus="event.stopPropagation();this.select()">
         <div class="prop-info">
           <div class="prop-name">${prop.name}</div>
@@ -2023,9 +2026,14 @@ function renderDaySaveSingle(){
 function saveTodayOrder(){
   if(!state.selectedStaff){ alert('担当者が選択されていません'); return; }
   const day = state.dayName;
-  const base = getSortedProps();
-  const ordered = [...state.entryOrder,
-    ...base.filter(p=>!state.entryOrder.includes(p.name)).map(p=>p.name)];
+  let ordered;
+  if(state.customOrder && state.customOrder.length){
+    ordered = [...state.customOrder];
+  } else {
+    const base = getSortedProps();
+    ordered = [...state.entryOrder,
+      ...base.filter(p=>!state.entryOrder.includes(p.name)).map(p=>p.name)];
+  }
   setSavedOrder(state.selectedStaff, day, ordered);
   const note = document.getElementById('daySavedNote');
   if(note){ note.textContent='✓ 保存しました'; setTimeout(()=>{ note.textContent='（保存済み・上書き）'; },1500); }
@@ -2661,56 +2669,104 @@ function dragEnd(e){
 }
 
 // ===== NUMBER REORDER =====
+let _orderMoving = false;
 function movePropToPos(fromIdx, input){
-  const toPos = parseInt(input.value);
-  if(isNaN(toPos)) return;
-  // Build current displayList
+  if(_orderMoving) return;
+  const rawVal = (input.value || '').trim();
+  const toPos = parseInt(rawVal, 10);
+  if(isNaN(toPos) || toPos < 1) {
+    input.value = fromIdx + 1;
+    return;
+  }
+  if(toPos === fromIdx + 1){
+    return;
+  }
+  _orderMoving = true;
+  setTimeout(() => { _orderMoving = false; }, 300);
+
+  // 現在表示されている displayList を再構築
   let displayList;
-  if(state.customOrder){
-    displayList = state.customOrder.map(n=>allProperties.find(p=>p.name===n)).filter(Boolean);
-    const missing = allProperties.filter(p=>!state.customOrder.includes(p.name));
+  if(state.customOrder && state.customOrder.length){
+    displayList = state.customOrder.map(n => allProperties.find(p => p.name === n)).filter(Boolean);
+    const missing = allProperties.filter(p => !state.customOrder.includes(p.name));
     displayList = [...displayList, ...missing];
   } else {
     const baseProps = getSortedProps();
-    const entered = state.entryOrder.map(n=>baseProps.find(p=>p.name===n)).filter(Boolean);
-    const remaining = baseProps.filter(p=>!state.entryOrder.includes(p.name));
+    const entered = state.entryOrder.map(n => baseProps.find(p => p.name === n)).filter(Boolean);
+    const remaining = baseProps.filter(p => !state.entryOrder.includes(p.name));
     displayList = [...entered, ...remaining];
   }
-  const toIdx = Math.max(0, Math.min(toPos-1, displayList.length-1));
-  if(toIdx === fromIdx){ input.value = fromIdx+1; return; }
-  // Initialize customOrder from current display if needed
-  if(!state.customOrder){
-    state.customOrder = displayList.map(p=>p.name);
+
+  if(fromIdx < 0 || fromIdx >= displayList.length){
+    input.value = fromIdx + 1;
+    return;
   }
-  const order = [...state.customOrder];
-  const propName = displayList[fromIdx].name;
-  const fi = order.indexOf(propName);
-  if(fi !== -1){
-    const item = order.splice(fi, 1)[0];
-    // toIdx references displayList positions; find corresponding customOrder index
-    const toName = displayList[toIdx].name;
-    let ti = order.indexOf(toName);
-    if(ti === -1) ti = order.length;
-    order.splice(ti, 0, item);
+
+  // 1始まりの入力番号を 0始まりのインデックス（範囲内）に変換
+  const toIdx = Math.max(0, Math.min(toPos - 1, displayList.length - 1));
+  if(toIdx === fromIdx){
+    input.value = fromIdx + 1;
+    return;
   }
+
+  const targetProp = displayList[fromIdx];
+  const targetPropIdx = allProperties.indexOf(targetProp);
+  const wasOpen = document.getElementById(`pbody_${targetPropIdx}`)?.classList.contains('open');
+
+  // リストから取り出して指定位置へ挿入（自動並び替え）
+  const movedProp = displayList.splice(fromIdx, 1)[0];
+  displayList.splice(toIdx, 0, movedProp);
+
+  const order = displayList.map(p => p.name);
   state.customOrder = order;
+
+  // 担当者・曜日の保存順序も自動更新
+  if(state.selectedStaff && state.dayName){
+    setSavedOrder(state.selectedStaff, state.dayName, order);
+  }
+
+  // allProperties 内の order も連動更新して保存
+  displayList.forEach((prop, i) => {
+    prop.order = i + 1;
+  });
+  saveJSON(LS_PROPERTIES, allProperties);
   saveSession();
+
+  // 画面再描画
   renderPropertyList();
-  setTimeout(()=>{
-    const cards = document.querySelectorAll('.prop-card');
-    if(cards[toIdx]){
+
+  // カードが開いていた場合は開いた状態を維持
+  if(wasOpen){
+    const body = document.getElementById(`pbody_${targetPropIdx}`);
+    if(body) body.classList.add('open');
+    const toggle = document.getElementById(`ptoggle_${targetPropIdx}`);
+    if(toggle) toggle.textContent = '▲';
+  }
+
+  // 移動先のカードへスクロールしてハイライト表示
+  setTimeout(() => {
+    const card = document.getElementById(`propcard_${targetPropIdx}`);
+    if(card){
       const headerH = (document.getElementById('app-header')?.offsetHeight || 0) + (document.getElementById('nav-tabs-bar')?.offsetHeight || 0);
-      const top = cards[toIdx].getBoundingClientRect().top + window.scrollY - headerH - 8;
-      window.scrollTo({ top, behavior:'smooth' });
-      cards[toIdx].style.background = '#fff';
-      setTimeout(()=>{ cards[toIdx].style.background = ''; }, 800);
+      const top = card.getBoundingClientRect().top + window.scrollY - headerH - 8;
+      window.scrollTo({ top, behavior: 'smooth' });
+      card.style.transition = 'box-shadow 0.3s';
+      card.style.boxShadow = '0 0 0 3px #000';
+      setTimeout(() => { card.style.boxShadow = ''; }, 1200);
     }
-  }, 50);
+  }, 60);
 }
 
-function resetPropOrderInput(fromIdx, input){
-  // On blur without Enter: reset display value
-  input.value = fromIdx + 1;
+function handlePropOrderBlur(fromIdx, input){
+  const rawVal = (input.value || '').trim();
+  const toPos = parseInt(rawVal, 10);
+  if(isNaN(toPos) || toPos < 1){
+    input.value = fromIdx + 1;
+    return;
+  }
+  if(toPos !== fromIdx + 1){
+    movePropToPos(fromIdx, input);
+  }
 }
 
 // ===== SHARE HISTORY AS EXCEL =====
