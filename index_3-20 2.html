@@ -33,7 +33,8 @@
   .btn-success { background: #fff; color: #000; border: 2px solid #000; }
   .btn-warning { background: #fff; color: #000; border: 2px solid #000; }
   .btn-danger { background: #fff; color: #000; border: 2px solid #000; }
-  .btn-enter { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 12px; }
+  .btn-enter { background: #fff; color: #000; border: 2px solid #000; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 12px; }
+  .btn-enter:active { background: #eee; }
   .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 8px; display: inline-block; width: auto; }
 
   /* ===== INPUTS ===== */
@@ -1497,7 +1498,7 @@ function renderPropertyList(){
         </div>
         <div id="prop_setting_msg_${idx}" style="display:none;color:#000;font-size:12px;font-weight:700;margin-top:4px;text-align:center;padding:5px;background:#fff;border-radius:4px;border:1.5px solid #000">✓ 項目設定を保存しました</div>
         <div style="margin-top:12px;display:flex;gap:8px">
-          <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)">${done?'💾 データを修正':'💾 データを保存'}</button>
+          <button class="btn-enter" onclick="saveInlinePropertyData(${idx},event)" style="background:#fff;color:#000;border:2px solid #000">${done?'💾 データを修正':'💾 データを保存'}</button>
         </div>
         <div style="margin-top:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteProp(${idx},event)">この物件を削除</button>
