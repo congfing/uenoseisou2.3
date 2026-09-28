@@ -1444,6 +1444,7 @@ function renderPropertyList(){
           id="inline_val_${idx}_${fi}" data-field-key="${fKey}"
           placeholder="0" value="${curVal}"
           oninput="onInlineValInput(${idx},${fi},this.value)"
+          onfocus="event.stopPropagation();this.select()"
           onclick="event.stopPropagation()"
           style="width:68px;padding:7px 4px;font-size:15px;font-weight:700;text-align:right;border:1.5px solid #000;border-radius:6px;outline:none;background:#fff">
         <select onchange="updateFU(${idx},${fi},this.value)" onclick="event.stopPropagation()">
