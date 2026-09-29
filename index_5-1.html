@@ -368,9 +368,31 @@
   }
   .candidates-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     margin-bottom: 8px;
+  }
+  .candidates-close-btn {
+    margin-left: auto;
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    font-size: 13px;
+    font-weight: 700;
+    color: #57606a;
+    cursor: pointer;
+    padding: 3px 9px;
+    border-radius: 6px;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .candidates-close-btn:hover, .candidates-close-btn:active {
+    background: #f3f4f6;
+    color: #cf222e;
+    border-color: #cf222e;
   }
   .candidates-title {
     font-size: 12px;
@@ -584,6 +606,7 @@
         <div class="candidates-header">
           <span class="candidates-title" id="candidatesTitle">該当候補</span>
           <span class="candidates-hint">（タップして物件を表示）</span>
+          <button type="button" class="candidates-close-btn" id="closeFilterCandidates" title="閉じる（✕）" aria-label="閉じる">✕ 閉じる</button>
         </div>
         <div class="candidates-list" id="candidatesList"></div>
       </div>
@@ -592,12 +615,13 @@
     <label for="propSearch">物件名・ファイル名で検索</label>
     <div class="search-row">
       <input type="search" id="propSearch" placeholder="例：ラムー、LAMU、セブン、アオキ、コメリ、kg">
-      <button type="button" class="clear-btn" id="clearSearch">クリア</button>
+      <button type="button" class="clear-btn" id="clearSearch">✕ クリア</button>
     </div>
     <div class="search-candidates-area" id="searchCandidatesArea" style="display: none;">
       <div class="candidates-header">
         <span class="candidates-title" id="searchCandidatesTitle">該当候補</span>
         <span class="candidates-hint">（タップして物件を表示）</span>
+        <button type="button" class="candidates-close-btn" id="closeSearchCandidates" title="閉じる（✕）" aria-label="閉じる">✕ 閉じる</button>
       </div>
       <div class="candidates-list" id="searchCandidatesList"></div>
     </div>
@@ -1584,6 +1608,8 @@ const candidatesList = document.getElementById('candidatesList');
 const searchCandidatesArea = document.getElementById('searchCandidatesArea');
 const searchCandidatesTitle = document.getElementById('searchCandidatesTitle');
 const searchCandidatesList = document.getElementById('searchCandidatesList');
+const closeSearchCandidates = document.getElementById('closeSearchCandidates');
+const closeFilterCandidates = document.getElementById('closeFilterCandidates');
 
 function populateSelect(list, selectedNo) {
   select.innerHTML = '<option value="">-- 物件を選択 --</option>';
@@ -1725,6 +1751,18 @@ clearSearch.addEventListener('click', () => {
   updateDisplay();
   searchInput.focus();
 });
+
+if (closeSearchCandidates) {
+  closeSearchCandidates.addEventListener('click', () => {
+    if (searchCandidatesArea) searchCandidatesArea.style.display = 'none';
+  });
+}
+
+if (closeFilterCandidates) {
+  closeFilterCandidates.addEventListener('click', () => {
+    if (filterCandidatesArea) filterCandidatesArea.style.display = 'none';
+  });
+}
 
 populateSelect(properties, null);
 
