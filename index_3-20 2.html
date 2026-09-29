@@ -251,7 +251,10 @@
 <!-- Screen 3: Combined property list + inline settings -->
 <div class="screen" id="screen3">
   <div style="padding-top:16px">
-    <div class="section-title">🏢 物件項目編集<span class="count-badge" id="propCount"></span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">🏢 物件項目編集<span class="count-badge" id="propCount"></span></div>
+      <button class="btn btn-secondary btn-sm" onclick="closePropertyListScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub" id="screen3sub"></div>
     <div class="sort-hint" id="sortHint"></div>
     <div class="day-save-single" id="daySaveSingle" style="display:none">
@@ -260,6 +263,7 @@
     </div>
     <div id="propertyList"></div>
     <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closePropertyListScreen()">✕ 閉じる</button>
       <button class="btn btn-success" style="flex:1" onclick="exportText()">📄 TEXT保存</button>
       <button class="btn btn-primary" style="flex:2" onclick="goToScreen5()">確認・保存 →</button>
     </div>
@@ -269,9 +273,15 @@
 <!-- Screen 9: Simple property list A -->
 <div class="screen" id="screen9">
   <div style="padding-top:16px">
-    <div class="section-title">物件リスト２列<span class="count-badge" id="propCountA"></span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">物件リスト２列<span class="count-badge" id="propCountA"></span></div>
+      <button class="btn btn-secondary btn-sm" onclick="closePropertyListScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub" id="screen9sub"></div>
     <div class="property-list-a" id="propertyListA"></div>
+    <div style="margin-top:16px;margin-bottom:20px">
+      <button class="btn btn-secondary" onclick="closePropertyListScreen()" style="padding:12px;font-size:15px;font-weight:700">✕ 閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -1237,6 +1247,7 @@ function goBack(){
   if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
   if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7||state.currentScreen===10){ showScreen(state.prevScreen||1); return; }
   if(state.currentScreen===4){ closePropertyEntry(); return; }
+  if(state.currentScreen===3||state.currentScreen===9){ closePropertyListScreen(); return; }
   if(state.currentScreen>1) showScreen(state.currentScreen-1);
 }
 
@@ -1246,8 +1257,14 @@ function navTo(n){
   if(n===0){ state.prevScreen=state.currentScreen; renderSettingsStaff(); showScreen(0); return; }
   if(n===1){ showScreen(1); return; }
   if(n===2){ renderStaffList(); showScreen(2); return; }
-  if(n===3){ renderPropertyList(); showScreen(3); return; }
-  if(n===9){ renderPropertyListA(); showScreen(9); return; }
+  if(n===3){
+    if(state.currentScreen!==3 && state.currentScreen!==9) state.prevScreen=state.currentScreen;
+    renderPropertyList(); showScreen(3); return;
+  }
+  if(n===9){
+    if(state.currentScreen!==3 && state.currentScreen!==9) state.prevScreen=state.currentScreen;
+    renderPropertyListA(); showScreen(9); return;
+  }
   if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
   if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
   if(n===8){ showScreen(8); initConvertScreen(); return; }
@@ -1296,6 +1313,7 @@ function removeStaff(name,e){
 // ===== SCREEN 2→3 =====
 function goToScreen3(){
   if(!state.selectedStaff){alert('担当者を選択してください');return;}
+  state.prevScreen=2;
   state.entryData={};state.entryDraft={};state.entryOrder=[];state.customOrder=null;
   saveSession();
   document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
@@ -2157,6 +2175,22 @@ function closePropertyEntry(){
   }
 }
 
+function closePropertyListScreen(){
+  if(state.prevScreen && state.prevScreen !== 3 && state.prevScreen !== 9 && state.prevScreen !== 4){
+    if(state.prevScreen === 2){
+      renderStaffList();
+      showScreen(2);
+    } else {
+      showScreen(state.prevScreen);
+    }
+  } else if(state.selectedStaff){
+    renderStaffList();
+    showScreen(2);
+  } else {
+    showScreen(1);
+  }
+}
+
 // ===== 曜日別・保存（シングルボタン） =====
 function renderDaySaveSingle(){
   const panel = document.getElementById('daySaveSingle');
@@ -2645,6 +2679,7 @@ function reloadHistoryEntry(ri,event){
   document.getElementById('dateInput').value=record.date;
   document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
   document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
+  state.prevScreen=6;
   renderPropertyListA();
   showScreen(9);
 }
