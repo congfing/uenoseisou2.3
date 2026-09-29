@@ -631,7 +631,7 @@
         <button type="button" class="filter-btn" data-filter="annual_sheet">sheetが年間sheet</button>
         <button type="button" class="filter-btn" data-filter="pickup_days">記入日が収集日</button>
         <button type="button" class="filter-btn" data-filter="monthly_total">月の合計だけを年間報告</button>
-        <button type="button" class="filter-btn reset-btn" id="resetFilterBtn">✕ 全表示</button>
+        <button type="button" class="filter-btn reset-btn" id="resetFilterBtn">候補を全部表示に戻す</button>
       </div>
       <div class="filter-candidates-area" id="filterCandidatesArea" style="display: none;">
         <div class="candidates-header">
@@ -1785,13 +1785,18 @@ clearSearch.addEventListener('click', () => {
 
 if (closeSearchCandidates) {
   closeSearchCandidates.addEventListener('click', () => {
+    searchInput.value = '';
     if (searchCandidatesArea) searchCandidatesArea.style.display = 'none';
+    updateDisplay();
   });
 }
 
 if (closeFilterCandidates) {
   closeFilterCandidates.addEventListener('click', () => {
+    activeFilterKey = null;
+    filterButtons.forEach(b => b.classList.remove('active'));
     if (filterCandidatesArea) filterCandidatesArea.style.display = 'none';
+    updateDisplay();
   });
 }
 
