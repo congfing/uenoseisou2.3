@@ -732,7 +732,7 @@
 
 <footer>計量物件表 記入箇所メモ v5-1</footer>
 
-<script src="property_screenshots/2026-09/manifest.js?v=20260930_0119"></script>
+<script src="property_screenshots/2026-09/manifest.js?v=20260930_0610"></script>
 <script>
 const properties = [
   {
@@ -1310,7 +1310,7 @@ const SCREENSHOT_FILES = {
   "旧上野庁舎 SAKAKURA BASE": "property_screenshots/031_旧上野庁舎 SAKAKURA BASE.png",
   "上野法務合同庁舎": "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
   "法務局": "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
-  "検察庁": "property_screenshots/2026-09/prosecutors_daily_20260922.png",
+  "検察庁": "property_screenshots/2026-09/prosecutors_monthly_20260930.png",
   "西松屋 伊賀上野店": "property_screenshots/034_西松屋 伊賀上野店.png",
   "農業屋 伊賀上野店": "property_screenshots/2026-09/agri_20260918b.png",
   "飯田金属": "property_screenshots/2026-09/iida_20260918b.png",
@@ -1946,9 +1946,9 @@ function renderProperty(p) {
     ? `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div>${screenshotPaths.map((path, index) => {
         let labelText = `シート画像${screenshotPaths.length > 1 ? ` ${index + 1}` : ""}`;
         if (path.includes('ueno_legal_monthly') || path.includes('houmukyoku_monthly')) {
-          labelText += '【月データ用：上野法務合同庁舎 実績報告】';
-        } else if (path.includes('prosecutors_daily')) {
-          labelText += '【日次入力：検察庁】';
+          labelText += '【年間集計：上野法務合同庁舎 実績報告】';
+        } else if (path.includes('prosecutors')) {
+          labelText += '【月Sheet：検察庁（日次入力・月合計）】';
         } else if (path.includes('uomasa_sheet1')) {
           labelText += '【Sheet1：月間総数記録】';
         } else if (path.includes('uomasa_sheet2')) {

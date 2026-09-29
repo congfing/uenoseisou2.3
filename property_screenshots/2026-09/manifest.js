@@ -82,11 +82,11 @@ window.MONTHLY_SCREENSHOTS = {
   ],
   "上野法務合同庁舎": [
     "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
-    "property_screenshots/2026-09/prosecutors_daily_20260922.png"
+    "property_screenshots/2026-09/prosecutors_monthly_20260930.png"
   ],
   "法務局": [
     "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
-    "property_screenshots/2026-09/prosecutors_daily_20260922.png"
+    "property_screenshots/2026-09/prosecutors_monthly_20260930.png"
   ],
   "農業屋 伊賀上野店": [
     "property_screenshots/2026-09/agri_20260918b.png"
@@ -117,8 +117,8 @@ window.MONTHLY_SCREENSHOTS = {
     "property_screenshots/2026-09/sakakura_20260918.png"
   ],
   "検察庁": [
-    "property_screenshots/2026-09/ueno_legal_monthly_20260922.png",
-    "property_screenshots/2026-09/prosecutors_daily_20260922.png"
+    "property_screenshots/2026-09/prosecutors_monthly_20260930.png",
+    "property_screenshots/2026-09/ueno_legal_monthly_20260922.png"
   ],
   "伊賀の街": [
     "property_screenshots/2026-09/iga_machi_20260918.png"
