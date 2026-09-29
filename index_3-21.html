@@ -219,7 +219,10 @@
 <!-- Screen 1: Date -->
 <div class="screen active" id="screen1">
   <div style="padding-top:16px">
-    <div class="section-title">📅 日付選択</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">📅 日付選択</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub">作業日を選択してください</div>
     <div class="card"><input type="date" id="dateInput" onchange="checkPastData(this.value)"></div>
     <div class="past-data-banner" id="pastDataBanner">
@@ -236,7 +239,10 @@
 <!-- Screen 2: Staff -->
 <div class="screen" id="screen2">
   <div style="padding-top:16px">
-    <div class="section-title">👤 担当者選択</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">👤 担当者選択</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub" id="screen2sub"></div>
     <div id="staffList"></div>
     <div class="add-row">
@@ -305,7 +311,10 @@
 <!-- Screen 5: Confirm -->
 <div class="screen" id="screen5">
   <div style="padding-top:16px">
-    <div class="section-title">✅ 確認・保存</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">✅ 確認・保存</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub" id="screen5sub"></div>
     <div id="summaryContent"></div>
     <div style="display:flex;gap:10px;margin-bottom:10px">
@@ -319,7 +328,10 @@
 <!-- Screen 6: History -->
 <div class="screen" id="screen6">
   <div style="padding-top:16px">
-    <div class="section-title">📋 履歴</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">📋 履歴</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
     <div class="section-sub">過去の入力データを確認できます</div>
     <div id="historyList"></div>
   </div>
@@ -328,8 +340,11 @@
 <!-- Screen 7: Mail Settings -->
 <div class="screen" id="screen7">
   <div style="padding-top:16px">
-    <div class="section-title">✉️ メール設定</div>
-    <div class="section-sub">送信先アドレスを最大4件登録できます</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">✉️ メール設定</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
+    <div class="section-sub" id="screen7sub">送信先アドレスを最大4件登録できます</div>
 
     <div class="card">
       <div style="font-size:15px;font-weight:700;margin-bottom:14px">📮 送信先アドレス</div>
@@ -361,8 +376,11 @@
 <!-- Screen 8: Text → Excel 変換 -->
 <div class="screen" id="screen8">
   <div style="padding-top:16px">
-    <div class="section-title">🔄 Excel 変換</div>
-    <div class="section-sub">履歴または保存テキストからExcelを作成します</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">🔄 Excel 変換</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
+    <div class="section-sub" id="screen8sub">履歴または保存テキストからExcelを作成します</div>
 
     <!-- 履歴から変換 -->
     <div class="card">
@@ -388,8 +406,11 @@
 <!-- Screen 0: Settings -->
 <div class="screen" id="screen0">
   <div style="padding-top:16px">
-    <div class="section-title">⚙️ 設定</div>
-    <div class="section-sub">物件の追加・担当者の管理</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="section-title" style="margin-bottom:0">⚙️ 設定</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+    </div>
+    <div class="section-sub" id="screen0sub">物件の追加・担当者の管理</div>
 
     <!-- Add property -->
     <div class="card">
@@ -440,8 +461,11 @@
 <!-- Screen 10: Email Column Settings (白、黒の文字、枠線デザイン) -->
 <div class="screen" id="screen10" style="background:#fff;color:#000;">
   <div style="padding-top:16px">
-    <div style="font-size:18px;font-weight:800;color:#000;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-      <span>🔢 メール列番号設定（本Sheet用）</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div style="font-size:18px;font-weight:800;color:#000;display:flex;align-items:center;gap:6px">
+        <span>🔢 メール列番号設定（本Sheet用）</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="closeColSettingScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div style="font-size:12px;color:#000;margin-bottom:14px;line-height:1.5">
       メール本文に付与する列番号（[C列]など）を設定・変更します。
@@ -1244,31 +1268,26 @@ function showScreen(n){
 }
 
 function goBack(){
-  if(state.currentScreen===1){ location.href='index_2-4_colview.html'; return; }
-  if(state.currentScreen===0||state.currentScreen===6||state.currentScreen===7||state.currentScreen===10){ showScreen(state.prevScreen||1); return; }
-  if(state.currentScreen===4){ closePropertyEntry(); return; }
-  if(state.currentScreen===3||state.currentScreen===9){ closePropertyListScreen(); return; }
-  if(state.currentScreen>1) showScreen(state.currentScreen-1);
+  closeCurrentTabScreen();
 }
 
 function navTo(n){
   if(n===2&&!state.date) return;
   if((n===3||n===9)&&!state.selectedStaff) return;
-  if(n===0){ state.prevScreen=state.currentScreen; renderSettingsStaff(); showScreen(0); return; }
+  if(state.currentScreen !== n){
+    if((state.currentScreen !== 3 && state.currentScreen !== 9) || (n !== 3 && n !== 9)){
+      state.prevScreen = state.currentScreen;
+    }
+  }
+  if(n===0){ renderSettingsStaff(); showScreen(0); return; }
   if(n===1){ showScreen(1); return; }
   if(n===2){ renderStaffList(); showScreen(2); return; }
-  if(n===3){
-    if(state.currentScreen!==3 && state.currentScreen!==9) state.prevScreen=state.currentScreen;
-    renderPropertyList(); showScreen(3); return;
-  }
-  if(n===9){
-    if(state.currentScreen!==3 && state.currentScreen!==9) state.prevScreen=state.currentScreen;
-    renderPropertyListA(); showScreen(9); return;
-  }
+  if(n===3){ renderPropertyList(); showScreen(3); return; }
+  if(n===9){ renderPropertyListA(); showScreen(9); return; }
   if(n===6){ state._histFilterDate=null; renderHistory(); showScreen(6); return; }
-  if(n===7){ state.prevScreen=state.currentScreen; showScreen(7); return; }
+  if(n===7){ showScreen(7); return; }
   if(n===8){ showScreen(8); initConvertScreen(); return; }
-  if(n===10){ state.prevScreen=state.currentScreen; initColSettingScreen(); showScreen(10); return; }
+  if(n===10){ initColSettingScreen(); showScreen(10); return; }
 }
 
 // ===== SCREEN 1→2 =====
@@ -2175,20 +2194,92 @@ function closePropertyEntry(){
   }
 }
 
-function closePropertyListScreen(){
-  if(state.prevScreen && state.prevScreen !== 3 && state.prevScreen !== 9 && state.prevScreen !== 4){
-    if(state.prevScreen === 2){
+function closeCurrentTabScreen(){
+  const cur = state.currentScreen;
+  if(cur === 4){
+    closePropertyEntry();
+    return;
+  }
+  if(cur === 10){
+    closeColSettingScreen();
+    return;
+  }
+  if(cur === 2){
+    showScreen(1);
+    return;
+  }
+  if(cur === 5){
+    const ret = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
+    if(ret === 9){ renderPropertyListA(); showScreen(9); }
+    else { renderPropertyList(); showScreen(3); }
+    return;
+  }
+  if(cur === 1){
+    if(state.prevScreen && state.prevScreen !== 1){
+      if(state.prevScreen === 2){
+        renderStaffList();
+        showScreen(2);
+      } else if(state.prevScreen === 3){
+        renderPropertyList();
+        showScreen(3);
+      } else if(state.prevScreen === 9){
+        renderPropertyListA();
+        showScreen(9);
+      } else {
+        showScreen(state.prevScreen);
+      }
+    } else {
+      location.href = 'index_2-4_colview.html';
+    }
+    return;
+  }
+  if(cur === 3 || cur === 9){
+    if(state.prevScreen && state.prevScreen !== 3 && state.prevScreen !== 9 && state.prevScreen !== 4){
+      if(state.prevScreen === 2){
+        renderStaffList();
+        showScreen(2);
+      } else {
+        showScreen(state.prevScreen);
+      }
+    } else if(state.selectedStaff){
       renderStaffList();
       showScreen(2);
     } else {
+      showScreen(1);
+    }
+    return;
+  }
+  // For screen 0 (設定), 6 (履歴), 7 (メール), 8 (変換)
+  if(state.prevScreen && state.prevScreen !== cur){
+    if((state.prevScreen === 3 || state.prevScreen === 9) && !state.selectedStaff){
+      showScreen(1);
+    } else if(state.prevScreen === 2){
+      renderStaffList();
+      showScreen(2);
+    } else if(state.prevScreen === 3){
+      renderPropertyList();
+      showScreen(3);
+    } else if(state.prevScreen === 9){
+      renderPropertyListA();
+      showScreen(9);
+    } else {
       showScreen(state.prevScreen);
     }
-  } else if(state.selectedStaff){
-    renderStaffList();
-    showScreen(2);
   } else {
-    showScreen(1);
+    if(state.selectedStaff){
+      renderPropertyListA();
+      showScreen(9);
+    } else if(state.date){
+      renderStaffList();
+      showScreen(2);
+    } else {
+      showScreen(1);
+    }
   }
+}
+
+function closePropertyListScreen(){
+  closeCurrentTabScreen();
 }
 
 // ===== 曜日別・保存（シングルボタン） =====
