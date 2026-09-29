@@ -41,6 +41,39 @@
       background: #fff;
     }
     .embedded .titlebar { display: none; }
+    .top-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #ffffff;
+      border-bottom: 2px solid var(--line, #000);
+      box-sizing: border-box;
+    }
+    .top-header-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ink, #000);
+      letter-spacing: 0.02em;
+    }
+    .app-close-btn {
+      flex-shrink: 0;
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #000000;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app-close-btn:hover, .app-close-btn:active {
+      background: #000000;
+      color: #ffffff;
+    }
     .lights {
       height: 100%;
       display: flex;
@@ -219,6 +252,13 @@
     <div class="bar-file">index_nenpi_shared.html</div>
   </header>
 
+  <div class="top-header-bar">
+    <div class="top-header-title">燃費共有読込</div>
+    <button type="button" class="app-close-btn" onclick="closeApp()" title="ソフトを閉じて一覧に戻る" aria-label="閉じる">
+      ✕ 閉じる
+    </button>
+  </div>
+
   <main class="app">
     <section class="box">
       <h1 class="box-title">燃費表共有 読込</h1>
@@ -273,10 +313,25 @@
       outputNote: document.getElementById("outputNote")
     };
 
+    function closeApp() {
+      if (window.parent && window.parent !== window) {
+        try {
+          if (typeof window.parent.showLauncher === 'function') {
+            window.parent.showLauncher(true);
+            return;
+          }
+          window.parent.postMessage({ type: 'closeSoftware' }, '*');
+          return;
+        } catch (e) {}
+      }
+      location.href = "index.html";
+    }
+    window.closeApp = closeApp;
+
     document.querySelectorAll("[data-action]").forEach((button) => {
       button.addEventListener("click", () => {
         if (button.dataset.action === "reload") location.reload();
-        else location.href = "index.html";
+        else closeApp();
       });
     });
 

@@ -59,6 +59,44 @@
       display: none;
     }
 
+    .top-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #ffffff;
+      border-bottom: 2px solid var(--line, #000000);
+      box-sizing: border-box;
+    }
+
+    .top-header-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text, #000000);
+      letter-spacing: 0.02em;
+    }
+
+    .app-close-btn {
+      flex-shrink: 0;
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #000000;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-close-btn:hover,
+    .app-close-btn:active {
+      background: #000000;
+      color: #ffffff;
+    }
+
     .window-controls {
       height: 100%;
       display: flex;
@@ -827,6 +865,13 @@
     <div class="file-name">index_nenpi.html</div>
   </header>
 
+  <div class="top-header-bar">
+    <div class="top-header-title">燃費管理</div>
+    <button type="button" class="app-close-btn" onclick="closeApp()" title="ソフトを閉じて一覧に戻る" aria-label="閉じる">
+      ✕ 閉じる
+    </button>
+  </div>
+
   <nav class="tabbar" aria-label="燃費管理メニュー">
     <button class="tab active" type="button" data-tab="mail">メール登録</button>
     <button class="tab" type="button" data-tab="vehicle">車番登録</button>
@@ -985,13 +1030,28 @@
     const screenTitle = document.getElementById("screenTitle");
     const screenHint = document.getElementById("screenHint");
 
+    function closeApp() {
+      if (window.parent && window.parent !== window) {
+        try {
+          if (typeof window.parent.showLauncher === 'function') {
+            window.parent.showLauncher(true);
+            return;
+          }
+          window.parent.postMessage({ type: 'closeSoftware' }, '*');
+          return;
+        } catch (e) {}
+      }
+      location.href = "index.html";
+    }
+    window.closeApp = closeApp;
+
     document.querySelectorAll("[data-title-action]").forEach((button) => {
       button.addEventListener("click", () => {
         if (button.dataset.titleAction === "reload") {
           location.reload();
           return;
         }
-        location.href = "index.html";
+        closeApp();
       });
     });
 

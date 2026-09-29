@@ -22,8 +22,32 @@
     -webkit-text-size-adjust: 100%;
   }
   header {
-    padding: 18px 20px;
+    padding: 14px 20px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .app-close-btn {
+    flex-shrink: 0;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-close-btn:hover, .app-close-btn:active {
+    background: #000000;
+    color: #ffffff;
   }
   header h1 {
     margin: 0;
@@ -584,8 +608,15 @@
 </head>
 <body>
 <header>
-  <h1>計量物件表　記入箇所メモ</h1>
-  <div class="sub" id="headerSub"></div>
+  <div class="header-inner">
+    <div>
+      <h1>計量物件表　記入箇所メモ</h1>
+      <div class="sub" id="headerSub"></div>
+    </div>
+    <button type="button" class="app-close-btn" onclick="closeApp()" title="ソフトを閉じて一覧に戻る" aria-label="閉じる">
+      ✕ 閉じる
+    </button>
+  </div>
 </header>
 
 <main>
@@ -1763,6 +1794,21 @@ if (closeFilterCandidates) {
     if (filterCandidatesArea) filterCandidatesArea.style.display = 'none';
   });
 }
+
+function closeApp() {
+  if (window.parent && window.parent !== window) {
+    try {
+      if (typeof window.parent.showLauncher === 'function') {
+        window.parent.showLauncher(true);
+        return;
+      }
+      window.parent.postMessage({ type: 'closeSoftware' }, '*');
+      return;
+    } catch (e) {}
+  }
+  window.location.href = 'index.html';
+}
+window.closeApp = closeApp;
 
 populateSelect(properties, null);
 

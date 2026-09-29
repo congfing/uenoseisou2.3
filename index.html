@@ -1556,6 +1556,13 @@
 
   document.getElementById("closeBtn").addEventListener("click", () => showLauncher(true));
   document.getElementById("homeBtn").addEventListener("click", () => showLauncher(false));
+
+  // 子フレーム（各ソフト）からの閉じる要求を受信
+  window.addEventListener("message", (event) => {
+    if (event.data === "closeSoftware" || event.data?.type === "closeSoftware") {
+      showLauncher(true);
+    }
+  });
   expandBtn.addEventListener("click", () => {
     if (!activeApp) return;
     const open = zoomMenu.hidden;
