@@ -583,7 +583,7 @@
 
     <label for="propSearch">物件名・ファイル名で検索</label>
     <div class="search-row">
-      <input type="search" id="propSearch" placeholder="例：セブン、マックス、kg、段ボール">
+      <input type="search" id="propSearch" placeholder="例：ラムー、LAMU、セブン、アオキ、コメリ、kg">
       <button type="button" class="clear-btn" id="clearSearch">クリア</button>
     </div>
     <label for="propSelect">物件を選択してください（タップ）</label>
@@ -1221,11 +1221,129 @@ const headerSub = document.getElementById('headerSub');
 const fileCount = new Set(properties.map(p => p.file)).size;
 headerSub.textContent = `${APP_VERSION}　／　全${properties.length}物件（${fileCount}ファイル）　／　更新日: ${UPDATED_AT}`;
 
+// 物件ごとの別名・読みがな（ひらがな、カタカナ、英語、略称）辞書
+const PROPERTY_SEARCH_ALIASES = {
+  1: ["LA・MU", "LAMU", "ラムー", "ラ・ムー", "らむー", "lamu", "大黒天物産"],
+  2: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "緑ヶ丘東町", "1420"],
+  3: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "東条", "1442"],
+  4: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "平野北谷", "1431"],
+  5: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "四十九町北", "1432"],
+  6: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "緑ヶ丘本町", "1422"],
+  7: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "平野東町", "1449"],
+  8: ["セブン", "セブンイレブン", "せぶん", "seven", "711", "7-11", "忍者市駅南", "2837"],
+  9: ["セカンドストリート", "セカスト", "2nd", "せかんどすとりーと", "小田", "3628"],
+  10: ["イオンタウン伊賀", "イオン", "いおん", "aeon"],
+  11: ["びっくりドンキー", "ドンキー", "びっくりのんきー", "donki", "ハンバーグ"],
+  12: ["KFC", "ケンタッキー", "フライドチキン", "けんたっきー", "kfc", "kentucky"],
+  13: ["いがっこ給食センター", "いがっこ", "給食センター", "給食"],
+  14: ["コカ・コーラボトラーズ", "コカコーラ", "コーラ", "こかこーら", "coca", "cola"],
+  15: ["チョーヤ梅酒", "チョーヤ", "ちょうや", "choya", "梅酒"],
+  16: ["ほっともっと", "ホットモット", "ほっと", "桑町", "hotto"],
+  17: ["ほっともっと", "ホットモット", "ほっと", "白鳳通り", "hotto"],
+  18: ["マックスバリュ", "マックスバリュー", "マックス", "佐那具", "maxvalu", "max"],
+  19: ["マックスバリュ", "マックスバリュー", "マックス", "上野", "maxvalu", "max"],
+  20: ["やさいの戸島屋", "戸島屋", "とじまや", "tojimaya", "野菜", "やさい"],
+  21: ["伊賀の街", "いがのまち", "街"],
+  22: ["ライフテクノサービス", "ライフテクノ", "らいふてくの", "life"],
+  23: ["伊賀神戸駅", "いがかんべ", "近鉄", "神戸駅"],
+  24: ["古本市場", "フルホンイチバ", "ふるいち", "古本", "サイリス", "furuhon"],
+  25: ["旧上野庁舎", "SAKAKURA BASE", "サカクラベース", "サカクラ", "さかくら", "sakakura"],
+  26: ["魚民", "うおたみ", "白木屋", "モンテローザ", "uomin"],
+  27: ["厚板プレス工業", "あついた", "厚板", "プレス"],
+  28: ["三重県伊賀庁舎", "県庁舎", "県庁", "合同庁舎"],
+  29: ["上野法務合同庁舎", "法務局", "ほうむきょく", "登記所"],
+  30: ["ドラッグセイムス", "セイムス", "せいむす", "大本紙料", "小田", "seims"],
+  31: ["ドラッグセイムス", "セイムス", "せいむす", "大本紙料", "上野", "seims"],
+  32: ["津地方裁判所伊賀支部", "裁判所", "地裁", "さいばんしょ"],
+  33: ["農業屋", "のうぎょうや", "三輝", "nougyouya"],
+  34: ["飯田金属", "いいだきんぞく", "iida"],
+  35: ["あみやき亭", "あみやき", "焼肉", "amiyaki"],
+  36: ["すき家", "すきや", "スキヤ", "牛丼", "sukiya"],
+  37: ["クスリのアオキ", "アオキ", "あおき", "青木", "伊賀上野", "aoki"],
+  38: ["クスリのアオキ", "アオキ", "あおき", "青木", "平野東", "aoki"],
+  39: ["ナフコ", "なふこ", "nafco", "アレックス"],
+  40: ["創価学会", "そうかがっかい", "文化会館"],
+  41: ["西松屋", "にしまつや", "nishimatsuya"],
+  42: ["コメリ", "こめり", "komeri", "HC", "ハード＆グリーン"],
+  43: ["検察庁", "けんさつちょう", "区検", "地検", "検察"]
+};
+
+// 検索用のテキスト正規化（全角半角、カタカナ→ひらがな、記号スペース長音除去）
+function normalizeForSearch(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/[！-～]/g, m => String.fromCharCode(m.charCodeAt(0) - 0xfee0))
+    .toLowerCase()
+    .replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60))
+    .replace(/[\s　・\-_/／,、.．:：（）()~〜「」【】ー]/g, "");
+}
+
+// 簡易ローマ字→ひらがな対応表
+const SEARCH_ROMAJI_TABLE = [
+  ["kya","きゃ"],["kyu","きゅ"],["kyo","きょ"],
+  ["sha","しゃ"],["shu","しゅ"],["sho","しょ"],["sya","しゃ"],["syu","しゅ"],["syo","しょ"],
+  ["cha","ちゃ"],["chu","ちゅ"],["cho","ちょ"],["tya","ちゃ"],["tyu","ちゅ"],["tyo","ちょ"],
+  ["nya","にゃ"],["nyu","にゅ"],["nyo","にょ"],
+  ["mya","みゃ"],["myu","みゅ"],["myo","みょ"],
+  ["rya","りゃ"],["ryu","りゅ"],["ryo","りょ"],
+  ["gya","ぎゃ"],["gyu","ぎゅ"],["gyo","ぎょ"],
+  ["ja","じゃ"],["ju","じゅ"],["jo","じょ"],
+  ["ka","か"],["ki","き"],["ku","く"],["ke","け"],["ko","こ"],
+  ["sa","さ"],["shi","し"],["si","し"],["su","す"],["se","せ"],["so","そ"],
+  ["ta","た"],["chi","ち"],["ti","ち"],["tsu","つ"],["tu","つ"],["te","て"],["to","と"],
+  ["na","な"],["ni","に"],["nu","ぬ"],["ne","ね"],["no","の"],
+  ["ha","は"],["hi","ひ"],["fu","ふ"],["hu","ふ"],["he","へ"],["ho","ほ"],
+  ["ma","ま"],["mi","み"],["mu","む"],["me","め"],["mo","も"],
+  ["ya","や"],["yu","ゆ"],["yo","よ"],
+  ["ra","ら"],["ri","り"],["ru","る"],["re","れ"],["ro","ろ"],
+  ["la","ら"],["li","り"],["lu","る"],["le","れ"],["lo","ろ"],
+  ["wa","わ"],["wo","を"],["nn","ん"],
+  ["ga","が"],["gi","ぎ"],["gu","ぐ"],["ge","げ"],["go","ご"],
+  ["za","ざ"],["ji","じ"],["zi","じ"],["zu","ず"],["ze","ぜ"],["zo","ぞ"],
+  ["da","だ"],["di","ぢ"],["du","づ"],["de","で"],["do","ど"],
+  ["ba","ば"],["bi","び"],["bu","ぶ"],["be","べ"],["bo","ぼ"],
+  ["pa","ぱ"],["pi","ぴ"],["pu","ぷ"],["pe","ぺ"],["po","ぽ"],
+  ["a","あ"],["i","い"],["u","う"],["e","え"],["o","お"]
+];
+
+function romajiToHiragana(str) {
+  let s = (str || "").toLowerCase();
+  s = s.replace(/([bcdfghjklmpqrstvwxyz])\1/g, "っ$1");
+  for (const [rom, hira] of SEARCH_ROMAJI_TABLE) {
+    s = s.replaceAll(rom, hira);
+  }
+  return s;
+}
+
 function propertySearchText(p) {
+  const aliases = PROPERTY_SEARCH_ALIASES[p.no] || [];
   return [
     p.no, p.name, p.file, p.fileNote, p.mark, p.header, p.rows,
-    ...(p.cols || []), ...(p.notes || []), conversionNoteFor(p)
-  ].join(' ').toLowerCase();
+    ...(p.cols || []), ...(p.notes || []), conversionNoteFor(p),
+    ...aliases
+  ].join(' ');
+}
+
+// ゆるい検索（あいまい検索）の判定関数
+function isPropertyMatch(p, query) {
+  if (!query) return true;
+  const rawQ = query.trim().toLowerCase();
+  if (!rawQ) return true;
+
+  // 1. 通常のテキスト検索（部分一致）
+  const fullText = propertySearchText(p).toLowerCase();
+  if (fullText.includes(rawQ)) return true;
+
+  // 2. ゆるい正規化検索（カタカナ・ひらがな共通化、長音・記号・スペース除去）
+  const normQ = normalizeForSearch(query);
+  const normText = normalizeForSearch(propertySearchText(p));
+  if (normQ && normText.includes(normQ)) return true;
+
+  // 3. ローマ字入力（LAMU -> らむ -> ラムー など）の判定
+  const romajiQ = normalizeForSearch(romajiToHiragana(query));
+  if (romajiQ && romajiQ !== normQ && normText.includes(romajiQ)) return true;
+
+  return false;
 }
 
 // 3-20の現在仕様。倍率は物件ごとに保存され、入力画面で変更できます。
@@ -1393,9 +1511,9 @@ function getFilteredProperties() {
   if (activeFilterKey && FILTER_DEFINITIONS[activeFilterKey]) {
     list = list.filter(FILTER_DEFINITIONS[activeFilterKey].predicate);
   }
-  const q = searchInput.value.trim().toLowerCase();
+  const q = searchInput.value.trim();
   if (q) {
-    list = list.filter(p => propertySearchText(p).includes(q));
+    list = list.filter(p => isPropertyMatch(p, q));
   }
   return list;
 }
@@ -1406,7 +1524,7 @@ function updateDisplay() {
   populateSelect(list, selectedNo);
   renderCandidates(list, selectedNo);
 
-  const q = searchInput.value.trim().toLowerCase();
+  const q = searchInput.value.trim();
   if (q && list.length === 1) {
     selectPropertyByNo(list[0].no);
   } else if (q && list.length === 0) {
