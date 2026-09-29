@@ -1127,7 +1127,7 @@ const properties = [
   {
     no: 42, name: "コメリ ＨＣ上野店",
     file: "コメリ.xlsx",
-    fileNote: "",
+    fileNote: "対象期間: 前月21日〜当月20日（20日締め）",
     mark: "①（シート: (4)）",
     header: "ヘッダー行: 5行目（大項目）、6行目（品目）、7行目（袋/㎏）",
     cols: [
@@ -1136,8 +1136,8 @@ const properties = [
       "L列（不燃物２ 容器包装系 袋）　N列（不燃物２ ㎏）",
       "P列（粗大ごみ／その他 袋）　R列（粗大ごみ／その他 ㎏）"
     ],
-    rows: "7〜37行目（1日〜31日）",
-    notes: []
+    rows: "7〜37行目（21日〜翌20日）",
+    notes: ["38行目が合計", "締め日は20日"]
   },
   {
     no: 43, name: "検察庁",
@@ -1266,13 +1266,13 @@ const FILTER_DEFINITIONS = {
   not_month_end: {
     label: "締め日が月末でない",
     predicate: (p) => {
-      return p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ";
+      return p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ" || p.name.includes("コメリ");
     }
   },
   month_end: {
     label: "締め日が月末",
     predicate: (p) => {
-      return !(p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ");
+      return !(p.name.includes("クスリのアオキ") || p.name === "コカ・コーラボトラーズ" || p.name.includes("コメリ"));
     }
   },
   annual_sheet: {
