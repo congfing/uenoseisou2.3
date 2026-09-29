@@ -69,9 +69,9 @@
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    position: sticky;
-    top: 10px;
-    z-index: 5;
+    background: #ffffff;
+    position: relative;
+    z-index: 2;
   }
   .selector label {
     display: block;
@@ -154,6 +154,46 @@
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    background: #ffffff;
+  }
+  .card-top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+    flex-wrap: wrap;
+  }
+  .card-nav-btn {
+    background: #f1f3f5;
+    color: var(--text);
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card-nav-btn:hover, .card-nav-btn:active {
+    background: #e1e4e8;
+  }
+  .card-nav-btn.primary {
+    background: #eef3fb;
+    color: #0969da;
+    border-color: #c8d8ee;
+  }
+  .card-nav-btn.primary:hover, .card-nav-btn.primary:active {
+    background: #0969da;
+    color: #ffffff;
   }
   .placeholder {
     text-align: center;
@@ -671,12 +711,12 @@
 </main>
 
 <!-- 全画面画像モーダル（ライトボックス） -->
-<div class="image-modal-overlay" id="imageModal" style="display: none;" onclick="if(event.target===this)closeImageModal()">
+<div class="image-modal-overlay" id="imageModal" style="display: none;" onclick="handleModalBackdropClick(event)">
   <div class="image-modal-header">
     <span class="image-modal-title" id="imageModalTitle">画像プレビュー</span>
     <button type="button" class="image-modal-close" id="imageModalClose" onclick="closeImageModal()" title="閉じる（✕）" aria-label="閉じる">✕</button>
   </div>
-  <div class="image-modal-body" id="imageModalBody" onclick="if(event.target===this)closeImageModal()">
+  <div class="image-modal-body" id="imageModalBody" onclick="handleModalBackdropClick(event)">
     <img id="imageModalImg" src="" alt="拡大画像プレビュー">
   </div>
   <div class="image-modal-footer" id="imageModalFooter">
@@ -1644,13 +1684,43 @@ const closeFilterCandidates = document.getElementById('closeFilterCandidates');
 
 function populateSelect(list, selectedNo) {
   select.innerHTML = '<option value="">-- 物件を選択 --</option>';
-  list.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.no;
-    opt.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
-    select.appendChild(opt);
-  });
-  if (selectedNo && list.some(p => p.no === selectedNo)) select.value = selectedNo;
+  const hasFilter = (activeFilterKey || searchInput.value.trim());
+
+  if (hasFilter && list.length < properties.length) {
+    // 絞り込み中：まず該当候補を optgroup で表示
+    const groupFiltered = document.createElement('optgroup');
+    groupFiltered.label = `【絞り込み該当】 (${list.length}件)`;
+    list.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.no;
+      opt.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
+      groupFiltered.appendChild(opt);
+    });
+    select.appendChild(groupFiltered);
+
+    // 続けて、その他の全物件も選択可能にして「その他の情報が開けない」問題を解消
+    const groupAll = document.createElement('optgroup');
+    groupAll.label = `【その他の全物件から選択】 (${properties.length}件)`;
+    properties.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.no;
+      opt.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
+      groupAll.appendChild(opt);
+    });
+    select.appendChild(groupAll);
+  } else {
+    // 絞り込みなし：全物件をそのまま表示
+    list.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.no;
+      opt.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
+      select.appendChild(opt);
+    });
+  }
+
+  if (selectedNo) {
+    select.value = selectedNo;
+  }
   hitCount.textContent = `表示候補：${list.length} / ${properties.length}物件`;
 }
 
@@ -1667,8 +1737,10 @@ function renderCandidates(list, selectedNo) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'candidate-chip' + (selectedNo === p.no ? ' selected' : '');
+        btn.setAttribute('data-no', p.no);
         btn.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           selectPropertyByNo(p.no);
         });
         candidatesList.appendChild(btn);
@@ -1692,8 +1764,10 @@ function renderCandidates(list, selectedNo) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'candidate-chip' + (selectedNo === p.no ? ' selected' : '');
+        btn.setAttribute('data-no', p.no);
         btn.textContent = String(p.no).padStart(2, ' ') + '. ' + p.name;
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           selectPropertyByNo(p.no);
         });
         searchCandidatesList.appendChild(btn);
@@ -1707,23 +1781,45 @@ function renderCandidates(list, selectedNo) {
 }
 
 function selectPropertyByNo(no) {
-  select.value = no;
   const p = properties.find(x => x.no === no);
   if (!p) {
+    select.value = '';
     content.innerHTML = `<div class="card"><div class="placeholder">上のプルダウンから物件を選択すると、<br>その物件の記入箇所データが表示されます。</div></div>`;
     return;
   }
+  select.value = no;
   content.innerHTML = renderProperty(p);
   // 候補チップの選択ハイライトを更新
   document.querySelectorAll('.candidate-chip').forEach(chip => {
-    chip.classList.toggle('selected', chip.textContent.startsWith(String(p.no).padStart(2, ' ') + '.'));
+    chip.classList.toggle('selected', chip.getAttribute('data-no') === String(p.no));
   });
-  // 詳細カードへスムーズにスクロール
+  // 詳細カードへスムーズにスクロール（画面上部に適度な余白を持たせて最上部から全貌を表示）
   const cardElem = content.querySelector('.card');
   if (cardElem) {
-    cardElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const cardTop = cardElem.getBoundingClientRect().top + window.pageYOffset - 16;
+    window.scrollTo({ top: Math.max(0, cardTop), behavior: 'smooth' });
   }
 }
+
+function scrollToSelector() {
+  const selectorElem = document.querySelector('.selector');
+  if (selectorElem) {
+    const top = selectorElem.getBoundingClientRect().top + window.pageYOffset - 10;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+window.scrollToSelector = scrollToSelector;
+
+function resetAllFilters() {
+  activeFilterKey = null;
+  filterButtons.forEach(b => b.classList.remove('active'));
+  searchInput.value = '';
+  updateDisplay();
+  scrollToSelector();
+}
+window.resetAllFilters = resetAllFilters;
 
 function getFilteredProperties() {
   let list = properties;
@@ -1824,6 +1920,13 @@ function escapeHtml(s) {
 }
 
 function renderProperty(p) {
+  const isFiltered = !!(activeFilterKey || searchInput.value.trim());
+  const topNavHtml = `
+    <div class="card-top-nav">
+      <button type="button" class="card-nav-btn" onclick="scrollToSelector()" title="検索・分類選択に戻る">▲ 検索・分類に戻る</button>
+      ${isFiltered ? `<button type="button" class="card-nav-btn primary" onclick="resetAllFilters()" title="全43物件の表示に戻す">🔄 候補を全部表示に戻す</button>` : ''}
+    </div>
+  `;
   const fileNoteHtml = p.fileNote
     ? `<div class="file-header-note">${escapeHtml(p.fileNote)}</div>` : "";
   const headerHtml = p.header
@@ -1853,17 +1956,25 @@ function renderProperty(p) {
         }
         const titleStr = `${p.name} - ${labelText}`;
         return `<div class="screenshot-item">
-          <div class="screenshot-label">${escapeHtml(labelText)}（画像をタップすると拡大できます）</div>
-          <div class="screenshot-frame js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}" onclick="openImageModal('${escapeHtml(path)}', '${escapeHtml(titleStr)}')">
+          <div class="screenshot-label">${escapeHtml(labelText)}（画像をタップすると全画面拡大できます）</div>
+          <div class="screenshot-frame js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}">
             <img src="${escapeHtml(path)}" alt="${escapeHtml(p.name)}の物件表スクリーンショット" loading="lazy">
           </div>
-          <button type="button" class="screenshot-link-btn js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}" onclick="openImageModal('${escapeHtml(path)}', '${escapeHtml(titleStr)}')">🔍 画像を別画面（拡大）で開く</button>
+          <button type="button" class="screenshot-link-btn js-modal-trigger" data-src="${escapeHtml(path)}" data-title="${escapeHtml(titleStr)}">🔍 物件表を全画面拡大で開く</button>
         </div>`;
       }).join("")}</div>`
     : `<div class="screenshot-section"><div class="screenshot-title">物件表スクリーンショット（2026年9月）</div><div class="screenshot-missing">この物件のスクリーンショットは未登録です。</div></div>`;
 
+  const bottomNavHtml = `
+    <div style="margin-top:22px;padding-top:14px;border-top:1px dashed var(--border);display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;">
+      <button type="button" class="card-nav-btn" onclick="scrollToSelector()">▲ 検索・分類に戻る</button>
+      ${isFiltered ? `<button type="button" class="card-nav-btn primary" onclick="resetAllFilters()">🔄 候補を全部表示に戻す</button>` : ''}
+    </div>
+  `;
+
   return `
     <div class="card">
+      ${topNavHtml}
       <div class="property-header">
         <span class="property-no">物件No.${p.no}</span>
         <span class="property-name">${escapeHtml(p.mark || "")} ${escapeHtml(p.name)}</span>
@@ -1876,6 +1987,7 @@ function renderProperty(p) {
       ${conversionHtml}
       ${notesHtml}
       ${screenshotHtml}
+      ${bottomNavHtml}
     </div>
   `;
 }
@@ -1883,6 +1995,7 @@ function renderProperty(p) {
 // 画像拡大モーダル制御
 let imageZoom = 1;
 let imageFitWidth = 0;
+let modalOpenedAt = 0;
 
 function updateImageZoomLabel() {
   const label = document.getElementById('imageZoomLabel');
@@ -1919,6 +2032,7 @@ function openImageModal(src, title) {
     console.warn('Image modal elements not found');
     return;
   }
+  modalOpenedAt = Date.now(); // モバイルでのタップバブリング誤クローズ防止
   imageZoom = 1;
   imageFitWidth = 0;
   modalImg.style.width = 'auto';
@@ -1927,7 +2041,9 @@ function openImageModal(src, title) {
   if (modalTitle) modalTitle.textContent = title || '画像プレビュー';
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  if (modalImg.complete) fitImageToModal();
+  if (modalImg.complete) {
+    fitImageToModal();
+  }
 }
 window.openImageModal = openImageModal;
 
@@ -1947,21 +2063,35 @@ function closeImageModal() {
 }
 window.closeImageModal = closeImageModal;
 
+// モーダル背景タップ時の誤クローズ防止ハンドラ
+function handleModalBackdropClick(e) {
+  // モーダルを開いてから400ms以内は、タッチイベントの遅延伝播による誤クローズを完全に防ぐ
+  if (Date.now() - modalOpenedAt < 400) return;
+  if (e.target === e.currentTarget) {
+    closeImageModal();
+  }
+}
+window.handleModalBackdropClick = handleModalBackdropClick;
+
 document.getElementById('imageZoomOut')?.addEventListener('click', (e) => {
+  e.preventDefault();
   e.stopPropagation();
   changeImageZoom(-0.25);
 });
 document.getElementById('imageZoomIn')?.addEventListener('click', (e) => {
+  e.preventDefault();
   e.stopPropagation();
   changeImageZoom(0.25);
 });
 document.getElementById('imageZoomReset')?.addEventListener('click', (e) => {
+  e.preventDefault();
   e.stopPropagation();
   imageZoom = 1;
   applyImageZoom();
   document.getElementById('imageModalBody')?.scrollTo({ top: 0, left: 0 });
 });
 document.getElementById('imageZoomClose')?.addEventListener('click', (e) => {
+  e.preventDefault();
   e.stopPropagation();
   closeImageModal();
 });
@@ -1974,6 +2104,7 @@ document.addEventListener('click', (e) => {
   const trigger = e.target.closest('.js-modal-trigger');
   if (trigger) {
     e.preventDefault();
+    e.stopPropagation();
     const src = trigger.getAttribute('data-src');
     const title = trigger.getAttribute('data-title');
     if (src) {
