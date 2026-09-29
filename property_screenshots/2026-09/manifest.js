@@ -1,6 +1,6 @@
 window.MONTHLY_SCREENSHOTS = {
   "LA・MU": [
-    "property_screenshots/2026-09/lamu_01_9-01.png"
+    "property_screenshots/2026-09/lamu_20260930.png"
   ],
   "あみやき亭": [
     "property_screenshots/2026-09/amiyaki_20260918.png"
