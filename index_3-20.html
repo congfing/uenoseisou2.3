@@ -2010,6 +2010,7 @@ function openEntry(idx,event,returnScreen){
   document.getElementById('clearPropertyButton').style.display=state.entryReturnScreen===9?'none':'block';
   const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
   const lastSaved=getLastData(prop.name);
+  const calcUnitNote=['イオンタウン伊賀','マックスバリュ佐那具店','マックスバリュ上野店','旧上野庁舎 SAKAKURA BASE'].includes(prop.name)?'（計算用）':'';
   const c=document.getElementById('inputFields'); c.innerHTML='';
   c.classList.toggle('sakakura-entry-grid',prop.name===SAKAKURA_PROPERTY_NAME);
   const renderedPairs=new Set();
@@ -2030,7 +2031,7 @@ function openEntry(idx,event,returnScreen){
       div.className='field-group card';
       div.innerHTML=`<div class="combined-field-row horizontal-combined">
           <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）${calcUnitNote}</span></div>
             ${getLastValueHint(lastSaved,bagField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
               id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
@@ -2077,7 +2078,7 @@ function openEntry(idx,event,returnScreen){
         div.className='field-group card';
         div.innerHTML=`<div class="combined-field-row">
             <div class="combined-field-input">
-              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）${calcUnitNote}</span></div>
               ${getLastValueHint(lastSaved,bagField,prop.name)}
               <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
                 id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
