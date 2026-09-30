@@ -732,7 +732,7 @@
 
 <footer>計量物件表 記入箇所メモ v5-1</footer>
 
-<script src="property_screenshots/2026-09/manifest.js?v=20260930_0610"></script>
+<script src="property_screenshots/2026-09/manifest.js?v=20260930_1728"></script>
 <script>
 const properties = [
   {
@@ -1949,6 +1949,10 @@ function renderProperty(p) {
           labelText += '【年間集計：上野法務合同庁舎 実績報告】';
         } else if (path.includes('prosecutors')) {
           labelText += '【月Sheet：検察庁（日次入力・月合計）】';
+        } else if (path.includes('district_court_annual')) {
+          labelText += '【年報シート：年統計（一般廃棄物収集量報告書）】';
+        } else if (path.includes('district_court')) {
+          labelText += '【月報シート：日次記録（廃棄物重量報告書）】';
         } else if (path.includes('uomasa_sheet1')) {
           labelText += '【Sheet1：月間総数記録】';
         } else if (path.includes('uomasa_sheet2')) {

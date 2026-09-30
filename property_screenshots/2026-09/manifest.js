@@ -105,7 +105,8 @@ window.MONTHLY_SCREENSHOTS = {
     "property_screenshots/2026-09/furuhon_20260918.png"
   ],
   "津地方裁判所伊賀支部": [
-    "property_screenshots/2026-09/district_court_20260918b.png"
+    "property_screenshots/2026-09/district_court_20260918b.png",
+    "property_screenshots/2026-09/district_court_annual_20260930.png"
   ],
   "西松屋 伊賀上野店": [
     "property_screenshots/2026-09/nishimatsuya_20260918.png"
