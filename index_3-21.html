@@ -2374,14 +2374,8 @@ function exportText(){
     const data = state.entryData[prop.name];
     lines.push((idx+1) + '．' + prop.name);
     const incCol = shouldIncludeMailColumns(prop);
-    const isSeven = prop.name && prop.name.startsWith('7.11 ');
     prop.fields.forEach(f => {
-      let fieldValue = getFieldValue(data, f, prop.name);
-      if (isSeven && ['ビン', 'PET', '缶'].includes(f.label)) {
-        if (fieldValue === '' || fieldValue === undefined) {
-          fieldValue = '0';
-        }
-      }
+      const fieldValue = getFieldValue(data, f, prop.name);
       const val = (fieldValue !== '' && fieldValue !== undefined) ? fieldValue : '－';
       const extraColumn = incCol ? getSevenSeparateMaterialColumn(prop, f) : '';
       const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
@@ -3114,16 +3108,9 @@ function sendHistoryByMail(ri, event){
     if(!hasVal) return;
     const propertyLines = [`【${prop.name}】`];
     const incCol = shouldIncludeMailColumns(prop);
-    const isSeven = prop.name && prop.name.startsWith('7.11 ');
     prop.fields.forEach(f => {
-      let val = getFieldValue(data, f, prop.name);
-      if (isSeven && ['ビン', 'PET', '缶'].includes(f.label)) {
-        if (val === '' || val === undefined) {
-          val = '0';
-        }
-      } else {
-        if (val === '' || val === undefined) return;
-      }
+      const val = getFieldValue(data, f, prop.name);
+      if (val === '' || val === undefined) return;
       const extraColumn = incCol ? getSevenSeparateMaterialColumn(prop, f) : '';
       const sourceHint = incCol ? (extraColumn ? ` [${extraColumn}列・項目外]` : f.row ? ` [${f.row}行]` : f.col ? ` [${f.col}列]` : '') : '';
       const mailLabel = getFieldMailLabel(prop, f);
