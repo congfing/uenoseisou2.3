@@ -3149,12 +3149,22 @@ const LS_MAIL_LIST = 'keiryo_mail_list';
 const LS_MAIL_INCLUDE_COLUMNS = 'keiryo_mail_include_columns';
 const MAIL_COUNT = 4;
 
+// メール本文への項目列付与停止指示に伴う初期化（既存端末の古いtrue設定をfalseにリセット）
+try {
+  const mailColMigratedKey = 'keiryo_mail_col_stop_migrated_v2';
+  if (!localStorage.getItem(mailColMigratedKey)) {
+    localStorage.setItem(LS_MAIL_INCLUDE_COLUMNS, 'false');
+    localStorage.setItem(mailColMigratedKey, 'true');
+  }
+} catch(e){}
+
 function shouldIncludeMailColumns(prop){
   // セブン-イレブン・セカンドストリートは横書き形式のため常に列番号を付与しない
   if(prop && (prop.name.startsWith('7.11 ') || prop.name.includes('セカンドストリート'))){
     return false;
   }
-  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, true);
+  // ご指示によりメール本文への項目列付与は初期状態で停止（デフォルト: false）
+  const enabled = !!loadJSON(LS_MAIL_INCLUDE_COLUMNS, false);
   if(!enabled) return false;
   return true;
 }
@@ -4331,8 +4341,6 @@ function saveColSettingCurrentProp() {
 
   // 全体保存
   saveJSON(LS_PROPERTIES, allProperties);
-  // メール送信時に列番号を反映できるようにフラグも有効化
-  saveJSON(LS_MAIL_INCLUDE_COLUMNS, true);
 
   // 通知表示
   const noticeEl = document.getElementById('colPropSaveNotice');
