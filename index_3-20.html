@@ -950,6 +950,14 @@ function getAutoKgRule(prop,sourceKey){
     };
     const d=defaults[sourceKey];
     if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name==='チョーヤ梅酒伊賀上野工場'){
+    // 規定値：可燃物収集(㎥)×75、フィルター紙収集(㎥)×175 ＝ kg
+    const defaults={
+      '可燃物収集__㎥':{target:'可燃物収集__kg',multiplier:75},
+      'フィルター紙収集__㎥':{target:'フィルター紙収集__kg',multiplier:175}
+    };
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
   } else if(prop.name===SAKAKURA_PROPERTY_NAME){
     const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===sourceKey);
     if(pair) rule = {target:pair.kg,multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
@@ -984,7 +992,14 @@ function getAutoMultiplierControl(prop,sourceKey){
   if(!rule||!rule.selectable) return '';
   const multiplier=getAutoMultiplier(prop,sourceKey,rule.multiplier);
   const selected=multiplier===null ? '' : String(multiplier);
-  const options=['',...Array.from({length:10},(_,i)=>String(i+1))]
+  const baseValues=Array.from({length:10},(_,i)=>String(i+1));
+  const extraValues=[rule.multiplier,multiplier];
+  if(prop.name==='チョーヤ梅酒伊賀上野工場') extraValues.push(75,175);
+  extraValues.forEach(v=>{
+    if(v!==null&&v!==undefined&&!baseValues.includes(String(v))) baseValues.push(String(v));
+  });
+  baseValues.sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const options=['',...baseValues]
     .map(value=>`<option value="${value}" ${value===selected?'selected':''}>${value===''?'なし':value}</option>`)
     .join('');
   return `<div class="auto-multiplier-row"><span>倍率</span><select class="auto-multiplier-select" data-source-key="${sourceKey}">${options}</select></div>`;
