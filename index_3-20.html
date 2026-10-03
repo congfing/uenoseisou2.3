@@ -571,7 +571,7 @@
 <script>
 const DAYS_JP   = ['日','月','火','水','木','金','土'];
 const ORDERED_DAYS = ['月','火','水','木','金','土','日'];
-const FIELD_SUGGESTIONS = ['可燃','不燃','可燃ごみ','不燃ごみ','生活ゴミ（可燃）','生活ゴミ（不燃）','産業廃棄物','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
+const FIELD_SUGGESTIONS = ['可燃','不燃','可燃ごみ','不燃ごみ','生活ゴミ(可燃)','生活ゴミ(不燃)','産業廃棄物','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
 const LS_PROPERTIES    = 'keiryo_properties';
 const LS_STAFF         = 'keiryo_staff';
 const LS_ORDER_PREFIX  = 'keiryo_order_';
@@ -715,15 +715,15 @@ const LEGACY_FIELD_VALUE_KEYS={
   ['上野法務合同庁舎::不燃物__kg']:['不燃__kg','不燃ごみ__kg'],
   ['上野法務合同庁舎::資源ごみ__kg']:['古紙__kg','シュレッダー__kg'],
   ['飯田金属::kg数__kg']:['収集__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(可燃)__袋']:['生ごみ（前）__袋'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(可燃)__kg']:['生ごみ（前）__kg'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(不燃)__袋']:['生ごみ（廃）__袋'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(不燃)__kg']:['生ごみ（廃）__kg'],
   ['株式会社クスリのアオキ 伊賀上野店::産業廃棄物__kg']:['廃業廃棄物__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(可燃)__袋']:['生ごみ（前）__袋'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(可燃)__kg']:['生ごみ（前）__kg'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(不燃)__袋']:['生ごみ（廃）__袋'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(不燃)__kg']:['生ごみ（廃）__kg'],
   ['株式会社クスリのアオキ 平野東店::産業廃棄物__kg']:['廃業廃棄物__kg']
 };
 const LEGACY_FIELD_VALUE_SUM_KEYS={
@@ -740,7 +740,7 @@ const DEFAULT_PROPERTIES = [
   { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
   { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'G'}] },
   { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'金属',unit:'kg',col:'I'},{label:'ビン・割れ物',unit:'kg',col:'M'},{label:'硬質プラスチック',unit:'kg',col:'R'}] },
-  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'O'}] },
+  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'Q'}] },
   { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
   { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
   { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
@@ -751,9 +751,9 @@ const DEFAULT_PROPERTIES = [
   { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
 
   { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'F'},{label:'発泡スチロール',unit:'kg',col:'I'},{label:'木くず',unit:'kg',col:'K'},{label:'その他',unit:'kg',col:'M'}] },
-  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'袋',col:'L'}] },
-  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
-  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
+  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'L'},{label:'可燃ごみ',unit:'kg',col:'M'}] },
+  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
+  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
   { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'J'}] },
   { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
   { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物',unit:'袋',col:'E'},{label:'不燃物',unit:'kg',col:'F'},{label:'ダンボール',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'カン',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'}] },
@@ -767,16 +767,16 @@ const DEFAULT_PROPERTIES = [
   { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'欄外・計算用'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'}] },
   { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'D'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'}] },
   { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋',col:'D'},{label:'可燃物',unit:'kg',col:'F'},{label:'古紙',unit:'kg',col:'H'},{label:'資源物',unit:'袋',col:'J'},{label:'資源物',unit:'kg',col:'L'}] },
-  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'E'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'G'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'I'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'K'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'M'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'O'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'Q'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'S'}] },
+  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'D'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'F'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'H'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'J'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'L'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'N'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'P'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'R'}] },
   { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg',col:'C'},{label:'紙類',unit:'kg',col:'D'},{label:'他可燃ゴミ',unit:'kg',col:'E'},{label:'不燃(ビニール等)',unit:'kg',col:'F'},{label:'カン',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'},{label:'割れ物',unit:'kg',col:'J'},{label:'発泡',unit:'kg',col:'K'},{label:'食品リサイクル',unit:'kg',col:'L'}] },
   { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'kg',col:'H'}] },
   { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
   { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg',col:'B'},{label:'不燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'F'}] },
-  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
+  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
   { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'I'}] },
   { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'I'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
-  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
-  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
+  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ(可燃)',unit:'kg',col:'B'},{label:'生活ゴミ(可燃)',unit:'袋',col:'C'},{label:'生活ゴミ(不燃)',unit:'kg',col:'E'},{label:'生活ゴミ(不燃)',unit:'袋',col:'F'}] },
+  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ(可燃)',unit:'kg',col:'B'},{label:'生活ゴミ(可燃)',unit:'袋',col:'C'},{label:'生活ゴミ(不燃)',unit:'kg',col:'E'},{label:'生活ゴミ(不燃)',unit:'袋',col:'F'}] },
   { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'不燃物１（ビン・缶・PET）',unit:'袋',col:'G'},{label:'不燃物１（ビン・缶・PET）',unit:'kg',col:'I'},{label:'不燃物２（容器包装系）',unit:'袋',col:'K'},{label:'不燃物２（容器包装系）',unit:'kg',col:'M'},{label:'粗大ごみ／その他',unit:'袋',col:'O'},{label:'粗大ごみ／その他',unit:'kg',col:'Q'}] },
 ];
 const DEFAULT_STAFF = ['担当者A','担当者B'];
@@ -921,8 +921,8 @@ function getAutoKgRule(prop,sourceKey){
     }
   } else if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
     const targets={
-      '生活ゴミ（可燃）__袋':'生活ゴミ（可燃）__kg',
-      '生活ゴミ（不燃）__袋':'生活ゴミ（不燃）__kg'
+      '生活ゴミ(可燃)__袋':'生活ゴミ(可燃)__kg',
+      '生活ゴミ(不燃)__袋':'生活ゴミ(不燃)__kg'
     };
     if(targets[sourceKey]){
       rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
