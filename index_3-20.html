@@ -2069,17 +2069,22 @@ function openEntry(idx,event,returnScreen){
     }
 
     const cleanLabel=normalizeLabelForPair(field.label);
-    const bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
     const kgIdx=prop.fields.findIndex(f=>f.unit==='kg'&&normalizeLabelForPair(f.label)===cleanLabel);
-    if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
+    // 倍率連動元：同名で倍率ルールを持つ項目（㎥など）を優先し、なければ従来どおり「袋」
+    let bagIdx=prop.fields.findIndex(f=>f.unit!=='kg'&&normalizeLabelForPair(f.label)===cleanLabel&&(()=>{
+      const r=getAutoKgRule(prop,fieldKey(f));
+      return r&&kgIdx!==-1&&r.target===fieldKey(prop.fields[kgIdx]);
+    })());
+    if(bagIdx===-1) bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
+    if(bagIdx!==-1&&kgIdx!==-1&&(fieldIdx===bagIdx||field.unit==='kg')){
       const bagField=prop.fields[bagIdx];
       const kgField=prop.fields[kgIdx];
       const bagKey=fieldKey(bagField);
       const rule=getAutoKgRule(prop,bagKey);
 
-      // 倍率が有効な場合のみ、袋数×倍率＝kg の横並び連動枠として表示
+      // 倍率が有効な場合のみ、数量×倍率＝kg の連動枠（同じ項目名を1つの枠）として表示
       if(rule && bagField.hasMultiplier!==false && kgField.hasMultiplier!==false){
-        const pairKey=`${cleanLabel}__袋kg`;
+        const pairKey=`${cleanLabel}__${bagField.unit}kg`;
         if(renderedPairs.has(pairKey)) return;
         renderedPairs.add(pairKey);
 
@@ -2093,7 +2098,7 @@ function openEntry(idx,event,returnScreen){
         div.className='field-group card';
         div.innerHTML=`<div class="combined-field-row">
             <div class="combined-field-input">
-              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）${calcUnitNote}</span></div>
+              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（${bagField.unit}）${bagField.unit==='袋'?calcUnitNote:''}</span></div>
               ${getLastValueHint(lastSaved,bagField,prop.name)}
               <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
                 id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
