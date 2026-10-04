@@ -629,10 +629,10 @@ function canonicalizePropertyData(data){
 }
 const SAKAKURA_PROPERTY_NAME='旧上野庁舎 SAKAKURA BASE';
 const SAKAKURA_AUTO_PAIRS=[
-  {bag:'ホテル（白）可燃ごみ__袋',kg:'ホテル（白）可燃ごみ__kg'},
-  {bag:'図書館（青）可燃ごみ__袋',kg:'図書館（青）可燃ごみ__kg'},
-  {bag:'物販（透明）可燃ごみ__袋',kg:'物販（透明）可燃ごみ__kg'},
-  {bag:'カフェ（黒）可燃ごみ__袋',kg:'カフェ（黒）可燃ごみ__kg'}
+  {group:'ホテル（白）',bag:'ホテル（白）可燃ごみ__袋',kg:'ホテル（白）可燃ごみ__kg',fu:'ホテル（白）不燃ごみ__kg'},
+  {group:'図書館（青）',bag:'図書館（青）可燃ごみ__袋',kg:'図書館（青）可燃ごみ__kg',fu:'図書館（青）不燃ごみ__kg'},
+  {group:'物販（透明）',bag:'物販（透明）可燃ごみ__袋',kg:'物販（透明）可燃ごみ__kg',fu:'物販（透明）不燃ごみ__kg'},
+  {group:'カフェ（黒）',bag:'カフェ（黒）可燃ごみ__袋',kg:'カフェ（黒）可燃ごみ__kg',fu:'カフェ（黒）不燃ごみ__kg'}
 ];
 const LEGACY_MULTIPLIER_SOURCE_KEYS={
   'イオンタウン伊賀::ごみ__袋':'可燃__袋',
@@ -1977,12 +1977,16 @@ function findFieldIndexByKey(prop,key){
 function getSakakuraPair(prop,fieldIdx){
   if(prop.name!==SAKAKURA_PROPERTY_NAME) return null;
   const currentKey=fieldKey(prop.fields[fieldIdx]);
-  const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===currentKey||item.kg===currentKey);
+  const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===currentKey||item.kg===currentKey||item.fu===currentKey);
   if(!pair) return null;
   const bagIdx=findFieldIndexByKey(prop,pair.bag);
   const kgIdx=findFieldIndexByKey(prop,pair.kg);
-  if(bagIdx===-1||kgIdx===-1) return null;
-  return {pairKey:`sakakura_${pair.bag}_${pair.kg}`,bagIdx,kgIdx,horizontal:true};
+  const fuIdx=pair.fu ? findFieldIndexByKey(prop,pair.fu) : -1;
+  if(bagIdx===-1||kgIdx===-1){
+    // 袋/kgのどちらかが削除されている場合は、不燃単独では枠をまとめない
+    return null;
+  }
+  return {pairKey:`sakakura_${pair.bag}_${pair.kg}`,group:pair.group,bagIdx,kgIdx,fuIdx,horizontal:true};
 }
 
 function getEntryValue(existing,field,propName=''){
@@ -2042,9 +2046,14 @@ function openEntry(idx,event,returnScreen){
       const bagInputId=`ef_${specialPair.bagIdx}`;
       const kgInputId=`ef_${specialPair.kgIdx}`;
       const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
+      const fuField=specialPair.fuIdx!==-1 ? prop.fields[specialPair.fuIdx] : null;
+      const fuKey=fuField ? fieldKey(fuField) : '';
+      const fuInputId=fuField ? `ef_${specialPair.fuIdx}` : '';
       const div=document.createElement('div');
       div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row horizontal-combined">
+      div.style.border='1.5px solid #9e9e9e';
+      div.innerHTML=`<div class="field-label" style="margin-bottom:6px;">${specialPair.group||''}</div>
+        <div class="combined-field-row horizontal-combined">
           <div class="combined-field-input">
             <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）${calcUnitNote}</span></div>
             ${getLastValueHint(lastSaved,bagField,prop.name)}
@@ -2058,12 +2067,19 @@ function openEntry(idx,event,returnScreen){
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
               id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
           </div>
-        </div>`;
+        </div>
+        ${fuField ? `<div class="combined-field-input" style="margin-top:10px;">
+            <div class="combined-field-unit">${fuField.label}<span class="field-unit">（${fuField.unit}）</span></div>
+            ${getLastValueHint(lastSaved,fuField,prop.name)}
+            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+              id="${fuInputId}" data-field-key="${fuKey}" placeholder="0" value="${getEntryValue(existing,fuField,prop.name)}">
+          </div>` : ''}`;
       c.appendChild(div);
       const bagInput=div.querySelector(`#${bagInputId}`);
       const kgInput=div.querySelector(`#${kgInputId}`);
       bindEntryInput(prop,bagInput,bagKey);
       bindEntryInput(prop,kgInput,kgKey);
+      if(fuField) bindEntryInput(prop,div.querySelector(`#${fuInputId}`),fuKey);
       bindMultiplierControl(prop,div,bagInput,bagKey);
       return;
     }
