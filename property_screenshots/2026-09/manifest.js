@@ -99,7 +99,7 @@ window.MONTHLY_SCREENSHOTS = {
   ],
   "魚民 上野市駅前店": [
     "property_screenshots/2026-09/uomasa_sheet1_20260918.png",
-    "property_screenshots/2026-09/uomasa_sheet2_20260918.png"
+    "property_screenshots/2026-09/uomasa_sheet2_20261006.png"
   ],
   "古本市場 上野店": [
     "property_screenshots/2026-09/furuhon_20260918.png"
