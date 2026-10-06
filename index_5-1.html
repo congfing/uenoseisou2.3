@@ -666,6 +666,7 @@
       <div class="filter-box-title">分類で絞り込み（タップで候補を表示）</div>
       <div class="filter-btn-group">
         <button type="button" class="filter-btn" data-filter="formula_kg">袋数を数式でkg</button>
+        <button type="button" class="filter-btn" data-filter="bag_and_kg">袋kg両方記入</button>
         <button type="button" class="filter-btn" data-filter="not_month_end">締め日が月末でない</button>
         <button type="button" class="filter-btn" data-filter="month_end">締め日が月末</button>
         <button type="button" class="filter-btn" data-filter="annual_sheet">sheetが年間sheet</button>
@@ -1605,6 +1606,21 @@ const FILTER_DEFINITIONS = {
         "旧上野庁舎 SAKAKURA BASE",
         "農業屋 伊賀上野店",
         "伊賀の街"
+      ];
+      return names.includes(p.name);
+    }
+  },
+  bag_and_kg: {
+    label: "袋kg両方記入",
+    predicate: (p) => {
+      // 同じ品目で「袋」と「kg」の両方を手入力する物件（数式でkg換算する物件は除く）
+      const names = [
+        "古本市場 上野店",
+        "すき家 伊賀上野店",
+        "クスリのアオキ 伊賀上野店",
+        "クスリのアオキ 平野東店",
+        "西松屋 伊賀上野店",
+        "コメリ ＨＣ上野店"
       ];
       return names.includes(p.name);
     }
