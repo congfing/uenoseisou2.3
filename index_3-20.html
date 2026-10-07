@@ -3226,13 +3226,27 @@ function shareHistoryAsExcel(ri, event){
 }
 
 // ===== SEND HISTORY BY MAIL =====
-function sendHistoryByMail(ri, event){
-  event.stopPropagation();
+function sendHistoryByMail(ri, event, resendMode){
+  event?.stopPropagation();
   let hist = getAllHistory();
   const filterDate = state._histFilterDate || null;
   if(filterDate) hist = hist.filter(h => h.date === filterDate);
   const record = hist[ri];
   if(!record){ alert('データが見つかりません'); return; }
+  if(isHistoryMailSent(record)&&!resendMode){
+    let dialog=document.getElementById('historyResendDialog');
+    if(!dialog){
+      dialog=document.createElement('dialog');dialog.id='historyResendDialog';
+      dialog.style.cssText='background:#fff;color:#000;border:1px solid #000;padding:20px;max-width:90vw';
+      dialog.innerHTML='<div style="font-weight:bold;margin-bottom:16px">再送信</div><div style="display:flex;gap:12px"><button type="button" class="btn btn-secondary" data-mode="同じ内容">同じ内容</button><button type="button" class="btn btn-secondary" data-mode="訂正">訂正</button></div><button type="button" class="btn btn-secondary" data-cancel style="margin-top:12px">キャンセル</button>';
+      document.body.appendChild(dialog);
+    }
+    dialog.querySelectorAll('[data-mode]').forEach(button=>{
+      button.onclick=()=>{dialog.close();sendHistoryByMail(ri,null,button.dataset.mode);};
+    });
+    dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
+    dialog.showModal();return;
+  }
 
   const d = new Date(record.date + 'T00:00:00');
   const dayName = DAYS_JP[d.getDay()];
@@ -3268,7 +3282,7 @@ function sendHistoryByMail(ri, event){
 
   const to = getMailTo();
   if(!to){ alert('送信先が設定されていません。\nメール設定タブでアドレスを登録してください。'); return; }
-  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）`);
+  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）${resendMode?`【${resendMode}】`:''}`);
   const bodyEncoded = encodeURIComponent(body);
   openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
   markHistoryMailSent(record);
