@@ -2233,12 +2233,13 @@ function openEntry(idx,event,returnScreen){
       if(targetField){
         const targetKey=fieldKey(targetField);
         const targetData={...(state.entryData[target.name]||{}),...(state.entryDraft[target.name]||{})};
-        const linked=document.createElement('div');linked.className='field-group card';
+        const linked=document.createElement('div');linked.className='combined-field-input';
+        linked.style.marginTop='16px';
         linked.innerHTML='<div class="field-label">段ボール<span class="field-unit">（kg）</span> <span style="color:#000">イオンタウン伊賀</span></div><input type="number" class="num-input" inputmode="decimal" min="0" step="any" id="linkedAeonCardboard" placeholder="0">';
         const linkedInput=linked.querySelector('input');
         linkedInput.value=getEntryValue(targetData,targetField,target.name);
         bindEntryInput(target,linkedInput,targetKey);
-        c.appendChild(linked);
+        div.appendChild(linked);
       }
     }
   });
