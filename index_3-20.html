@@ -2227,6 +2227,20 @@ function openEntry(idx,event,returnScreen){
     const input = div.querySelector('input.num-input');
     bindEntryInput(prop,input,key);
     bindMultiplierControl(prop,div,input,key);
+    if(prop.name==='マックスバリュ上野店'&&field.label==='段ボール'&&field.unit==='kg'){
+      const target=allProperties.find(p=>p.name==='イオンタウン伊賀');
+      const targetField=target?.fields.find(f=>f.label==='段ボール'&&f.unit==='kg');
+      if(targetField){
+        const targetKey=fieldKey(targetField);
+        const targetData={...(state.entryData[target.name]||{}),...(state.entryDraft[target.name]||{})};
+        const linked=document.createElement('div');linked.className='field-group card';
+        linked.innerHTML='<div class="field-label">段ボール<span class="field-unit">（kg）</span> <span style="color:#000">イオンタウン伊賀</span></div><input type="number" class="num-input" inputmode="decimal" min="0" step="any" id="linkedAeonCardboard" placeholder="0">';
+        const linkedInput=linked.querySelector('input');
+        linkedInput.value=getEntryValue(targetData,targetField,target.name);
+        bindEntryInput(target,linkedInput,targetKey);
+        c.appendChild(linked);
+      }
+    }
   });
   renderEntryScreenshot(prop);
   showScreen(4);
@@ -2240,7 +2254,25 @@ function savePropertyData(){
     data[fieldKey(f)]=v!==''?parseFloat(v):'';
     if(v!=='')hasVal=true;
   });
+  const linkedInput=document.getElementById('linkedAeonCardboard');
+  if(linkedInput&&linkedInput.value!=='')hasVal=true;
   if(!hasVal&&!confirm('値が入力されていません。空のまま保存しますか？'))return;
+  if(linkedInput){
+    const target=allProperties.find(p=>p.name==='イオンタウン伊賀');
+    const targetField=target.fields.find(f=>f.label==='段ボール'&&f.unit==='kg');
+    const targetKey=fieldKey(targetField);
+    const targetData={...(state.entryData[target.name]||{})};
+    if(linkedInput.value!==''||Object.prototype.hasOwnProperty.call(targetData,targetKey)){
+      targetData[targetKey]=linkedInput.value!==''?parseFloat(linkedInput.value):'';
+      state.entryData[target.name]=targetData;
+      setLastData(target.name,targetData,state.selectedStaff,state.date);
+      if(!state.entryOrder.includes(target.name))state.entryOrder.push(target.name);
+    }
+    if(state.entryDraft[target.name]){
+      delete state.entryDraft[target.name][targetKey];
+      if(!Object.keys(state.entryDraft[target.name]).length)delete state.entryDraft[target.name];
+    }
+  }
   state.entryData[prop.name]=data;
   if(state.entryDraft) delete state.entryDraft[prop.name];
   setLastData(prop.name,data,state.selectedStaff,state.date);
