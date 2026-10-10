@@ -148,6 +148,70 @@
   .col-lbl:hover { background:#d4e5f9; }
   .col-lbl input { cursor:pointer; margin:0; }
   .col-lbl.on { background:#1a6eb5; color:#fff; border-color:#1558a0; }
+  #btnNewRecord {
+    padding:4px 11px; border:1px solid #222; border-radius:4px;
+    background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer;
+  }
+
+  /* 新規登録 */
+  #newRecordDialog {
+    display:none; position:fixed; inset:0; z-index:320; padding:14px;
+    background:rgba(0,0,0,.38); align-items:center; justify-content:center;
+  }
+  #newRecordDialog.active { display:flex; }
+  #newRecordPanel {
+    width:min(920px,100%); max-height:calc(100vh - 28px); overflow:auto;
+    background:#fff; border:1px solid #222; border-radius:6px; padding:16px;
+  }
+  .new-record-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .new-record-head h2 { margin:0; font-size:18px; flex:1; }
+  #newRecordFields { border-top:1px solid #999; }
+  .new-record-field { border-bottom:1px solid #999; min-width:0; }
+  .new-record-field-title {
+    display:flex; align-items:center; gap:8px; width:100%; padding:11px 4px;
+    border:0; background:#fff; color:#111; font:inherit; font-weight:700; text-align:left; cursor:pointer;
+  }
+  .new-record-field-title::after { content:'▼'; margin-left:auto; font-size:10px; }
+  .new-record-field.open .new-record-field-title::after { content:'▲'; }
+  .new-record-field-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#555; font-weight:400; }
+  .new-record-field-body { display:none; padding:0 4px 11px; }
+  .new-record-field.open .new-record-field-body { display:block; }
+  .new-record-field input[type="text"], .new-record-field input[type="number"] {
+    width:100%; min-height:38px; padding:6px 8px; border:1px solid #777;
+    background:#fff; color:#111; font:inherit;
+  }
+  .new-record-choice-list { display:flex; flex-wrap:wrap; gap:5px; max-height:110px; overflow:auto; }
+  .new-record-choice {
+    padding:5px 8px; border:1px solid #888; border-radius:4px;
+    background:#fff; color:#111; font:inherit; cursor:pointer;
+  }
+  .new-record-choice.selected { background:#d9d9d9; font-weight:800; border-color:#222; }
+  .new-record-order-row { display:flex; gap:6px; align-items:center; }
+  .new-record-order-row input { flex:1; }
+  .new-record-order-row button { min-height:38px; border:1px solid #222; background:#fff; font-weight:700; }
+  #newRecordExisting { margin-top:8px; max-height:180px; overflow:auto; border:1px solid #aaa; }
+  .new-record-existing-row { display:grid; grid-template-columns:48px 1fr; gap:8px; padding:5px 7px; border-bottom:1px solid #ccc; }
+  .new-record-existing-row.preview { background:#d9d9d9; font-weight:800; }
+  .new-record-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  .new-record-actions button { padding:9px 15px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
+  #propertyManagePanel { display:none; margin-top:12px; border-top:1px solid #222; padding-top:12px; }
+  #propertyManagePanel.active { display:block; }
+  #propertySearchInput { width:100%; min-height:42px; padding:7px 9px; border:1px solid #777; font:inherit; }
+  #propertySearchResults { margin-top:8px; max-height:240px; overflow:auto; border:1px solid #999; }
+  .property-search-result {
+    display:block; width:100%; padding:9px; border:0; border-bottom:1px solid #ccc;
+    background:#fff; color:#111; text-align:left; font:inherit; cursor:pointer;
+  }
+  .property-search-result.selected { background:#d9d9d9; font-weight:800; }
+  #propertySelectedInfo { min-height:22px; margin-top:7px; font-weight:700; }
+  @media (max-width:620px) {
+    #newRecordDialog { padding:0; align-items:stretch; }
+    #newRecordPanel { max-height:100vh; width:100%; border-radius:0; padding:12px; }
+    .new-record-choice { min-height:38px; }
+    .new-record-actions { position:sticky; bottom:-12px; background:#fff; padding:10px 0 12px; }
+    .new-record-actions { flex-wrap:wrap; }
+    .new-record-actions button { flex:1 1 42%; }
+  }
 
   /* テーブルラッパー：残り全高を占有、縦横両方スクロール */
   #tableWrapper {
@@ -157,16 +221,16 @@
   }
   #emptyMsg { text-align:center; padding:40px; color:#888; font-size:14px; }
 
-  #dataTable { border-collapse:collapse; min-width:100%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+  #dataTable { border-collapse:collapse; min-width:100%; background:#fff; border:1px solid #999; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
   #dataTable.compact-columns { width:max-content; min-width:0; }
   #dataTable.compact-columns thead th,
-  #dataTable.compact-columns tbody td { max-width:280px; }
+  #dataTable.compact-columns tbody td { max-width:180px; }
   /* thead は tableWrapper のスクロールコンテナ内で top:0 に固定 */
   #dataTable thead { position:sticky; top:0; z-index:50; }
   #dataTable thead th {
-    background:#1a6eb5; color:#fff; padding:8px 12px;
+    background:#1a6eb5; color:#fff; padding:6px 6px;
     text-align:left; font-size:13px; font-weight:600;
-    white-space:nowrap; border-right:1px solid rgba(255,255,255,0.15);
+    white-space:nowrap; border:1px solid #999;
     cursor:pointer; user-select:none;
   }
   #dataTable thead th:hover { background:#1558a0; }
@@ -181,11 +245,22 @@
     color:#124f86; font-size:13px; font-weight:800;
   }
   #dataTable tbody td {
-    padding:4px 7px; font-size:13px; font-weight:400;
+    padding:3px 5px; font-size:13px; font-weight:400;
     vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    box-sizing:border-box;
+    box-sizing:border-box; border:1px solid #999;
   }
   #dataTable tbody td.rn { color:#aaa; font-size:11px; text-align:right; min-width:32px; }
+  #dataTable th.weekday-col,
+  #dataTable td.weekday-col {
+    width:58px; min-width:58px; max-width:58px;
+    padding-left:4px; padding-right:4px; text-align:center;
+  }
+  @media (max-width:620px) {
+    #dataTable thead th { padding:5px 4px; font-size:12px; }
+    #dataTable tbody td { padding:3px 4px; font-size:12px; max-width:150px; }
+    #dataTable th.weekday-col,
+    #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
+  }
 
   /* フィルター＋ソートポップアップ */
   #filterPopup {
@@ -347,6 +422,7 @@
     <select id="gitFileSelector"><option value="">⏳ 取得中…</option></select>
     <select id="sheetSelector" title="シートを選択" disabled><option value="">― シート ―</option></select>
     <button class="tb-btn" id="btnReload">🔄 最新を取得</button>
+    <button class="tb-btn" id="btnNewRecord">新規登録</button>
     <button class="tb-btn" id="btnAssignment">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
@@ -390,6 +466,26 @@
   </div>
 </div>
 
+<div id="newRecordDialog" role="dialog" aria-modal="true" aria-labelledby="newRecordTitle">
+  <div id="newRecordPanel">
+    <div class="new-record-head"><h2 id="newRecordTitle">新規登録</h2></div>
+    <div id="newRecordFields"></div>
+    <div id="propertyManagePanel">
+      <input type="search" id="propertySearchInput" placeholder="物件名をひらがな2文字以上で検索">
+      <div id="propertySelectedInfo"></div>
+      <div id="propertySearchResults"></div>
+    </div>
+    <div class="new-record-actions">
+      <button type="button" id="newRecordSubmit">登録</button>
+      <button type="button" id="newRecordMail">メール送信</button>
+      <button type="button" id="propertySearchOpen">物件検索</button>
+      <button type="button" id="propertyHide">この物件を非表示</button>
+      <button type="button" id="propertyRestore">非表示物件を戻す</button>
+      <button type="button" id="newRecordCancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <!-- 保存ダイアログ -->
 <div id="saveDialog">
   <div id="saveDialogBox">
@@ -416,6 +512,7 @@
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
   <button type="button" id="collectionOrderSave">保存</button>
+  <button type="button" id="collectionOrderSaveExit">保存後終了</button>
   <button type="button" id="collectionOrderCommit">メール送信</button>
 </div>
 
@@ -875,6 +972,297 @@ function buildColPanel() {
   });
 }
 
+const newRecordDialog = document.getElementById('newRecordDialog');
+const newRecordFields = document.getElementById('newRecordFields');
+let newRecordDraft = [];
+let newRecordOrderPreview = null;
+let hiddenPropertyRecords = [];
+let selectedPropertyRow = null;
+let propertyManageMode = 'search';
+
+function findHeaderIndex(names) {
+  return headers.findIndex(header => names.includes(String(header || '').trim()));
+}
+
+function uniqueColumnValues(columnIndex) {
+  if (columnIndex < 0) return [];
+  return [...new Set(dataArray.map(row => String(row[columnIndex] || '').trim()).filter(Boolean))].sort(natCmp);
+}
+
+function nextRegistrationNumber(columnIndex) {
+  const numbers = uniqueColumnValues(columnIndex)
+    .map(value => Number(String(value).replace(/[^0-9]/g, '')))
+    .filter(Number.isFinite);
+  return numbers.length ? String(Math.max(...numbers) + 1) : '1';
+}
+
+function normalizePropertySearch(value) {
+  return String(value || '').normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, char =>
+    String.fromCharCode(char.charCodeAt(0) - 0x60)
+  ).replace(/[\s　・･ー\-]/g, '');
+}
+
+function propertyRowInfo(row) {
+  const districtCol = findHeaderIndex(['地区', '地区名']);
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const registrationCol = findHeaderIndex(['登録番号']);
+  const orderCol = findHeaderIndex(['整理番号']);
+  return {
+    district: districtCol >= 0 ? String(row[districtCol] || '').trim() : '',
+    property: propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '',
+    registration: registrationCol >= 0 ? String(row[registrationCol] || '').trim() : '',
+    order: orderCol >= 0 ? Number(row[orderCol]) || 0 : 0
+  };
+}
+
+function renderPropertySearchResults() {
+  const results = document.getElementById('propertySearchResults');
+  const input = document.getElementById('propertySearchInput');
+  const info = document.getElementById('propertySelectedInfo');
+  results.innerHTML = '';
+  selectedPropertyRow = null;
+  info.textContent = '';
+  const source = propertyManageMode === 'restore' ? hiddenPropertyRecords.map(item => item.row) : dataArray;
+  const query = normalizePropertySearch(input.value);
+  if (propertyManageMode === 'search' && query.length < 2) {
+    results.textContent = '2文字以上入力すると候補を表示します。';
+    return;
+  }
+  const matches = source.filter(row => {
+    const item = propertyRowInfo(row);
+    return item.property && (propertyManageMode === 'restore' || normalizePropertySearch(item.property).includes(query));
+  }).slice(0, 100);
+  matches.forEach(row => {
+    const item = propertyRowInfo(row);
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'property-search-result';
+    button.textContent = `${item.order || '-'}｜${item.district}｜${item.property}｜登録番号 ${item.registration || '-'}`;
+    button.addEventListener('click', () => {
+      results.querySelectorAll('.property-search-result').forEach(entry => entry.classList.toggle('selected', entry === button));
+      selectedPropertyRow = row;
+      info.textContent = `選択中：${item.property}`;
+      if (propertyManageMode === 'restore') restoreHiddenProperty(row);
+    });
+    results.appendChild(button);
+  });
+  if (!matches.length) results.textContent = propertyManageMode === 'restore' ? '非表示の物件はありません。' : '該当する物件がありません。';
+}
+
+function openPropertyManager(mode) {
+  propertyManageMode = mode;
+  const panel = document.getElementById('propertyManagePanel');
+  const input = document.getElementById('propertySearchInput');
+  panel.classList.add('active');
+  input.style.display = mode === 'restore' ? 'none' : '';
+  input.value = '';
+  renderPropertySearchResults();
+  if (mode === 'search') input.focus();
+}
+
+function shiftOrdersForRemoval(removedOrder) {
+  const orderCol = findHeaderIndex(['整理番号']);
+  if (orderCol < 0 || removedOrder < 1) return;
+  dataArray.forEach(row => {
+    const current = Number(row[orderCol]);
+    if (Number.isFinite(current) && current > removedOrder) row[orderCol] = String(current - 1);
+  });
+}
+
+function shiftOrdersForRestore(restoredOrder) {
+  const orderCol = findHeaderIndex(['整理番号']);
+  if (orderCol < 0 || restoredOrder < 1) return;
+  dataArray.forEach(row => {
+    const current = Number(row[orderCol]);
+    if (Number.isFinite(current) && current >= restoredOrder) row[orderCol] = String(current + 1);
+  });
+}
+
+function restoreHiddenProperty(row) {
+  const hiddenIndex = hiddenPropertyRecords.findIndex(item => item.row === row);
+  if (hiddenIndex < 0) return;
+  const record = hiddenPropertyRecords[hiddenIndex];
+  const item = propertyRowInfo(record.row);
+  shiftOrdersForRestore(record.originalOrder);
+  const orderCol = findHeaderIndex(['整理番号']);
+  if (orderCol >= 0) record.row[orderCol] = String(record.originalOrder);
+  dataArray.splice(Math.min(record.originalIndex, dataArray.length), 0, record.row);
+  hiddenPropertyRecords.splice(hiddenIndex, 1);
+  selectedPropertyRow = null;
+  renderTable(); renderPropertySearchResults();
+  showToast(`${item.property}を元の位置へ戻しました`);
+}
+
+function renderExistingDistrictProperties() {
+  const host = document.getElementById('newRecordExisting');
+  if (!host) return;
+  const districtCol = findHeaderIndex(['地区', '地区名']);
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const orderCol = findHeaderIndex(['整理番号']);
+  const district = districtCol >= 0 ? String(newRecordDraft[districtCol] || '').trim() : '';
+  host.innerHTML = '';
+  if (!district) { host.textContent = '地区を選択すると既存の物件を表示します。'; return; }
+  const existing = dataArray
+    .filter(row => String(row[districtCol] || '').trim() === district)
+    .map(row => ({ order:Number(row[orderCol]) || 0, property:String(row[propertyCol] || '').trim() }))
+    .sort((a,b) => a.order - b.order);
+  const requested = Number(newRecordOrderPreview);
+  let inserted = false;
+  existing.forEach(item => {
+    if (!inserted && requested > 0 && item.order >= requested) {
+      const preview = document.createElement('div');
+      preview.className = 'new-record-existing-row preview';
+      preview.innerHTML = `<span>${requested}</span><span>新規物件（挿入位置）</span>`;
+      host.appendChild(preview); inserted = true;
+    }
+    const row = document.createElement('div');
+    row.className = 'new-record-existing-row';
+    const shownOrder = requested > 0 && item.order >= requested ? item.order + 1 : item.order;
+    row.innerHTML = `<span>${shownOrder || ''}</span><span></span>`;
+    row.lastElementChild.textContent = item.property;
+    host.appendChild(row);
+  });
+  if (!inserted && requested > 0) {
+    const preview = document.createElement('div');
+    preview.className = 'new-record-existing-row preview';
+    preview.innerHTML = `<span>${requested}</span><span>新規物件（挿入位置）</span>`;
+    host.appendChild(preview);
+  }
+  if (!existing.length && !(requested > 0)) host.textContent = 'この地区の既存物件はありません。';
+}
+
+function selectNewRecordChoice(columnIndex, value, button) {
+  newRecordDraft[columnIndex] = value;
+  button.closest('.new-record-choice-list').querySelectorAll('.new-record-choice').forEach(item => {
+    item.classList.toggle('selected', item === button);
+  });
+  const field = button.closest('.new-record-field');
+  const summary = field && field.querySelector('.new-record-field-value');
+  if (summary) summary.textContent = value || '未選択';
+  if (columnIndex === findHeaderIndex(['地区', '地区名'])) renderExistingDistrictProperties();
+}
+
+function openNewRecordDialog() {
+  if (!headers.length) { showToast('先に物件表を読み込んでください'); return; }
+  newRecordDraft = Array(headers.length).fill('');
+  newRecordOrderPreview = null;
+  const registrationCol = findHeaderIndex(['登録番号']);
+  if (registrationCol >= 0) newRecordDraft[registrationCol] = nextRegistrationNumber(registrationCol);
+  document.getElementById('propertyManagePanel').classList.remove('active');
+  selectedPropertyRow = null;
+  renderNewRecordFields();
+  newRecordDialog.classList.add('active');
+}
+
+function renderNewRecordFields() {
+  newRecordFields.innerHTML = '';
+  const districtCol = findHeaderIndex(['地区', '地区名']);
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const registrationCol = findHeaderIndex(['登録番号']);
+  const orderCol = findHeaderIndex(['整理番号']);
+  headers.slice(0, 26).forEach((rawHeader, columnIndex) => {
+    const header = String(rawHeader || `列${columnIndex + 1}`).trim();
+    const field = document.createElement('section'); field.className = 'new-record-field'; field.dataset.column = columnIndex;
+    const title = document.createElement('button'); title.type = 'button'; title.className = 'new-record-field-title';
+    const label = document.createElement('span'); label.textContent = header;
+    const summary = document.createElement('span'); summary.className = 'new-record-field-value';
+    summary.textContent = newRecordDraft[columnIndex] || '未選択';
+    title.append(label, summary);
+    title.addEventListener('click', () => {
+      field.classList.toggle('open');
+    });
+    const body = document.createElement('div'); body.className = 'new-record-field-body';
+    field.append(title, body);
+    const isManualText = columnIndex === propertyCol || /電話番号|備考/.test(header);
+    if (isManualText) {
+      const input = document.createElement('input'); input.type = 'text'; input.placeholder = '物件名を入力';
+      if (columnIndex !== propertyCol) input.placeholder = `${header}を入力`;
+      input.addEventListener('input', () => {
+        newRecordDraft[columnIndex] = input.value;
+        summary.textContent = input.value || '未入力';
+      });
+      body.appendChild(input);
+    } else if (columnIndex === registrationCol) {
+      const input = document.createElement('input'); input.type = 'text'; input.readOnly = true; input.value = newRecordDraft[columnIndex];
+      body.appendChild(input);
+    } else if (columnIndex === orderCol) {
+      const row = document.createElement('div'); row.className = 'new-record-order-row';
+      const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.inputMode = 'numeric';
+      const change = document.createElement('button'); change.type = 'button'; change.textContent = '変更';
+      change.addEventListener('click', () => {
+        const value = Number(input.value);
+        if (!Number.isInteger(value) || value < 1) { showToast('整理番号を入力してください'); return; }
+        newRecordDraft[columnIndex] = String(value); newRecordOrderPreview = value; summary.textContent = String(value); renderExistingDistrictProperties();
+      });
+      row.append(input, change); body.appendChild(row);
+    } else {
+      const list = document.createElement('div'); list.className = 'new-record-choice-list';
+      let values = uniqueColumnValues(columnIndex);
+      if (/^[月火水木金土日]曜日$/.test(header)) values = [...new Set(['N-', 'M-', 'K-', ...values])];
+      values.forEach(value => {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'new-record-choice'; button.textContent = value;
+        button.addEventListener('click', () => selectNewRecordChoice(columnIndex, value, button)); list.appendChild(button);
+      });
+      const unset = document.createElement('button');
+      unset.type = 'button'; unset.className = 'new-record-choice'; unset.textContent = '未選択';
+      unset.addEventListener('click', () => selectNewRecordChoice(columnIndex, '', unset));
+      list.appendChild(unset);
+      body.appendChild(list);
+    }
+    if (columnIndex === districtCol) {
+      const existing = document.createElement('div'); existing.id = 'newRecordExisting'; body.appendChild(existing);
+    }
+    newRecordFields.appendChild(field);
+  });
+  renderExistingDistrictProperties();
+}
+
+document.getElementById('newRecordCancel').addEventListener('click', () => newRecordDialog.classList.remove('active'));
+document.getElementById('btnNewRecord').addEventListener('click', openNewRecordDialog);
+document.getElementById('propertySearchInput').addEventListener('input', renderPropertySearchResults);
+document.getElementById('propertySearchOpen').addEventListener('click', () => openPropertyManager('search'));
+document.getElementById('propertyHide').addEventListener('click', () => {
+  if (propertyManageMode !== 'search' || !selectedPropertyRow) { showToast('物件検索から非表示にする物件を選択してください'); return; }
+  const index = dataArray.indexOf(selectedPropertyRow);
+  if (index < 0) return;
+  const item = propertyRowInfo(selectedPropertyRow);
+  hiddenPropertyRecords.push({ row:[...selectedPropertyRow], originalIndex:index, originalOrder:item.order });
+  dataArray.splice(index, 1);
+  shiftOrdersForRemoval(item.order);
+  selectedPropertyRow = null;
+  renderTable(); renderPropertySearchResults();
+  showToast(`${item.property}を非表示にしました`);
+});
+document.getElementById('propertyRestore').addEventListener('click', () => openPropertyManager('restore'));
+document.getElementById('newRecordMail').addEventListener('click', () => {
+  const lines = ['【物件表 新規登録】', `ファイル：${currentFilename}`, `シート：${currentSheetName}`];
+  headers.slice(0, 26).forEach((header, index) => {
+    const value = String(newRecordDraft[index] || '').trim();
+    if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
+  });
+  const link = document.createElement('a');
+  link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 新規登録')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
+  link.style.display = 'none'; document.body.appendChild(link); link.click();
+  setTimeout(() => link.remove(), 1000);
+});
+document.getElementById('newRecordSubmit').addEventListener('click', () => {
+  const districtCol = findHeaderIndex(['地区', '地区名']);
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const orderCol = findHeaderIndex(['整理番号']);
+  if (districtCol >= 0 && !String(newRecordDraft[districtCol] || '').trim()) { showToast('地区を選択してください'); return; }
+  if (propertyCol >= 0 && !String(newRecordDraft[propertyCol] || '').trim()) { showToast('物件名を入力してください'); return; }
+  const order = Number(newRecordDraft[orderCol]);
+  if (orderCol >= 0 && (!Number.isInteger(order) || order < 1)) { showToast('整理番号を入力して変更を押してください'); return; }
+  if (orderCol >= 0) {
+    dataArray.forEach(row => {
+      const current = Number(row[orderCol]);
+      if (Number.isFinite(current) && current >= order) row[orderCol] = String(current + 1);
+    });
+  }
+  dataArray.push([...newRecordDraft]);
+  newRecordDialog.classList.remove('active'); renderTable(); saveState();
+  showToast('新しい物件を表に登録しました');
+});
+
 function syncCheckboxes() {
   colPanel.querySelectorAll('input[type=checkbox]').forEach(cb => {
     const ci = parseInt(cb.dataset.col);
@@ -1228,6 +1616,7 @@ function renderTable() {
         label += ` 🔽${vals}`;
       }
       th.textContent = label;
+      if (/^[月火水木金土日]曜日$/.test(String(headers[ci] || '').trim())) th.classList.add('weekday-col');
       if (sortState.col===ci) th.classList.add(sortState.dir===1?'sorted-asc':'sorted-desc');
       th.addEventListener('click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
       htr.appendChild(th);
@@ -1259,13 +1648,13 @@ function renderTable() {
     const tr = document.createElement('tr');
     const tdN = document.createElement('td');
     tdN.className='rn'; tdN.textContent=ri+1; tr.appendChild(tdN);
+    const districtCol = headers.findIndex(h => ['地区', '地区名'].includes(String(h || '').trim()));
+    const district = districtCol >= 0 ? String(row[districtCol] || '').trim() : '';
+    const districtBg = districtBackground(district);
+    tr.style.backgroundColor = districtBg;
     if (assignmentFilter.active) {
       const item = assignmentRows[ri];
-      const districtCol = headers.findIndex(h => ['地区', '地区名'].includes(String(h || '').trim()));
       const propertyCol = headers.findIndex(h => ['契約物件', '物件名', '名前'].includes(String(h || '').trim()));
-      const district = districtCol >= 0 ? String(row[districtCol] || '').trim() : '';
-      const districtBg = districtBackground(district);
-      tr.style.backgroundColor = districtBg;
       const tdDistrict = document.createElement('td');
       tdDistrict.textContent = district;
       const tdProperty = document.createElement('td');
@@ -1273,6 +1662,7 @@ function renderTable() {
       const tdOrder = document.createElement('td');
       const orderEditor = document.createElement('div');
       orderEditor.className = 'collection-order-editor';
+      orderEditor.style.setProperty('background-color', districtBg, 'important');
       const orderInput = document.createElement('input');
       orderInput.type = 'number';
       orderInput.min = '1';
@@ -1311,14 +1701,14 @@ function renderTable() {
       const tdAssignment = document.createElement('td');
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
       tr.append(tdDistrict, tdProperty, tdOrder, tdAssignment);
-      tr.querySelectorAll('td').forEach(td => td.style.setProperty('background-color', districtBg, 'important'));
     } else {
       visArr.forEach(ci => {
         const td = document.createElement('td');
         const cell = String(row[ci] || '').trim();
         const header = String(headers[ci] || '').trim();
+        if (/^[月火水木金土日]曜日$/.test(header)) td.classList.add('weekday-col');
         if ((header === '計量' && cell !== '') || cell === '計量') {
-          td.className = 'keiryou-td';
+          td.classList.add('keiryou-td');
           td.textContent = '計量';
         } else {
           td.textContent = cell;
@@ -1326,6 +1716,7 @@ function renderTable() {
         tr.appendChild(td);
       });
     }
+    tr.querySelectorAll('td').forEach(td => td.style.setProperty('background-color', districtBg, 'important'));
     tableBody.appendChild(tr);
   });
 
@@ -1423,6 +1814,17 @@ function saveCollectionOrderProgress() {
 document.getElementById('collectionOrderSave').addEventListener('click', () => {
   saveCollectionOrderProgress();
   showToast('途中入力を端末に保存しました');
+});
+
+document.getElementById('collectionOrderSaveExit').addEventListener('click', () => {
+  saveCollectionOrderProgress();
+  assignmentFilter = { active:false, staff:new Set(), days:new Set() };
+  visibleCols = new Set(headers.map((_, i) => i));
+  colPanel.classList.remove('active');
+  syncCheckboxes();
+  renderTable();
+  saveState();
+  showToast('保存して全列表示へ戻りました');
 });
 
 document.getElementById('collectionOrderCommit').addEventListener('click', () => {
