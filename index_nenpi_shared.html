@@ -316,11 +316,23 @@
     function closeApp() {
       if (window.parent && window.parent !== window) {
         try {
+          if (typeof window.parent.closeSharedApp === 'function') {
+            window.parent.closeSharedApp();
+            return;
+          }
+          if (typeof window.parent.closeApp === 'function') {
+            window.parent.closeApp();
+            return;
+          }
+          if (typeof window.parent.closeSharedPanel === 'function') {
+            window.parent.closeSharedPanel();
+            return;
+          }
           if (typeof window.parent.showLauncher === 'function') {
             window.parent.showLauncher(true);
             return;
           }
-          window.parent.postMessage({ type: 'closeSoftware' }, '*');
+          window.parent.postMessage({ type: 'closeFuelShared' }, '*');
           return;
         } catch (e) {}
       }

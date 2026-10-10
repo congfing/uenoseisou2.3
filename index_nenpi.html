@@ -253,6 +253,19 @@
       display: block;
     }
 
+    .shared-panel {
+      height: calc(100vh - 245px);
+      min-height: 560px;
+    }
+
+    .shared-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #ffffff;
+    }
+
     .panel-body {
       padding: 18px;
     }
@@ -679,6 +692,11 @@
         padding: 12px 0 28px;
       }
 
+      .shared-panel {
+        height: calc(100vh - 330px);
+        min-height: 520px;
+      }
+
       .tab {
         min-height: 46px;
         font-size: 14px;
@@ -879,6 +897,7 @@
     <button class="tab" type="button" data-tab="entry">データ入力</button>
     <button class="tab" type="button" data-tab="history">入力履歴</button>
     <button class="tab" type="button" data-tab="graph">グラフ表示</button>
+    <button class="tab" type="button" data-tab="shared">燃費読込</button>
   </nav>
 
   <main class="app">
@@ -1010,6 +1029,15 @@
         <div id="graphArea"></div>
       </div>
     </section>
+
+    <section class="panel shared-panel" id="panel-shared" aria-labelledby="screenTitle">
+      <iframe
+        class="shared-frame"
+        src="index_nenpi_shared.html"
+        title="燃費読込"
+        loading="lazy"
+      ></iframe>
+    </section>
   </main>
 
   <script>
@@ -1022,8 +1050,10 @@
       driver: ["運転手登録", "燃費入力で使う運転手を登録します。"],
       entry: ["データ入力", "登録済みの情報から燃費データを入力します。"],
       history: ["入力履歴", "保存した燃費データを確認します。"],
-      graph: ["グラフ表示", "燃費データをグラフで確認します。"]
+      graph: ["グラフ表示", "燃費データをグラフで確認します。"],
+      shared: ["燃費読込", "Google Driveの燃費記録を確認します。"]
     };
+    let previousTab = state.activeTab !== "shared" && state.activeTab in tabMeta ? state.activeTab : "mail";
 
     const globalMessage = document.getElementById("globalMessage");
     const screenHead = document.querySelector(".screen-head");
@@ -1044,6 +1074,24 @@
       location.href = "index.html";
     }
     window.closeApp = closeApp;
+
+    function closeSharedPanel() {
+      setActiveTab(previousTab);
+    }
+    window.closeSharedPanel = closeSharedPanel;
+
+    function closeSharedApp() {
+      state.activeTab = previousTab !== "shared" && previousTab in tabMeta ? previousTab : "mail";
+      saveState();
+      closeApp();
+    }
+    window.closeSharedApp = closeSharedApp;
+
+    window.addEventListener("message", (event) => {
+      if (event.data?.type === "closeFuelShared") {
+        closeSharedPanel();
+      }
+    });
 
     document.querySelectorAll("[data-title-action]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1191,8 +1239,9 @@
     function loadState() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        const activeTab = saved?.activeTab === "shared" ? "mail" : (saved?.activeTab || "mail");
         return {
-          activeTab: saved?.activeTab || "mail",
+          activeTab,
           mail: normalizeMail(saved?.mail),
           vehicles: Array.isArray(saved?.vehicles) ? saved.vehicles : [],
           drivers: Array.isArray(saved?.drivers) ? saved.drivers : [],
@@ -1228,6 +1277,9 @@
     }
 
     function setActiveTab(tab) {
+      if (tab === "shared" && state.activeTab !== "shared" && state.activeTab in tabMeta) {
+        previousTab = state.activeTab;
+      }
       state.activeTab = tab;
       saveState();
       render();
