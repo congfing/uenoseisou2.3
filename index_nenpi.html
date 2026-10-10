@@ -1081,9 +1081,7 @@
     window.closeSharedPanel = closeSharedPanel;
 
     function closeSharedApp() {
-      state.activeTab = previousTab !== "shared" && previousTab in tabMeta ? previousTab : "mail";
-      saveState();
-      closeApp();
+      closeSharedPanel();
     }
     window.closeSharedApp = closeSharedApp;
 
