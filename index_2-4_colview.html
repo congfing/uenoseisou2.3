@@ -98,6 +98,7 @@
     width:64px; padding:5px 6px; border:1px solid #777; border-radius:4px;
     background:#fff; color:#111; font:inherit; text-align:center;
   }
+  .collection-order-input[data-registered="true"] { background:#e6e6e6 !important; }
   .collection-order-input:focus { outline:2px solid #222; outline-offset:1px; }
   .collection-order-editor { display:flex; align-items:center; gap:5px; }
   .collection-order-change {
@@ -411,7 +412,8 @@
 <div id="collectionOrderActions" aria-label="収集順の変更操作">
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
-  <button type="button" id="collectionOrderCommit">変更を決定してメール送信</button>
+  <button type="button" id="collectionOrderSave">保存</button>
+  <button type="button" id="collectionOrderCommit">メール送信</button>
 </div>
 
 <!-- フィルター＋ソートポップアップ -->
@@ -1085,12 +1087,22 @@ function normalizedCollectionOrder(value) {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-function applyCollectionOrderChange(item, requestedOrder) {
+function nextCollectionOrder(staff) {
+  const prefix = `${staff}||`;
+  let max = 0;
+  Object.keys(draftCollectionOrders).forEach(key => {
+    if (!key.startsWith(prefix)) return;
+    const order = normalizedCollectionOrder(draftCollectionOrders[key]);
+    if (order !== null) max = Math.max(max, order);
+  });
+  return max + 1;
+}
+
+function insertCollectionOrder(item, requestedOrder) {
   const staffPrefix = `${item.staff}||`;
   const oldOrder = normalizedCollectionOrder(draftCollectionOrders[item.key]);
   delete draftCollectionOrders[item.key];
 
-  // 移動前の位置を詰めてから、新しい位置を空ける。
   if (oldOrder !== null) {
     Object.keys(draftCollectionOrders).forEach(key => {
       if (!key.startsWith(staffPrefix)) return;
@@ -1098,7 +1110,6 @@ function applyCollectionOrderChange(item, requestedOrder) {
       if (order !== null && order > oldOrder) draftCollectionOrders[key] = order - 1;
     });
   }
-  if (requestedOrder === null) return;
 
   Object.keys(draftCollectionOrders).forEach(key => {
     if (!key.startsWith(staffPrefix)) return;
@@ -1262,24 +1273,29 @@ function renderTable() {
       orderInput.inputMode = 'numeric';
       orderInput.className = 'collection-order-input';
       orderInput.setAttribute('aria-label', `${tdProperty.textContent}の収集順`);
-      orderInput.value = draftCollectionOrders[item.key] || '';
+      const registeredOrder = normalizedCollectionOrder(draftCollectionOrders[item.key]);
+      orderInput.dataset.registered = registeredOrder === null ? 'false' : 'true';
+      if (registeredOrder !== null) {
+        orderInput.style.setProperty('background-color', '#d9d9d9', 'important');
+      }
+      orderInput.value = registeredOrder ?? nextCollectionOrder(item.staff);
       const orderChange = document.createElement('button');
       orderChange.type = 'button';
       orderChange.className = 'collection-order-change';
-      orderChange.textContent = '変更';
+      orderChange.textContent = registeredOrder === null ? '変更' : '変更済み';
       orderChange.setAttribute('aria-label', `${tdProperty.textContent}の収集順を変更`);
       orderChange.addEventListener('click', () => {
         const value = normalizedCollectionOrder(orderInput.value);
-        if (orderInput.value.trim() && value === null) {
+        if (value === null) {
           showToast('1以上の番号を入力してください');
           orderInput.focus();
           return;
         }
         collectionOrderUndoStack.push({ ...draftCollectionOrders });
-        applyCollectionOrderChange(item, value);
+        insertCollectionOrder(item, value);
         renderTable();
         const currentPosition = displayedAssignmentRows.findIndex(entry => entry.key === item.key) + 1;
-        showToast(`変更後の現在位置：${currentPosition}番`);
+        showToast(`収集順${value}に登録しました（現在位置：${currentPosition}番）`);
       });
       orderInput.addEventListener('keydown', event => {
         if (event.key === 'Enter') orderChange.click();
@@ -1390,13 +1406,22 @@ function openCollectionOrderMail() {
   return true;
 }
 
-document.getElementById('collectionOrderCommit').addEventListener('click', () => {
+function saveCollectionOrderProgress() {
   clearTimeout(collectionOrderRenderTimer);
   committedCollectionOrders = { ...draftCollectionOrders };
   collectionOrderUndoStack = [];
   saveState();
   renderTable();
-  if (openCollectionOrderMail()) showToast('端末に保存しました');
+}
+
+document.getElementById('collectionOrderSave').addEventListener('click', () => {
+  saveCollectionOrderProgress();
+  showToast('途中入力を端末に保存しました');
+});
+
+document.getElementById('collectionOrderCommit').addEventListener('click', () => {
+  saveCollectionOrderProgress();
+  if (openCollectionOrderMail()) showToast('端末に保存してメールを開きました');
 });
 
 // ===== 保存機能 =====
