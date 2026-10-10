@@ -158,6 +158,9 @@
   #emptyMsg { text-align:center; padding:40px; color:#888; font-size:14px; }
 
   #dataTable { border-collapse:collapse; min-width:100%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+  #dataTable.compact-columns { width:max-content; min-width:0; }
+  #dataTable.compact-columns thead th,
+  #dataTable.compact-columns tbody td { max-width:280px; }
   /* thead は tableWrapper のスクロールコンテナ内で top:0 に固定 */
   #dataTable thead { position:sticky; top:0; z-index:50; }
   #dataTable thead th {
@@ -886,7 +889,9 @@ document.getElementById('btnTogglePanel').addEventListener('click', () => {
   adjustWrapperHeight();
 });
 document.getElementById('btnAllOn').addEventListener('click', () => {
+  assignmentFilter = { active:false, staff:new Set(), days:new Set() };
   visibleCols = new Set(headers.map((_,i) => i));
+  colPanel.classList.remove('active');
   syncCheckboxes(); renderTable(); saveState();
 });
 document.getElementById('btnAllOff').addEventListener('click', () => {
@@ -1123,6 +1128,7 @@ function insertCollectionOrder(item, requestedOrder) {
 function renderTable() {
   const q = searchInput.value.trim().toLowerCase();
   const visArr = [...visibleCols].sort((a,b) => a-b);
+  dataTable.classList.toggle('compact-columns', !assignmentFilter.active && visArr.length < headers.length);
   let assignmentRows = null;
 
   if (!headers.length) {
