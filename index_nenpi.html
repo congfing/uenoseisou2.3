@@ -253,6 +253,28 @@
       display: block;
     }
 
+    .panel-close-bar {
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px 10px 0;
+    }
+
+    .panel-close-button {
+      min-height: 36px;
+      padding: 6px 14px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .panel-close-button:active {
+      font-weight: 900;
+    }
+
     .shared-panel {
       height: calc(100vh - 245px);
       min-height: 560px;
@@ -910,6 +932,9 @@
     </div>
 
     <section class="panel active" id="panel-mail" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="list-box">
         <div id="mailList"></div>
       </div>
@@ -935,6 +960,9 @@
     </section>
 
     <section class="panel" id="panel-vehicle" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="list-box">
         <div id="vehicleList"></div>
       </div>
@@ -960,6 +988,9 @@
     </section>
 
     <section class="panel" id="panel-driver" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="list-box">
         <div id="driverList"></div>
       </div>
@@ -982,6 +1013,9 @@
     </section>
 
     <section class="panel" id="panel-entry" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="panel-body">
         <form id="entryForm" autocomplete="on">
           <div class="entry-grid">
@@ -1014,6 +1048,9 @@
     </section>
 
     <section class="panel" id="panel-history" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="panel-body">
         <div class="section-title">
           <h2>入力履歴</h2>
@@ -1025,6 +1062,9 @@
     </section>
 
     <section class="panel" id="panel-graph" aria-labelledby="screenTitle">
+      <div class="panel-close-bar">
+        <button class="panel-close-button" type="button" data-close-panel>✕ 閉じる</button>
+      </div>
       <div class="panel-body">
         <div id="graphArea"></div>
       </div>
@@ -1076,7 +1116,7 @@
     window.closeApp = closeApp;
 
     function closeSharedPanel() {
-      setActiveTab(previousTab);
+      closeCurrentPanel();
     }
     window.closeSharedPanel = closeSharedPanel;
 
@@ -1087,7 +1127,7 @@
 
     window.addEventListener("message", (event) => {
       if (event.data?.type === "closeFuelShared") {
-        closeSharedPanel();
+        closeCurrentPanel();
       }
     });
 
@@ -1103,6 +1143,10 @@
 
     document.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+    });
+
+    document.querySelectorAll("[data-close-panel]").forEach((button) => {
+      button.addEventListener("click", closeCurrentPanel);
     });
 
     document.querySelectorAll("[data-clear-form]").forEach((button) => {
@@ -1275,10 +1319,17 @@
     }
 
     function setActiveTab(tab) {
-      if (tab === "shared" && state.activeTab !== "shared" && state.activeTab in tabMeta) {
-        previousTab = state.activeTab;
+      if (tab === "shared" && state.activeTab !== "shared") {
+        previousTab = state.activeTab in tabMeta ? state.activeTab : "";
       }
       state.activeTab = tab;
+      saveState();
+      render();
+      setMessage("");
+    }
+
+    function closeCurrentPanel() {
+      state.activeTab = "";
       saveState();
       render();
       setMessage("");
@@ -1292,17 +1343,17 @@
     }
 
     function renderTabs() {
-      const active = state.activeTab in tabMeta ? state.activeTab : "mail";
+      const active = state.activeTab === "" ? "" : (state.activeTab in tabMeta ? state.activeTab : "mail");
       document.querySelectorAll("[data-tab]").forEach((button) => {
         button.classList.toggle("active", button.dataset.tab === active);
       });
       document.querySelectorAll(".panel").forEach((panel) => {
         panel.classList.toggle("active", panel.id === `panel-${active}`);
       });
-      screenHead.classList.toggle("hidden", active === "entry");
+      screenHead.classList.toggle("hidden", active === "entry" || active === "");
       document.body.classList.toggle("entry-tab", active === "entry");
-      screenTitle.textContent = tabMeta[active][0];
-      screenHint.textContent = tabMeta[active][1];
+      screenTitle.textContent = active ? tabMeta[active][0] : "";
+      screenHint.textContent = active ? tabMeta[active][1] : "";
     }
 
     function renderLists() {

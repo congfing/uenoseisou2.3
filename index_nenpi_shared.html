@@ -66,13 +66,13 @@
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      transition: all 0.15s ease;
+      box-shadow: none;
       -webkit-tap-highlight-color: transparent;
     }
     .app-close-btn:hover, .app-close-btn:active {
-      background: #000000;
-      color: #ffffff;
+      background: #ffffff;
+      color: #000000;
+      font-weight: 900;
     }
     .lights {
       height: 100%;
@@ -254,7 +254,7 @@
 
   <div class="top-header-bar">
     <div class="top-header-title">燃費共有読込</div>
-    <button type="button" class="app-close-btn" onclick="closeApp()" title="ソフトを閉じて一覧に戻る" aria-label="閉じる">
+    <button type="button" class="app-close-btn" onclick="closeApp()" title="読込画面を閉じる" aria-label="閉じる">
       ✕ 閉じる
     </button>
   </div>
@@ -315,26 +315,8 @@
 
     function closeApp() {
       if (window.parent && window.parent !== window) {
-        try {
-          if (typeof window.parent.closeSharedApp === 'function') {
-            window.parent.closeSharedApp();
-            return;
-          }
-          if (typeof window.parent.closeApp === 'function') {
-            window.parent.closeApp();
-            return;
-          }
-          if (typeof window.parent.closeSharedPanel === 'function') {
-            window.parent.closeSharedPanel();
-            return;
-          }
-          if (typeof window.parent.showLauncher === 'function') {
-            window.parent.showLauncher(true);
-            return;
-          }
-          window.parent.postMessage({ type: 'closeFuelShared' }, '*');
-          return;
-        } catch (e) {}
+        window.parent.postMessage({ type: 'closeFuelShared' }, '*');
+        return;
       }
       location.href = "index.html";
     }
