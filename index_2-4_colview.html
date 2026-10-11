@@ -165,6 +165,7 @@
   }
   .new-record-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
   .new-record-head h2 { margin:0; font-size:18px; flex:1; }
+  #newRecordClose { padding:7px 11px; border:1px solid #222; background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer; }
   #newRecordFields { border-top:1px solid #999; }
   .new-record-field { border-bottom:1px solid #999; min-width:0; }
   .new-record-field-title {
@@ -181,6 +182,7 @@
     background:#fff; color:#111; font:inherit;
   }
   .new-record-choice-list { display:flex; flex-wrap:wrap; gap:5px; max-height:110px; overflow:auto; }
+  .new-record-choice-list.weekday-choice-list { max-height:none; overflow:visible; }
   .new-record-choice {
     padding:5px 8px; border:1px solid #888; border-radius:4px;
     background:#fff; color:#111; font:inherit; cursor:pointer;
@@ -197,13 +199,18 @@
   #propertyManagePanel { display:none; margin-top:12px; border-top:1px solid #222; padding-top:12px; }
   #propertyManagePanel.active { display:block; }
   #propertySearchInput { width:100%; min-height:42px; padding:7px 9px; border:1px solid #777; font:inherit; }
+  .property-selected-row { display:flex; gap:6px; align-items:stretch; margin-top:8px; }
+  .property-selected-row button { flex:0 0 auto; padding:7px 10px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
   #propertySearchResults { margin-top:8px; max-height:240px; overflow:auto; border:1px solid #999; }
   .property-search-result {
     display:block; width:100%; padding:9px; border:0; border-bottom:1px solid #ccc;
     background:#fff; color:#111; text-align:left; font:inherit; cursor:pointer;
   }
   .property-search-result.selected { background:#d9d9d9; font-weight:800; }
-  #propertySelectedInfo { min-height:22px; margin-top:7px; font-weight:700; }
+  #propertySelectedInfo {
+    display:block; flex:1; min-width:0; padding:9px; border:1px solid #222;
+    background:#fff; font-weight:700; line-height:1.6;
+  }
   @media (max-width:620px) {
     #newRecordDialog { padding:0; align-items:stretch; }
     #newRecordPanel { max-height:100vh; width:100%; border-radius:0; padding:12px; }
@@ -412,7 +419,7 @@
 
 <div id="app-header">
   <h1>📋 列選択ビューアv2-4</h1>
-
+  <button type="button" id="backBtn" onclick="closeApp()">✕ 閉じる</button>
 </div>
 
 <div id="toolbar">
@@ -468,19 +475,24 @@
 
 <div id="newRecordDialog" role="dialog" aria-modal="true" aria-labelledby="newRecordTitle">
   <div id="newRecordPanel">
-    <div class="new-record-head"><h2 id="newRecordTitle">新規登録</h2></div>
+    <div class="new-record-head">
+      <h2 id="newRecordTitle">新規登録</h2>
+      <button type="button" id="newRecordClose">閉じる</button>
+    </div>
     <div id="newRecordFields"></div>
     <div id="propertyManagePanel">
       <input type="search" id="propertySearchInput" placeholder="物件名をひらがな2文字以上で検索">
-      <div id="propertySelectedInfo"></div>
+      <div class="property-selected-row">
+        <div id="propertySelectedInfo">物件を選択してください</div>
+        <button type="button" id="propertyHide">非表示</button>
+        <button type="button" id="propertyRestore">戻す</button>
+      </div>
       <div id="propertySearchResults"></div>
     </div>
     <div class="new-record-actions">
-      <button type="button" id="newRecordSubmit">登録</button>
+      <button type="button" id="newRecordSubmit">新規登録します</button>
       <button type="button" id="newRecordMail">メール送信</button>
       <button type="button" id="propertySearchOpen">物件検索</button>
-      <button type="button" id="propertyHide">この物件を非表示</button>
-      <button type="button" id="propertyRestore">非表示物件を戻す</button>
       <button type="button" id="newRecordCancel">キャンセル</button>
     </div>
   </div>
@@ -512,8 +524,8 @@
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
   <button type="button" id="collectionOrderSave">保存</button>
-  <button type="button" id="collectionOrderSaveExit">保存後終了</button>
   <button type="button" id="collectionOrderCommit">メール送信</button>
+  <button type="button" id="collectionOrderSaveExit">閉じる</button>
 </div>
 
 <!-- フィルター＋ソートポップアップ -->
@@ -592,6 +604,21 @@ let committedCollectionOrders = {};
 let draftCollectionOrders = {};
 let collectionOrderUndoStack = [];
 let collectionOrderRenderTimer = null;
+
+function closeApp() {
+  if (window.parent && window.parent !== window) {
+    try {
+      if (typeof window.parent.showLauncher === 'function') {
+        window.parent.showLauncher(true);
+        return;
+      }
+      window.parent.postMessage({ type:'closeSoftware' }, '*');
+      return;
+    } catch (e) {}
+  }
+  window.location.href = 'index.html';
+}
+window.closeApp = closeApp;
 
 // ===== localStorage 状態保存・復元 =====
 const STORAGE_KEY = 'keiryou_colview_state';
@@ -1021,7 +1048,7 @@ function renderPropertySearchResults() {
   const info = document.getElementById('propertySelectedInfo');
   results.innerHTML = '';
   selectedPropertyRow = null;
-  info.textContent = '';
+  info.textContent = propertyManageMode === 'restore' ? '戻す物件を選択してください' : '物件を選択してください';
   const source = propertyManageMode === 'restore' ? hiddenPropertyRecords.map(item => item.row) : dataArray;
   const query = normalizePropertySearch(input.value);
   if (propertyManageMode === 'search' && query.length < 2) {
@@ -1040,7 +1067,7 @@ function renderPropertySearchResults() {
     button.addEventListener('click', () => {
       results.querySelectorAll('.property-search-result').forEach(entry => entry.classList.toggle('selected', entry === button));
       selectedPropertyRow = row;
-      info.textContent = `選択中：${item.property}`;
+      info.textContent = `選択中：${item.property}　地区：${item.district || '-'}　整理番号：${item.order || '-'}　登録番号：${item.registration || '-'}`;
       if (propertyManageMode === 'restore') restoreHiddenProperty(row);
     });
     results.appendChild(button);
@@ -1197,7 +1224,10 @@ function renderNewRecordFields() {
     } else {
       const list = document.createElement('div'); list.className = 'new-record-choice-list';
       let values = uniqueColumnValues(columnIndex);
-      if (/^[月火水木金土日]曜日$/.test(header)) values = [...new Set(['N-', 'M-', 'K-', ...values])];
+      if (/^[月火水木金土日]曜日$/.test(header)) {
+        list.classList.add('weekday-choice-list');
+        values = [...new Set(['N-', 'M-', 'K-', ...values])];
+      }
       values.forEach(value => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'new-record-choice'; button.textContent = value;
         button.addEventListener('click', () => selectNewRecordChoice(columnIndex, value, button)); list.appendChild(button);
@@ -1217,6 +1247,7 @@ function renderNewRecordFields() {
 }
 
 document.getElementById('newRecordCancel').addEventListener('click', () => newRecordDialog.classList.remove('active'));
+document.getElementById('newRecordClose').addEventListener('click', () => newRecordDialog.classList.remove('active'));
 document.getElementById('btnNewRecord').addEventListener('click', openNewRecordDialog);
 document.getElementById('propertySearchInput').addEventListener('input', renderPropertySearchResults);
 document.getElementById('propertySearchOpen').addEventListener('click', () => openPropertyManager('search'));
@@ -1817,14 +1848,16 @@ document.getElementById('collectionOrderSave').addEventListener('click', () => {
 });
 
 document.getElementById('collectionOrderSaveExit').addEventListener('click', () => {
-  saveCollectionOrderProgress();
+  clearTimeout(collectionOrderRenderTimer);
+  draftCollectionOrders = { ...committedCollectionOrders };
+  collectionOrderUndoStack = [];
   assignmentFilter = { active:false, staff:new Set(), days:new Set() };
   visibleCols = new Set(headers.map((_, i) => i));
   colPanel.classList.remove('active');
   syncCheckboxes();
   renderTable();
   saveState();
-  showToast('保存して全列表示へ戻りました');
+  showToast('画面を閉じました');
 });
 
 document.getElementById('collectionOrderCommit').addEventListener('click', () => {
