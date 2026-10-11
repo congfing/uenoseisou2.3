@@ -390,15 +390,6 @@
     background:rgba(255,255,255,0.2); border:none; color:#fff;
     width:28px; height:28px; border-radius:50%; font-size:14px; cursor:pointer;
   }
-  #hist-save-btn {
-    margin:10px 12px 8px; padding:10px 0;
-    color:#fff; border:none; border-radius:9px;
-    font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;
-    flex-shrink:0; transition:opacity 0.15s;
-  }
-  #hist-save-btn:active { opacity:0.8; }
-  #hist-save-btn.saved { background:linear-gradient(135deg,#166534,#16a34a); }
-  #hist-list { overflow-y:auto; flex:1; padding:0 10px 10px; -webkit-overflow-scrolling:touch; }
   #hist-close-btn {
     margin:0 12px 12px; padding:10px 0; flex-shrink:0;
     background:#fff; color:#111; border:1px solid #111; border-radius:7px;
@@ -422,9 +413,8 @@
     font-size:15px; cursor:pointer; padding:3px; flex-shrink:0; }
   .hist-del-btn:active { color:#ef4444; }
   #hist-empty { text-align:center; color:#9ca3af; font-size:12px; padding:28px 0 10px; line-height:1.8; }
-  .property-history-section { padding:10px 10px 8px; border-bottom:1px solid #bbb; }
-  .property-history-title { font-size:14px; font-weight:800; margin-bottom:7px; }
-  #property-change-list { max-height:42vh; overflow:auto; }
+  .property-history-section { padding:10px 10px 8px; border-bottom:1px solid #bbb; display:flex; flex:1; min-height:0; flex-direction:column; }
+  #property-change-list { flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; }
   .property-change-item { display:grid; grid-template-columns:24px minmax(0,1fr); gap:7px; padding:8px; border:1px solid #aaa; margin-bottom:6px; background:#fff; }
   .property-change-item.sent { background:#e5e5e5; color:#666; }
   .property-change-item input { width:18px; height:18px; margin-top:2px; }
@@ -432,7 +422,6 @@
   .property-change-meta { margin-top:2px; font-size:11px; line-height:1.5; }
   .property-history-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .property-history-actions button { flex:1 1 46%; min-height:38px; padding:6px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
-  .column-history-title { padding:9px 12px 0; font-size:13px; font-weight:800; }
 
 
 </style>
@@ -902,9 +891,6 @@ function loadFromGitHub(filename) {
     })
     .then(buf => {
       loadWorkbookData(buf, filename, 'GitHub: ' + GITHUB_REPO_LABEL);
-      if (window._histPendingRestore && window._histPendingRestore.filename === filename) {
-        setTimeout(function() { window._histPendingRestore.applyFn(); delete window._histPendingRestore; }, 100);
-      }
     })
     .catch(e => updateStatus('⚠️ 読み込み失敗: '+e.message))
     .finally(() => { btn.textContent='🔄 最新を取得'; btn.disabled=false; });
@@ -2247,85 +2233,22 @@ window._colviewCtx = {
 <div id="hist-overlay" onclick="closeHistPanel()"></div>
 <div id="hist-panel">
   <div id="hist-panel-hdr">
-    <span>📌 列ビュー 履歴</span>
+    <span>物件の変更履歴</span>
     <button onclick="closeHistPanel()">✕</button>
   </div>
   <div class="property-history-section">
-    <div class="property-history-title">物件の変更履歴</div>
     <div id="property-change-list"></div>
     <div class="property-history-actions">
       <button type="button" onclick="sendSelectedPropertyHistory()">選択してメール送信</button>
-      <button type="button" onclick="removeSelectedSentPropertyHistory()">送信済みを外す</button>
+      <button type="button" onclick="removeSelectedPropertyHistory()">履歴を削除</button>
     </div>
   </div>
-  <div class="column-history-title">列表示の履歴</div>
-  <button id="hist-save-btn" onclick="saveHistItem()">💾 今の状態を保存</button>
-  <div id="hist-list"></div>
   <button id="hist-close-btn" type="button" onclick="closeHistPanel()">閉じる</button>
 </div>
 
 <script>
-// ===== 列選択ビューア 履歴機能 =====
+// ===== 物件の変更履歴機能 =====
 (function() {
-  const HIST_KEY = 'colview_history';
-  const MAX_HIST = 30;
-
-  function ctx() { return window._colviewCtx || null; }
-
-  function getHist() {
-    try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch(e) { return []; }
-  }
-  function setHist(h) {
-    try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch(e) {}
-  }
-
-  function snapshot() {
-    const c = ctx(); if (!c) return null;
-    const fs = c.getFilterState();
-    const hdrs = c.getHeaders();
-    const visCols = [...c.getVisibleCols()].sort((a,b) => a-b);
-    const ss = c.getSortState();
-    return {
-      id:              Date.now(),
-      timestamp:       Date.now(),
-      filename:        c.getFilename(),
-      sheetName:       c.getSheetName(),
-      visibleCols:     visCols,
-      visibleColNames: visCols.map(i => hdrs[i] || `列${i+1}`),
-      totalCount:      c.getTotalCount(),
-      sortState:       { ...ss },
-      sortColName:     (ss && ss.col >= 0) ? (hdrs[ss.col] || `列${ss.col+1}`) : '',
-      searchQuery:     c.getSearchQuery(),
-      filterState: (fs && fs.colIdx !== null) ? {
-        colIdx:         fs.colIdx,
-        colName:        hdrs[fs.colIdx] || `列${fs.colIdx+1}`,
-        selectedValues: [...fs.selectedValues],
-        filterType:     fs.filterType
-      } : null
-    };
-  }
-
-  function makeLabel(item) {
-    const parts = [];
-    // ソート
-    if (item.sortState && item.sortState.col >= 0) {
-      const name = item.sortColName || (item.visibleColNames
-        ? (item.visibleColNames[item.visibleCols ? item.visibleCols.indexOf(item.sortState.col) : -1] || `列${item.sortState.col+1}`)
-        : `列${item.sortState.col+1}`);
-      parts.push((item.sortState.dir === 1 ? '▲' : '▼') + name);
-    }
-    // フィルター・検索
-    if (item.filterState && item.filterState.colIdx !== null && item.filterState.selectedValues && item.filterState.selectedValues.length > 0) {
-      const colName = item.filterState.colName || `列${item.filterState.colIdx+1}`;
-      const rawVals = item.filterState.selectedValues.map(v => v.startsWith('\x00exact:') ? v.slice(7) : v);
-      const vals = rawVals.slice(0, 3).join('・');
-      const more = rawVals.length > 3 ? `…他${rawVals.length - 3}件` : '';
-      parts.push(`🔍${colName}: ${vals}${more}`);
-    }
-    if (item.searchQuery) parts.push(`"${item.searchQuery}"`);
-    return parts.length > 0 ? parts.join(' · ') : '';
-  }
-
   function fmtTime(ts) {
     const d = new Date(ts), p = n => String(n).padStart(2,'0');
     return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -2384,117 +2307,14 @@ window._colviewCtx = {
     showToast(`${selected.length}件を送信済みにしました`);
   };
 
-  window.removeSelectedSentPropertyHistory = function() {
+  window.removeSelectedPropertyHistory = function() {
     const ids = new Set(selectedPropertyHistoryIds());
     const history = getPropertyChangeHistory();
-    const removable = history.filter(item => ids.has(item.id) && item.sentAt);
-    if (!removable.length) { showToast('外す送信済み履歴を選択してください'); return; }
-    setPropertyChangeHistory(history.filter(item => !(ids.has(item.id) && item.sentAt)));
+    const removable = history.filter(item => ids.has(item.id));
+    if (!removable.length) { showToast('削除する履歴を選択してください'); return; }
+    setPropertyChangeHistory(history.filter(item => !ids.has(item.id)));
     window.renderPropertyChangeHistory();
-    showToast(`${removable.length}件の送信済み履歴を外しました`);
-  };
-
-  function renderHist() {
-    const items = getHist();
-    const el = document.getElementById('hist-list');
-    if (!el) return;
-    if (items.length === 0) {
-      el.innerHTML = '<div id="hist-empty">保存した履歴はありません<br><small>「今の状態を保存」で現在の<br>列選択・ソートを記録できます</small></div>';
-      return;
-    }
-    el.innerHTML = items.map(item => {
-      const colNames = item.visibleColNames && item.visibleColNames.length
-        ? item.visibleColNames.join('・')
-        : (item.visibleCols ? `${item.visibleCols.length}列` : '全列');
-      const meta = makeLabel(item);
-      const count = item.totalCount != null ? ` 全${item.totalCount}件` : '';
-      return `
-      <div class="hist-item" onclick="restoreHist(${item.id})">
-        <div class="hist-item-body">
-          <div class="hist-item-file">📋 ${item.filename || '(ファイル未選択)'}${item.sheetName ? ' / ' + item.sheetName : ''}${count}</div>
-          <div class="hist-item-cols">${colNames}</div>
-          ${meta ? `<div class="hist-item-meta">${meta}</div>` : ''}
-          <div class="hist-item-time">🕐 ${fmtTime(item.timestamp)}</div>
-        </div>
-        <button class="hist-del-btn" onclick="event.stopPropagation(); deleteHist(${item.id})">🗑</button>
-      </div>
-      `;
-    }).join('');
-  }
-
-  window.saveHistItem = function() {
-    const item = snapshot();
-    if (!item || !item.filename) { alert('先にファイルを読み込んでください。'); return; }
-    const h = getHist();
-    h.unshift(item);
-    if (h.length > MAX_HIST) h.length = MAX_HIST;
-    setHist(h);
-    renderHist();
-    const btn = document.getElementById('hist-save-btn');
-    btn.textContent = '✅ 保存しました';
-    btn.classList.add('saved');
-    setTimeout(() => { btn.textContent = '💾 今の状態を保存'; btn.classList.remove('saved'); }, 1800);
-  };
-
-  window.deleteHist = function(id) {
-    setHist(getHist().filter(x => x.id !== id));
-    renderHist();
-  };
-
-  window.restoreHist = function(id) {
-    const item = getHist().find(x => x.id === id);
-    if (!item) return;
-    closeHistPanel();
-
-    function applyState() {
-      const c = ctx(); if (!c) return;
-      if (item.sheetName && item.sheetName !== c.getSheetName()) {
-        const sheetSel = document.getElementById('sheetSelector');
-        if (sheetSel && Array.from(sheetSel.options).some(opt => opt.value === item.sheetName)) {
-          sheetSel.value = item.sheetName;
-          loadSheet(item.sheetName);
-        }
-      }
-      // 列表示
-      if (item.visibleCols && item.visibleCols.length > 0) {
-        c.setVisibleCols(new Set(item.visibleCols));
-        c.syncCheckboxes();
-      }
-      // ソート
-      if (item.sortState && item.sortState.col >= 0) {
-        c.setSortState({ ...item.sortState });
-        const ci = item.sortState.col, dir = item.sortState.dir;
-        if (dir !== 0) {
-          c.getDataArray().sort((a, b) => {
-            const va = String(a[ci]||'').trim(), vb = String(b[ci]||'').trim();
-            if (va===vb) return 0; if (va==='') return 1; if (vb==='') return -1;
-            return dir * (va < vb ? -1 : 1);
-          });
-        }
-      } else {
-        c.setSortState({ col: -1, dir: 0 });
-      }
-      // 検索
-      if (item.searchQuery !== undefined) c.setSearchQuery(item.searchQuery);
-      // フィルター
-      c.setFilterState(item.filterState || null);
-      // 再描画
-      c.renderTable();
-      c.updateStatus('📌 履歴を復元しました');
-    }
-
-    if (item.filename && item.filename !== ctx().getFilename()) {
-      window._histPendingRestore = { applyFn: applyState, filename: item.filename };
-      const sel = document.getElementById('gitFileSelector');
-      if (sel) {
-        for (const opt of sel.options) {
-          if (decodeURIComponent(opt.value) === item.filename) { sel.value = opt.value; break; }
-        }
-      }
-      ctx().loadFromGitHub(item.filename);
-    } else {
-      applyState();
-    }
+    showToast(`${removable.length}件の履歴を削除しました`);
   };
 
   window.toggleHistPanel = function() {
@@ -2503,11 +2323,10 @@ window._colviewCtx = {
     if (panel.classList.contains('open')) {
       panel.classList.remove('open'); overlay.classList.remove('show');
     } else {
-      renderHist(); window.renderPropertyChangeHistory(); panel.classList.add('open'); overlay.classList.add('show');
+      window.renderPropertyChangeHistory(); panel.classList.add('open'); overlay.classList.add('show');
     }
   };
   window.openPropertyHistoryPanel = function() {
-    renderHist();
     window.renderPropertyChangeHistory();
     document.getElementById('hist-panel').classList.add('open');
     document.getElementById('hist-overlay').classList.add('show');
