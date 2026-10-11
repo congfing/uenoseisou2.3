@@ -1300,7 +1300,7 @@ function appendExistingFieldChangeButton(body, columnIndex) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'new-record-field-change';
-  button.textContent = '変更';
+  button.textContent = '変更して反映';
   button.addEventListener('click', () => applyExistingPropertyField(columnIndex));
   body.appendChild(button);
 }
@@ -1356,7 +1356,7 @@ function renderNewRecordFields() {
       const row = document.createElement('div'); row.className = 'new-record-order-row';
       const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.inputMode = 'numeric';
       input.value = newRecordDraft[columnIndex] || '';
-      const change = document.createElement('button'); change.type = 'button'; change.textContent = '変更';
+      const change = document.createElement('button'); change.type = 'button'; change.textContent = '変更して反映';
       change.addEventListener('click', () => {
         const value = Number(input.value);
         if (!Number.isInteger(value) || value < 1) { showToast('整理番号を入力してください'); return; }
