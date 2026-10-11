@@ -691,6 +691,34 @@ function loadSavedState() {
   } catch(e) { return null; }
 }
 
+function restoreCollectionOrdersToRows(collectionOrders) {
+  if (!collectionOrders || typeof collectionOrders !== 'object') return 0;
+  const districtCol = headers.findIndex(h => ['地区', '地区名'].includes(String(h || '').trim()));
+  const propertyCol = headers.findIndex(h => ['契約物件', '物件名', '名前'].includes(String(h || '').trim()));
+  let restored = 0;
+  Object.entries(collectionOrders).forEach(([key, savedOrder]) => {
+    const order = normalizedCollectionOrder(savedOrder);
+    const [staff, day, district, ...propertyParts] = String(key).split('||');
+    const property = propertyParts.join('||');
+    if (order === null || !ASSIGNMENT_STAFF.includes(staff) || !ASSIGNMENT_DAYS.includes(day)) return;
+    const dayCol = headers.findIndex(h => String(h || '').trim() === day);
+    if (dayCol < 0) return;
+    const row = dataArray.find(candidate => {
+      const rowDistrict = districtCol >= 0 ? String(candidate[districtCol] || '').trim() : '';
+      const rowProperty = propertyCol >= 0 ? String(candidate[propertyCol] || '').trim() : '';
+      const weekdayValue = String(candidate[dayCol] || '').trim().replace('－', '-');
+      return rowDistrict === district && rowProperty === property && weekdayValue.startsWith(staff);
+    });
+    if (!row) return;
+    const nextValue = `${staff}${order}`;
+    if (String(row[dayCol] || '').trim() !== nextValue) {
+      row[dayCol] = nextValue;
+      restored++;
+    }
+  });
+  return restored;
+}
+
 // 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
   if (!saved) return;
@@ -723,6 +751,7 @@ function applyRestoredState(saved) {
     ? { ...saved.collectionOrders }
     : {};
   draftCollectionOrders = { ...committedCollectionOrders };
+  restoreCollectionOrdersToRows(committedCollectionOrders);
   collectionOrderUndoStack = [];
   updateAssignmentButton();
 }
