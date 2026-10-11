@@ -2230,7 +2230,12 @@ function getTimestamp() {
 }
 
 function makeTimestampedName(filename) {
-  return filename.replace(/\.xlsx$/i, '') + '_' + getTimestamp() + '.xlsx';
+  const stem = filename.replace(/\.xlsx$/i, '');
+  const datedPropertyTable = stem.match(/^(2026年度物件表_KMN置換_列移動)(?:_\d{4}-\d{2}-\d{2})?(?:_\d{8}_\d{4,6})?$/);
+  if (datedPropertyTable) {
+    return `${datedPropertyTable[1]}_${getTimestamp()}.xlsx`;
+  }
+  return `${stem.replace(/_\d{8}_\d{4,6}$/, '')}_${getTimestamp()}.xlsx`;
 }
 
 function doSaveExcel(filename) {
