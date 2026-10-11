@@ -200,7 +200,7 @@
   #propertyManagePanel { display:none; margin-top:12px; border-top:1px solid #222; padding-top:12px; }
   #propertyManagePanel.active { display:block; }
   #propertySearchInput { width:100%; min-height:42px; padding:7px 9px; border:1px solid #777; font:inherit; }
-  .property-selected-row { display:flex; gap:6px; align-items:stretch; margin-top:8px; }
+  .property-selected-row { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; margin-top:8px; }
   .property-selected-row button { flex:0 0 auto; padding:7px 10px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
   #propertySearchResults { margin-top:8px; max-height:240px; overflow:auto; border:1px solid #999; }
   .property-search-result {
@@ -246,6 +246,7 @@
   #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
   #dataTable tbody tr:hover { background:#f0f6ff; }
+  #dataTable tbody tr.newly-registered-row { outline:2px solid #222; outline-offset:-2px; }
   #dataTable tbody tr.assignment-group-row { background:#e7f0fb; }
   #dataTable tbody tr.assignment-group-row:hover { background:#e7f0fb; }
   #dataTable tbody tr.assignment-group-row td {
@@ -494,6 +495,7 @@
       <button type="button" id="newRecordSubmit">新規登録します</button>
       <button type="button" id="newRecordMail">メール送信</button>
       <button type="button" id="propertySearchOpen">物件検索</button>
+      <button type="button" id="propertyClearFields">上のデータを消す</button>
       <button type="button" id="newRecordCancel">キャンセル</button>
     </div>
   </div>
@@ -1004,6 +1006,8 @@ const newRecordDialog = document.getElementById('newRecordDialog');
 const newRecordFields = document.getElementById('newRecordFields');
 let newRecordDraft = [];
 let newRecordOrderPreview = null;
+let lastRegisteredRecord = null;
+let pendingPropertyChanges = [];
 let hiddenPropertyRecords = [];
 let selectedPropertyRow = null;
 let propertyManageMode = 'search';
@@ -1048,6 +1052,18 @@ function loadPropertyIntoRegistrationFields(row) {
   const orderCol = findHeaderIndex(['整理番号']);
   newRecordOrderPreview = orderCol >= 0 ? Number(newRecordDraft[orderCol]) || null : null;
   renderNewRecordFields();
+}
+
+function clearPropertyRegistrationFields() {
+  newRecordDraft = Array(headers.length).fill('');
+  newRecordOrderPreview = null;
+  const registrationCol = findHeaderIndex(['登録番号']);
+  if (registrationCol >= 0) newRecordDraft[registrationCol] = nextRegistrationNumber(registrationCol);
+  selectedPropertyRow = null;
+  document.getElementById('propertySelectedInfo').textContent = '物件を選択してください';
+  document.getElementById('propertySearchResults').querySelectorAll('.property-search-result').forEach(entry => entry.classList.remove('selected'));
+  renderNewRecordFields();
+  showToast('上のデータを消しました');
 }
 
 function renderPropertySearchResults() {
@@ -1123,6 +1139,7 @@ function restoreHiddenProperty(row) {
   if (orderCol >= 0) record.row[orderCol] = String(record.originalOrder);
   dataArray.splice(Math.min(record.originalIndex, dataArray.length), 0, record.row);
   hiddenPropertyRecords.splice(hiddenIndex, 1);
+  pendingPropertyChanges.push({ type:'restore', row:[...record.row] });
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
   showToast(`${item.property}を元の位置へ戻しました`);
@@ -1270,6 +1287,7 @@ document.getElementById('propertyHide').addEventListener('click', () => {
   if (index < 0) return;
   const item = propertyRowInfo(selectedPropertyRow);
   hiddenPropertyRecords.push({ row:[...selectedPropertyRow], originalIndex:index, originalOrder:item.order });
+  pendingPropertyChanges.push({ type:'hide', row:[...selectedPropertyRow] });
   dataArray.splice(index, 1);
   shiftOrdersForRemoval(item.order);
   selectedPropertyRow = null;
@@ -1277,14 +1295,28 @@ document.getElementById('propertyHide').addEventListener('click', () => {
   showToast(`${item.property}を非表示にしました`);
 });
 document.getElementById('propertyRestore').addEventListener('click', () => openPropertyManager('restore'));
+document.getElementById('propertyClearFields').addEventListener('click', clearPropertyRegistrationFields);
 document.getElementById('newRecordMail').addEventListener('click', () => {
-  const lines = ['【物件表 新規登録】', `ファイル：${currentFilename}`, `シート：${currentSheetName}`];
-  headers.slice(0, 26).forEach((header, index) => {
-    const value = String(newRecordDraft[index] || '').trim();
-    if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const currentHasProperty = propertyCol >= 0 && String(newRecordDraft[propertyCol] || '').trim();
+  const changes = [...pendingPropertyChanges];
+  if (!changes.length && currentHasProperty) changes.push({ type:'register', row:[...newRecordDraft] });
+  if (!changes.length && lastRegisteredRecord) changes.push({ type:'register', row:[...lastRegisteredRecord] });
+  if (!changes.length) {
+    showToast('先に物件情報を入力するか、新規登録してください');
+    return;
+  }
+  const typeLabels = { register:'新規登録', hide:'非表示', restore:'非表示から戻す' };
+  const lines = ['【物件表 登録・変更】', `ファイル：${currentFilename}`, `シート：${currentSheetName}`];
+  changes.forEach((change, changeIndex) => {
+    lines.push('', `【${changeIndex + 1}件目：${typeLabels[change.type] || '変更'}】`);
+    headers.slice(0, 26).forEach((header, index) => {
+      const value = String(change.row[index] || '').trim();
+      if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
+    });
   });
   const link = document.createElement('a');
-  link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 新規登録')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
+  link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 登録・変更')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
   link.style.display = 'none'; document.body.appendChild(link); link.click();
   setTimeout(() => link.remove(), 1000);
 });
@@ -1296,14 +1328,39 @@ document.getElementById('newRecordSubmit').addEventListener('click', () => {
   if (propertyCol >= 0 && !String(newRecordDraft[propertyCol] || '').trim()) { showToast('物件名を入力してください'); return; }
   const order = Number(newRecordDraft[orderCol]);
   if (orderCol >= 0 && (!Number.isInteger(order) || order < 1)) { showToast('整理番号を入力して変更を押してください'); return; }
+  const newRow = [...newRecordDraft];
+  let insertIndex = dataArray.length;
   if (orderCol >= 0) {
+    const matchedIndex = dataArray.findIndex(row => {
+      const current = Number(row[orderCol]);
+      return Number.isFinite(current) && current >= order;
+    });
+    if (matchedIndex >= 0) insertIndex = matchedIndex;
     dataArray.forEach(row => {
       const current = Number(row[orderCol]);
       if (Number.isFinite(current) && current >= order) row[orderCol] = String(current + 1);
     });
   }
-  dataArray.push([...newRecordDraft]);
-  newRecordDialog.classList.remove('active'); renderTable(); saveState();
+  dataArray.splice(insertIndex, 0, newRow);
+  lastRegisteredRecord = [...newRow];
+  pendingPropertyChanges.push({ type:'register', row:[...newRow] });
+  filterState = { colIdx:null, selectedValues:new Set(), filterType:'exact' };
+  searchInput.value = '';
+  assignmentFilter = { active:false, staff:new Set(), days:new Set() };
+  sortState = { col:-1, dir:0 };
+  visibleCols = new Set(headers.map((_, index) => index));
+  colPanel.classList.remove('active');
+  syncCheckboxes();
+  newRecordDialog.classList.remove('active');
+  renderTable();
+  const displayedIndex = displayedRows.indexOf(newRow);
+  const displayedRow = displayedIndex >= 0 ? tableBody.querySelectorAll('tr')[displayedIndex] : null;
+  if (displayedRow) {
+    displayedRow.classList.add('newly-registered-row');
+    displayedRow.scrollIntoView({ block:'center', behavior:'smooth' });
+    setTimeout(() => displayedRow.classList.remove('newly-registered-row'), 3500);
+  }
+  saveState();
   showToast('新しい物件を表に登録しました');
 });
 
@@ -1800,14 +1857,22 @@ document.getElementById('collectionOrderReset').addEventListener('click', () => 
 });
 
 function getCollectionOrderMailTo() {
+  const requiredAddresses = [
+    'annsyuu38@gmail.com',
+    'yuno.uejma@gmail.com',
+    'kankyoubu.itaku@gmail.com'
+  ];
   try {
     const list = JSON.parse(localStorage.getItem('keiryo_mail_list') || '[]');
-    const addresses = Array.isArray(list)
+    const selectedAddresses = Array.isArray(list)
       ? list.filter(item => item && item.enabled && item.addr).map(item => item.addr.trim()).filter(Boolean)
       : [];
-    return addresses.length ? addresses.join(',') : 'annsyuu38@gmail.com';
+    const addresses = [...selectedAddresses, ...requiredAddresses].filter((address, index, all) =>
+      all.findIndex(item => item.toLowerCase() === address.toLowerCase()) === index
+    );
+    return addresses.join(',');
   } catch(e) {
-    return 'annsyuu38@gmail.com';
+    return requiredAddresses.join(',');
   }
 }
 
