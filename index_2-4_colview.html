@@ -1307,6 +1307,7 @@ function appendExistingFieldChangeButton(body, columnIndex) {
 
 function openNewRecordDialog() {
   if (!headers.length) { showToast('先に物件表を読み込んでください'); return; }
+  lastRegisteredRecord = null;
   newRecordDraft = Array(headers.length).fill('');
   newRecordOrderPreview = null;
   const registrationCol = findHeaderIndex(['登録番号']);
@@ -1412,10 +1413,6 @@ document.getElementById('propertyHide').addEventListener('click', () => {
 });
 document.getElementById('propertyRestore').addEventListener('click', () => openPropertyManager('restore'));
 document.getElementById('propertyClearFields').addEventListener('click', clearPropertyRegistrationFields);
-function openPropertyHistoryForMail() {
-  if (typeof window.openPropertyHistoryPanel === 'function') window.openPropertyHistoryPanel();
-}
-
 function sendPropertyChangeMail(changes) {
   if (!changes.length) { showToast('送信する変更履歴を選択してください'); return false; }
   const typeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す' };
@@ -1434,7 +1431,24 @@ function sendPropertyChangeMail(changes) {
   return true;
 }
 
-document.getElementById('newRecordMail').addEventListener('click', openPropertyHistoryForMail);
+function sendLatestNewRecordMail() {
+  if (!lastRegisteredRecord) { showToast('先に新規登録してください'); return; }
+  const history = getPropertyChangeHistory();
+  const target = history.find(item => item.type === 'register' && !item.sentAt &&
+    item.filename === currentFilename && item.sheetName === currentSheetName &&
+    JSON.stringify(item.row) === JSON.stringify(lastRegisteredRecord));
+  if (!target) { showToast('この新規登録は送信済みです'); return; }
+  if (!sendPropertyChangeMail([target])) return;
+  target.sentAt = Date.now();
+  setPropertyChangeHistory(history);
+  pendingPropertyChanges = pendingPropertyChanges.filter(change =>
+    !(change.type === 'register' && JSON.stringify(change.row) === JSON.stringify(lastRegisteredRecord))
+  );
+  if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+  showToast('新規登録1件を送信済みにしました');
+}
+
+document.getElementById('newRecordMail').addEventListener('click', sendLatestNewRecordMail);
 document.getElementById('newRecordSubmit').addEventListener('click', () => {
   if (selectedPropertyRow) {
     showToast('既存物件は各項目の変更ボタンで保存し、閉じるを押してください');
@@ -1471,7 +1485,8 @@ document.getElementById('newRecordSubmit').addEventListener('click', () => {
   visibleCols = new Set(headers.map((_, index) => index));
   colPanel.classList.remove('active');
   syncCheckboxes();
-  newRecordDialog.classList.remove('active');
+  selectedPropertyRow = newRow;
+  loadPropertyIntoRegistrationFields(newRow);
   renderTable();
   const displayedIndex = displayedRows.indexOf(newRow);
   const displayedRow = displayedIndex >= 0 ? tableBody.querySelectorAll('tr')[displayedIndex] : null;
