@@ -152,6 +152,7 @@
     padding:4px 11px; border:1px solid #222; border-radius:4px;
     background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer;
   }
+  #btnAssignment { font-weight:700; }
 
   /* 新規登録 */
   #newRecordDialog {
@@ -1523,8 +1524,12 @@ function normalizedCollectionOrder(value) {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-function nextCollectionOrder(staff) {
-  const prefix = `${staff}||`;
+function collectionOrderGroupPrefix(staff, day) {
+  return `${staff}||${day}||`;
+}
+
+function nextCollectionOrder(staff, day) {
+  const prefix = collectionOrderGroupPrefix(staff, day);
   let max = 0;
   Object.keys(draftCollectionOrders).forEach(key => {
     if (!key.startsWith(prefix)) return;
@@ -1535,20 +1540,20 @@ function nextCollectionOrder(staff) {
 }
 
 function insertCollectionOrder(item, requestedOrder) {
-  const staffPrefix = `${item.staff}||`;
+  const groupPrefix = collectionOrderGroupPrefix(item.staff, item.day);
   const oldOrder = normalizedCollectionOrder(draftCollectionOrders[item.key]);
   delete draftCollectionOrders[item.key];
 
   if (oldOrder !== null) {
     Object.keys(draftCollectionOrders).forEach(key => {
-      if (!key.startsWith(staffPrefix)) return;
+      if (!key.startsWith(groupPrefix)) return;
       const order = normalizedCollectionOrder(draftCollectionOrders[key]);
       if (order !== null && order > oldOrder) draftCollectionOrders[key] = order - 1;
     });
   }
 
   Object.keys(draftCollectionOrders).forEach(key => {
-    if (!key.startsWith(staffPrefix)) return;
+    if (!key.startsWith(groupPrefix)) return;
     const order = normalizedCollectionOrder(draftCollectionOrders[key]);
     if (order !== null && order >= requestedOrder) draftCollectionOrders[key] = order + 1;
   });
@@ -1614,9 +1619,9 @@ function renderTable() {
     });
     assignments.sort((a, b) =>
       (staffOrder.get(a.staff) - staffOrder.get(b.staff)) ||
+      (dayOrder.get(a.day) - dayOrder.get(b.day)) ||
       ((a.collectionOrder === null) - (b.collectionOrder === null)) ||
       ((a.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (b.collectionOrder ?? Number.MAX_SAFE_INTEGER)) ||
-      (dayOrder.get(a.day) - dayOrder.get(b.day)) ||
       (a.order - b.order) ||
       (a.sourceIndex - b.sourceIndex)
     );
@@ -1673,17 +1678,18 @@ function renderTable() {
   // ボディ描画
   // 「計量」列はHome側のTabで切り替えるため、ページ移動リンクは出さない。
   tableBody.innerHTML='';
-  let currentAssignmentStaff = '';
+  let currentAssignmentGroup = '';
   rows.forEach((row,ri) => {
     if (assignmentFilter.active) {
       const item = assignmentRows[ri];
-      if (item.staff !== currentAssignmentStaff) {
-        currentAssignmentStaff = item.staff;
+      const group = `${item.staff}||${item.day}`;
+      if (group !== currentAssignmentGroup) {
+        currentAssignmentGroup = group;
         const groupRow = document.createElement('tr');
         groupRow.className = 'assignment-group-row';
         const groupCell = document.createElement('td');
         groupCell.colSpan = 5;
-        groupCell.textContent = `${item.staff} 担当`;
+        groupCell.textContent = `${item.staff} / ${item.day}`;
         groupRow.appendChild(groupCell);
         tableBody.appendChild(groupRow);
       }
@@ -1717,7 +1723,7 @@ function renderTable() {
       if (registeredOrder !== null) {
         orderInput.style.setProperty('background-color', '#d9d9d9', 'important');
       }
-      orderInput.value = registeredOrder ?? nextCollectionOrder(item.staff);
+      orderInput.value = registeredOrder ?? nextCollectionOrder(item.staff, item.day);
       const orderChange = document.createElement('button');
       orderChange.type = 'button';
       orderChange.className = 'collection-order-change';
