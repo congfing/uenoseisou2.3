@@ -440,14 +440,14 @@
     <input type="file" id="localFileInput" accept=".xlsx,.xls" style="display:none;">
     <select id="gitFileSelector"><option value="">⏳ 取得中…</option></select>
     <select id="sheetSelector" title="シートを選択" disabled><option value="">― シート ―</option></select>
-    <button class="tb-btn" id="btnReload">🔄 最新を取得</button>
+    <button class="tb-btn" id="btnReload">🔄 GITの最新を取得</button>
     <button class="tb-btn" id="btnNewRecord">新規登録</button>
     <button class="tb-btn" id="btnAssignment">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
     <button class="tb-btn" id="btnAllOff">全列非表示</button>
     <input type="text" id="searchInput" placeholder="🔍 検索">
-    <button class="tb-btn" id="btnSave" style="background:#27ae60;color:#fff;border-color:#1e8449;">💾 保存</button>
+    <button class="tb-btn" id="btnSave" style="background:#27ae60;color:#fff;border-color:#1e8449;font-weight:700;">💾 エクセル保存</button>
     <button class="tb-btn" onclick="toggleHistPanel()" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:700;">📌 履歴</button>
     <span id="statusBar">— 読み込み中 —</span>
   </div>
@@ -539,7 +539,7 @@
 <div id="collectionOrderActions" aria-label="収集順の変更操作">
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
-  <button type="button" id="collectionOrderSave">保存</button>
+  <button type="button" id="collectionOrderSave">保存して反映</button>
   <button type="button" id="collectionOrderCommit">メール送信</button>
   <button type="button" id="collectionOrderSaveExit">閉じる</button>
 </div>
@@ -953,7 +953,7 @@ function loadFromGitHub(filename) {
       loadWorkbookData(buf, filename, 'GitHub: ' + GITHUB_REPO_LABEL);
     })
     .catch(e => updateStatus('⚠️ 読み込み失敗: '+e.message))
-    .finally(() => { btn.textContent='🔄 最新を取得'; btn.disabled=false; });
+    .finally(() => { btn.textContent='🔄 GITの最新を取得'; btn.disabled=false; });
 }
 
 gitFileSel.addEventListener('change', function() {
@@ -2112,17 +2112,36 @@ function openCollectionOrderMail() {
   return true;
 }
 
-function saveCollectionOrderProgress() {
+function applyCollectionOrdersToWeekdayCells() {
+  let changed = 0;
+  displayedAssignmentRows.forEach(item => {
+    const order = normalizedCollectionOrder(draftCollectionOrders[item.key]);
+    if (order === null) return;
+    const dayCol = headers.findIndex(h => String(h || '').trim() === item.day);
+    if (dayCol < 0) return;
+    const nextValue = `${item.staff}${order}`;
+    if (String(item.row[dayCol] || '').trim() === nextValue) return;
+    item.row[dayCol] = nextValue;
+    changed++;
+  });
+  return changed;
+}
+
+function saveCollectionOrderProgress(applyToWeekdayCells = false) {
   clearTimeout(collectionOrderRenderTimer);
   committedCollectionOrders = { ...draftCollectionOrders };
+  const changed = applyToWeekdayCells ? applyCollectionOrdersToWeekdayCells() : 0;
   collectionOrderUndoStack = [];
   saveState();
   renderTable();
+  return changed;
 }
 
 document.getElementById('collectionOrderSave').addEventListener('click', () => {
-  saveCollectionOrderProgress();
-  showToast('途中入力を端末に保存しました');
+  const changed = saveCollectionOrderProgress(true);
+  showToast(changed > 0
+    ? `${changed}件を曜日欄に記入しました`
+    : '入力済みの収集順を保存しました');
 });
 
 document.getElementById('collectionOrderSaveExit').addEventListener('click', () => {
