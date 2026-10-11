@@ -199,7 +199,8 @@
   .new-record-actions button { padding:9px 15px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
   #propertyManagePanel { display:none; margin-top:12px; border-top:1px solid #222; padding-top:12px; }
   #propertyManagePanel.active { display:block; }
-  #propertySearchInput { width:100%; min-height:42px; padding:7px 9px; border:1px solid #777; font:inherit; }
+  .property-search-inputs { display:grid; grid-template-columns:minmax(0, 1fr) 150px; gap:7px; }
+  #propertySearchInput, #propertyOrderSearchInput { width:100%; min-height:42px; padding:7px 9px; border:1px solid #777; font:inherit; }
   .property-selected-row { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; margin-top:8px; }
   .property-selected-row button { flex:0 0 auto; padding:7px 10px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
   #propertySearchResults { margin-top:8px; max-height:240px; overflow:auto; border:1px solid #999; }
@@ -218,6 +219,7 @@
     .new-record-choice { min-height:38px; }
     .new-record-actions { position:sticky; bottom:-12px; background:#fff; padding:10px 0 12px; }
     .new-record-actions { flex-wrap:wrap; }
+    .property-search-inputs { grid-template-columns:minmax(0, 1fr) 110px; }
     .new-record-actions button { flex:1 1 42%; }
   }
 
@@ -483,7 +485,10 @@
     </div>
     <div id="newRecordFields"></div>
     <div id="propertyManagePanel">
-      <input type="search" id="propertySearchInput" placeholder="物件名をひらがな2文字以上で検索">
+      <div class="property-search-inputs">
+        <input type="search" id="propertySearchInput" placeholder="物件名を2文字以上で検索">
+        <input type="number" id="propertyOrderSearchInput" min="1" inputmode="numeric" placeholder="整理番号">
+      </div>
       <div class="property-selected-row">
         <div id="propertySelectedInfo">物件を選択してください</div>
         <button type="button" id="propertyHide">非表示</button>
@@ -1069,19 +1074,25 @@ function clearPropertyRegistrationFields() {
 function renderPropertySearchResults() {
   const results = document.getElementById('propertySearchResults');
   const input = document.getElementById('propertySearchInput');
+  const orderInput = document.getElementById('propertyOrderSearchInput');
   const info = document.getElementById('propertySelectedInfo');
   results.innerHTML = '';
   selectedPropertyRow = null;
   info.textContent = propertyManageMode === 'restore' ? '戻す物件を選択してください' : '物件を選択してください';
   const source = propertyManageMode === 'restore' ? hiddenPropertyRecords.map(item => item.row) : dataArray;
   const query = normalizePropertySearch(input.value);
-  if (propertyManageMode === 'search' && query.length < 2) {
-    results.textContent = '2文字以上入力すると候補を表示します。';
+  const orderQuery = String(orderInput.value || '').trim();
+  if (propertyManageMode === 'search' && !orderQuery && query.length < 2) {
+    results.textContent = '物件名を2文字以上、または整理番号を入力すると候補を表示します。';
     return;
   }
   const matches = source.filter(row => {
     const item = propertyRowInfo(row);
-    return item.property && (propertyManageMode === 'restore' || normalizePropertySearch(item.property).includes(query));
+    if (!item.property) return false;
+    if (propertyManageMode === 'restore') return true;
+    const nameMatches = !query || normalizePropertySearch(item.property).includes(query);
+    const orderMatches = !orderQuery || String(item.order) === orderQuery;
+    return nameMatches && orderMatches;
   }).slice(0, 100);
   matches.forEach(row => {
     const item = propertyRowInfo(row);
@@ -1104,9 +1115,12 @@ function openPropertyManager(mode) {
   propertyManageMode = mode;
   const panel = document.getElementById('propertyManagePanel');
   const input = document.getElementById('propertySearchInput');
+  const orderInput = document.getElementById('propertyOrderSearchInput');
   panel.classList.add('active');
   input.style.display = mode === 'restore' ? 'none' : '';
+  orderInput.style.display = mode === 'restore' ? 'none' : '';
   input.value = '';
+  orderInput.value = '';
   renderPropertySearchResults();
   if (mode === 'search') input.focus();
 }
@@ -1280,6 +1294,7 @@ document.getElementById('newRecordCancel').addEventListener('click', () => newRe
 document.getElementById('newRecordClose').addEventListener('click', () => newRecordDialog.classList.remove('active'));
 document.getElementById('btnNewRecord').addEventListener('click', openNewRecordDialog);
 document.getElementById('propertySearchInput').addEventListener('input', renderPropertySearchResults);
+document.getElementById('propertyOrderSearchInput').addEventListener('input', renderPropertySearchResults);
 document.getElementById('propertySearchOpen').addEventListener('click', () => openPropertyManager('search'));
 document.getElementById('propertyHide').addEventListener('click', () => {
   if (propertyManageMode !== 'search' || !selectedPropertyRow) { showToast('物件検索から非表示にする物件を選択してください'); return; }
