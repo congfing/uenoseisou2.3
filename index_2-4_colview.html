@@ -885,6 +885,20 @@ function uniqueXlsxNames(names) {
     .filter(name => /\.xlsx$/i.test(name));
 }
 
+function latestPropertyTableName(names) {
+  const prefix = '2026年度物件表_KMN置換_列移動_';
+  const candidates = names.map(name => {
+    if (!name.startsWith(prefix)) return null;
+    const dated = name.match(/_(\d{4})-(\d{2})-(\d{2})(?:_(\d{8})_(\d{4,6}))?\.xlsx$/i);
+    if (!dated) return null;
+    const dateScore = `${dated[1]}${dated[2]}${dated[3]}`;
+    const timeScore = dated[5] ? dated[5].padEnd(6, '0') : '000000';
+    return { name, score: `${dated[4] || dateScore}${timeScore}` };
+  }).filter(Boolean);
+  candidates.sort((a, b) => b.score.localeCompare(a.score) || b.name.localeCompare(a.name, 'ja'));
+  return candidates.length ? candidates[0].name : null;
+}
+
 function getGitHubXlsxNames() {
   return fetch(GITHUB_API_URL + '?t=' + Date.now(), { cache: 'no-store' })
     .then(r => { if(!r.ok) throw new Error('GitHub API HTTP ' + r.status); return r.json(); })
@@ -921,8 +935,9 @@ function fetchGitHubFileList() {
       const existsPrevious = previousValue && xlsxNames.some(name => encodeURIComponent(name) === previousValue);
       gitFileSel.value = existsPrevious ? previousValue : '';
       gitListLoadedAt = Date.now();
+      const latestPropertyTable = latestPropertyTableName(xlsxNames);
       const defaultFile = xlsxNames.includes(DEFAULT_GITHUB_XLSX) ? DEFAULT_GITHUB_XLSX : null;
-      const target = defaultFile || xlsxNames[0];
+      const target = latestPropertyTable || defaultFile || xlsxNames[0];
       if (target) {
         gitFileSel.value = encodeURIComponent(target);
         loadFromGitHub(target);
@@ -985,8 +1000,7 @@ document.getElementById('localFileInput').addEventListener('change', function() 
   this.value = '';
 });
 document.getElementById('btnReload').addEventListener('click', () => {
-  if (gitFileSel.value && gitFileSel.value !== '__local__') loadFromGitHub();
-  else fetchGitHubFileList();
+  fetchGitHubFileList();
 });
 
 function updateAssignmentButton(count) {
