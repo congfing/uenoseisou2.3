@@ -604,7 +604,9 @@ let visibleCols = new Set();
 let sortState   = { col: -1, dir: 0 };
 let currentFilename = '';
 let currentSheetName = '';
+let currentHeaderRowIndex = 0;
 let workbook    = null;   // 読み込んだExcelワークブック
+const sheetDataRowCounts = {};
 // フィルター状態: { colIdx, selectedValues: Set, filterType: 'exact'|'prefix' }
 let filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
 let filterPopupCol = -1;
@@ -743,6 +745,59 @@ function detectHeaderRow(raw) {
   return idx;
 }
 
+function excelCellType(value) {
+  if (typeof value === 'number') return 'n';
+  if (typeof value === 'boolean') return 'b';
+  return 's';
+}
+
+function setWorksheetCellValue(ws, rowIndex, columnIndex, value, styleSource) {
+  const address = XLSX.utils.encode_cell({ r:rowIndex, c:columnIndex });
+  let cell = ws[address];
+  const preferredType = (cell && cell.t) || (styleSource && styleSource.t) || '';
+  let normalized = value === null || value === undefined ? '' : value;
+  if (preferredType === 'n' && normalized !== '' && Number.isFinite(Number(normalized))) normalized = Number(normalized);
+  if (!cell) {
+    cell = {};
+    if (styleSource && styleSource.s) cell.s = styleSource.s;
+    ws[address] = cell;
+  }
+  delete cell.f;
+  delete cell.F;
+  delete cell.w;
+  cell.v = normalized;
+  cell.t = excelCellType(normalized);
+}
+
+function syncCurrentSheetToWorkbook() {
+  if (!workbook || !currentSheetName || !headers.length) return;
+  const ws = workbook.Sheets[currentSheetName];
+  if (!ws) return;
+  const bodyStart = currentHeaderRowIndex + 1;
+  const oldCount = sheetDataRowCounts[currentSheetName] ?? dataArray.length;
+  const rowCount = Math.max(oldCount, dataArray.length);
+  const columnCount = headers.length;
+  const templateRow = bodyStart + Math.max(0, Math.min(oldCount, dataArray.length) - 1);
+
+  for (let rowOffset = 0; rowOffset < rowCount; rowOffset++) {
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+      const rowIndex = bodyStart + rowOffset;
+      const address = XLSX.utils.encode_cell({ r:rowIndex, c:columnIndex });
+      const nextValue = rowOffset < dataArray.length ? (dataArray[rowOffset][columnIndex] ?? '') : '';
+      const existing = ws[address];
+      if (existing && String(existing.v ?? '') === String(nextValue)) continue;
+      const styleSource = ws[XLSX.utils.encode_cell({ r:templateRow, c:columnIndex })];
+      setWorksheetCellValue(ws, rowIndex, columnIndex, nextValue, styleSource);
+    }
+  }
+
+  const originalRange = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : { s:{r:0,c:0}, e:{r:0,c:0} };
+  originalRange.e.r = Math.max(currentHeaderRowIndex, bodyStart + dataArray.length - 1);
+  originalRange.e.c = Math.max(originalRange.e.c, columnCount - 1);
+  ws['!ref'] = XLSX.utils.encode_range(originalRange);
+  sheetDataRowCounts[currentSheetName] = dataArray.length;
+}
+
 // 指定シートのデータをロードして表示（シート切替にも使用）
 function loadSheet(sheetName) {
   if (!workbook) return;
@@ -752,8 +807,10 @@ function loadSheet(sheetName) {
   const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' })
                   .map(r => r.map(c => c===null||c===undefined ? '' : String(c)));
   const hIdx = detectHeaderRow(raw);
+  currentHeaderRowIndex = hIdx;
   headers   = raw[hIdx] ? [...raw[hIdx]] : [];
   dataArray = raw.slice(hIdx+1);
+  sheetDataRowCounts[sheetName] = dataArray.length;
   visibleCols  = new Set(headers.map((_,i) => i));
   sortState    = { col:-1, dir:0 };
   filterState  = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
@@ -772,7 +829,7 @@ function loadSheet(sheetName) {
 // Excel読み込み
 function loadWorkbookData(buf, filename, sourcePath) {
   try {
-    const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+    const wb = XLSX.read(new Uint8Array(buf), { type:'array', cellStyles:true, cellDates:true });
     workbook = wb;
 
     // シートセレクタを更新
@@ -792,8 +849,10 @@ function loadWorkbookData(buf, filename, sourcePath) {
     const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' })
                     .map(r => r.map(c => c===null||c===undefined ? '' : String(c)));
     const hIdx = detectHeaderRow(raw);
+    currentHeaderRowIndex = hIdx;
     headers   = raw[hIdx] ? [...raw[hIdx]] : [];
     dataArray = raw.slice(hIdx+1);
+    sheetDataRowCounts[currentSheetName] = dataArray.length;
     currentFilename = filename;
     visibleCols  = new Set(headers.map((_,i) => i));
     sortState    = { col:-1, dir:0 };
@@ -816,6 +875,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
 // シートセレクタ変更イベント
 sheetSel.addEventListener('change', function() {
   if (!workbook || !this.value) return;
+  syncCurrentSheetToWorkbook();
   loadSheet(this.value);
 });
 
@@ -2095,21 +2155,13 @@ function makeTimestampedName(filename) {
 }
 
 function doSaveExcel(filename) {
-  if (!headers.length || !displayedRows.length) {
+  if (!workbook || !headers.length) {
     showToast('⚠️ 保存するデータがありません');
     return;
   }
-  const visArr = [...visibleCols].sort((a,b) => a-b);
-  const districtCol = headers.findIndex(h => ['地区', '地区名'].includes(String(h || '').trim()));
-  const propertyCol = headers.findIndex(h => ['契約物件', '物件名', '名前'].includes(String(h || '').trim()));
-  const wsData = assignmentFilter.active
-    ? [['順番', '地区名', '物件名', '収集順', '担当者情報'], ...displayedAssignmentRows.map((item, i) => [i + 1, districtCol >= 0 ? item.row[districtCol] || '' : '', propertyCol >= 0 ? item.row[propertyCol] || '' : '', draftCollectionOrders[item.key] || '', `${item.staffValue} / ${item.day}`])]
-    : [visArr.map(ci => headers[ci]), ...displayedRows.map(row => visArr.map(ci => row[ci] || ''))];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-  XLSX.writeFile(wb, filename);
-  showToast('✅ ' + filename + ' を保存しました');
+  syncCurrentSheetToWorkbook();
+  XLSX.writeFile(workbook, filename, { bookType:'xlsx', cellStyles:true, compression:true });
+  showToast('✅ 全シートを保持して ' + filename + ' を保存しました');
 }
 
 const saveDialog    = document.getElementById('saveDialog');
