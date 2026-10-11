@@ -192,11 +192,13 @@
   .new-record-order-row { display:flex; gap:6px; align-items:center; }
   .new-record-order-row input { flex:1; }
   .new-record-order-row button { min-height:38px; border:1px solid #222; background:#fff; font-weight:700; }
+  .new-record-field-change { width:100%; min-height:38px; margin-top:7px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
   #newRecordExisting { margin-top:8px; max-height:180px; overflow:auto; border:1px solid #aaa; }
   .new-record-existing-row { display:grid; grid-template-columns:48px 1fr; gap:8px; padding:5px 7px; border-bottom:1px solid #ccc; }
   .new-record-existing-row.preview { background:#d9d9d9; font-weight:800; }
   .new-record-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
   .new-record-actions button { padding:9px 15px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
+  .new-record-actions button:disabled { color:#777; border-color:#aaa; font-weight:400; }
   #propertyManagePanel { display:none; margin-top:12px; border-top:1px solid #222; padding-top:12px; }
   #propertyManagePanel.active { display:block; }
   .property-search-inputs { display:grid; grid-template-columns:minmax(0, 1fr) 150px; gap:7px; }
@@ -372,9 +374,9 @@
   }
   #hist-overlay.show { display:block; }
   #hist-panel {
-    position:fixed; top:44px; right:-105%; width:min(340px,92vw);
-    height:calc(100dvh - 44px); z-index:700;
-    box-shadow:-4px 0 24px rgba(0,0,0,0.2);
+    position:fixed; top:0; right:-105%; width:100vw;
+    height:100dvh; z-index:700;
+    box-shadow:none;
     transition:right 0.25s ease;
     display:flex; flex-direction:column;
     font-family:'Hiragino Sans','Meiryo',sans-serif;
@@ -397,6 +399,12 @@
   #hist-save-btn:active { opacity:0.8; }
   #hist-save-btn.saved { background:linear-gradient(135deg,#166534,#16a34a); }
   #hist-list { overflow-y:auto; flex:1; padding:0 10px 10px; -webkit-overflow-scrolling:touch; }
+  #hist-close-btn {
+    margin:0 12px 12px; padding:10px 0; flex-shrink:0;
+    background:#fff; color:#111; border:1px solid #111; border-radius:7px;
+    font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;
+  }
+  #hist-close-btn:active { font-weight:900; }
   .hist-item {
     display:flex; align-items:center; gap:8px; padding:9px 10px;
     border:1px solid #c7daf5; border-radius:8px;
@@ -414,6 +422,17 @@
     font-size:15px; cursor:pointer; padding:3px; flex-shrink:0; }
   .hist-del-btn:active { color:#ef4444; }
   #hist-empty { text-align:center; color:#9ca3af; font-size:12px; padding:28px 0 10px; line-height:1.8; }
+  .property-history-section { padding:10px 10px 8px; border-bottom:1px solid #bbb; }
+  .property-history-title { font-size:14px; font-weight:800; margin-bottom:7px; }
+  #property-change-list { max-height:42vh; overflow:auto; }
+  .property-change-item { display:grid; grid-template-columns:24px minmax(0,1fr); gap:7px; padding:8px; border:1px solid #aaa; margin-bottom:6px; background:#fff; }
+  .property-change-item.sent { background:#e5e5e5; color:#666; }
+  .property-change-item input { width:18px; height:18px; margin-top:2px; }
+  .property-change-name { font-size:13px; font-weight:800; }
+  .property-change-meta { margin-top:2px; font-size:11px; line-height:1.5; }
+  .property-history-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .property-history-actions button { flex:1 1 46%; min-height:38px; padding:6px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
+  .column-history-title { padding:9px 12px 0; font-size:13px; font-weight:800; }
 
 
 </style>
@@ -501,7 +520,7 @@
       <button type="button" id="newRecordMail">メール送信</button>
       <button type="button" id="propertySearchOpen">物件検索</button>
       <button type="button" id="propertyClearFields">上のデータを消す</button>
-      <button type="button" id="newRecordCancel">キャンセル</button>
+      <button type="button" id="newRecordCancel">閉じる</button>
     </div>
   </div>
 </div>
@@ -1016,6 +1035,35 @@ let pendingPropertyChanges = [];
 let hiddenPropertyRecords = [];
 let selectedPropertyRow = null;
 let propertyManageMode = 'search';
+const PROPERTY_CHANGE_HISTORY_KEY = 'colview_property_change_history_v1';
+
+function getPropertyChangeHistory() {
+  try { return JSON.parse(localStorage.getItem(PROPERTY_CHANGE_HISTORY_KEY) || '[]'); } catch (e) { return []; }
+}
+
+function setPropertyChangeHistory(items) {
+  try { localStorage.setItem(PROPERTY_CHANGE_HISTORY_KEY, JSON.stringify(items.slice(0, 200))); } catch (e) {}
+}
+
+function recordPropertyChange(type, row) {
+  const items = getPropertyChangeHistory();
+  const summary = propertyRowInfo(row);
+  const registrationCol = findHeaderIndex(['登録番号']);
+  const registration = registrationCol >= 0 ? String(row[registrationCol] || '') : '';
+  const isSameUnsentUpdate = item => type === 'update' && item.type === 'update' && !item.sentAt &&
+    item.filename === currentFilename && item.sheetName === currentSheetName &&
+    registrationCol >= 0 && String(item.row[registrationCol] || '') === registration;
+  const existing = items.find(isSameUnsentUpdate);
+  if (existing) {
+    existing.row = [...row];
+    existing.summary = summary;
+    existing.timestamp = Date.now();
+  } else {
+    items.unshift({ id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, timestamp:Date.now(), type, row:[...row], summary, filename:currentFilename, sheetName:currentSheetName, sentAt:null });
+  }
+  setPropertyChangeHistory(items);
+  if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+}
 
 function findHeaderIndex(names) {
   return headers.findIndex(header => names.includes(String(header || '').trim()));
@@ -1057,6 +1105,14 @@ function loadPropertyIntoRegistrationFields(row) {
   const orderCol = findHeaderIndex(['整理番号']);
   newRecordOrderPreview = orderCol >= 0 ? Number(newRecordDraft[orderCol]) || null : null;
   renderNewRecordFields();
+  syncNewRecordMode();
+}
+
+function syncNewRecordMode() {
+  const submit = document.getElementById('newRecordSubmit');
+  const editing = !!selectedPropertyRow;
+  submit.disabled = editing;
+  submit.textContent = editing ? '既存物件を変更中' : '新規登録します';
 }
 
 function clearPropertyRegistrationFields() {
@@ -1068,6 +1124,7 @@ function clearPropertyRegistrationFields() {
   document.getElementById('propertySelectedInfo').textContent = '物件を選択してください';
   document.getElementById('propertySearchResults').querySelectorAll('.property-search-result').forEach(entry => entry.classList.remove('selected'));
   renderNewRecordFields();
+  syncNewRecordMode();
   showToast('上のデータを消しました');
 }
 
@@ -1153,7 +1210,7 @@ function restoreHiddenProperty(row) {
   if (orderCol >= 0) record.row[orderCol] = String(record.originalOrder);
   dataArray.splice(Math.min(record.originalIndex, dataArray.length), 0, record.row);
   hiddenPropertyRecords.splice(hiddenIndex, 1);
-  pendingPropertyChanges.push({ type:'restore', row:[...record.row] });
+  recordPropertyChange('restore', record.row);
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
   showToast(`${item.property}を元の位置へ戻しました`);
@@ -1208,6 +1265,60 @@ function selectNewRecordChoice(columnIndex, value, button) {
   if (columnIndex === findHeaderIndex(['地区', '地区名'])) renderExistingDistrictProperties();
 }
 
+function rememberExistingPropertyChange(row) {
+  const registrationCol = findHeaderIndex(['登録番号']);
+  const registration = registrationCol >= 0 ? String(row[registrationCol] || '') : '';
+  pendingPropertyChanges = pendingPropertyChanges.filter(change => {
+    if (change.type !== 'update') return true;
+    return registrationCol < 0 || String(change.row[registrationCol] || '') !== registration;
+  });
+  pendingPropertyChanges.push({ type:'update', row:[...row] });
+  recordPropertyChange('update', row);
+}
+
+function applyExistingPropertyField(columnIndex) {
+  if (!selectedPropertyRow || !dataArray.includes(selectedPropertyRow)) {
+    showToast('物件検索で変更する物件を選択してください');
+    return;
+  }
+  const orderCol = findHeaderIndex(['整理番号']);
+  if (columnIndex === orderCol) {
+    const oldOrder = Number(selectedPropertyRow[orderCol]);
+    const newOrder = Number(newRecordDraft[orderCol]);
+    if (!Number.isInteger(newOrder) || newOrder < 1) { showToast('整理番号を入力してください'); return; }
+    dataArray.forEach(row => {
+      if (row === selectedPropertyRow) return;
+      const current = Number(row[orderCol]);
+      if (!Number.isFinite(current)) return;
+      if (newOrder < oldOrder && current >= newOrder && current < oldOrder) row[orderCol] = String(current + 1);
+      if (newOrder > oldOrder && current > oldOrder && current <= newOrder) row[orderCol] = String(current - 1);
+    });
+    selectedPropertyRow[orderCol] = String(newOrder);
+    dataArray.sort((a, b) => (Number(a[orderCol]) || Number.MAX_SAFE_INTEGER) - (Number(b[orderCol]) || Number.MAX_SAFE_INTEGER));
+    newRecordOrderPreview = newOrder;
+  } else {
+    selectedPropertyRow[columnIndex] = newRecordDraft[columnIndex];
+  }
+  rememberExistingPropertyChange(selectedPropertyRow);
+  renderTable();
+  renderExistingDistrictProperties();
+  const item = propertyRowInfo(selectedPropertyRow);
+  document.getElementById('propertySelectedInfo').textContent = `選択中：${item.property}　地区：${item.district || '-'}　整理番号：${item.order || '-'}　登録番号：${item.registration || '-'}`;
+  saveState();
+  const label = String(headers[columnIndex] || `列${columnIndex + 1}`).trim();
+  showToast(`${label}を変更しました`);
+}
+
+function appendExistingFieldChangeButton(body, columnIndex) {
+  if (!selectedPropertyRow) return;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'new-record-field-change';
+  button.textContent = '変更';
+  button.addEventListener('click', () => applyExistingPropertyField(columnIndex));
+  body.appendChild(button);
+}
+
 function openNewRecordDialog() {
   if (!headers.length) { showToast('先に物件表を読み込んでください'); return; }
   newRecordDraft = Array(headers.length).fill('');
@@ -1217,6 +1328,7 @@ function openNewRecordDialog() {
   document.getElementById('propertyManagePanel').classList.remove('active');
   selectedPropertyRow = null;
   renderNewRecordFields();
+  syncNewRecordMode();
   newRecordDialog.classList.add('active');
 }
 
@@ -1249,6 +1361,7 @@ function renderNewRecordFields() {
         summary.textContent = input.value || '未入力';
       });
       body.appendChild(input);
+      appendExistingFieldChangeButton(body, columnIndex);
     } else if (columnIndex === registrationCol) {
       const input = document.createElement('input'); input.type = 'text'; input.readOnly = true; input.value = newRecordDraft[columnIndex];
       body.appendChild(input);
@@ -1261,6 +1374,7 @@ function renderNewRecordFields() {
         const value = Number(input.value);
         if (!Number.isInteger(value) || value < 1) { showToast('整理番号を入力してください'); return; }
         newRecordDraft[columnIndex] = String(value); newRecordOrderPreview = value; summary.textContent = String(value); renderExistingDistrictProperties();
+        if (selectedPropertyRow) applyExistingPropertyField(columnIndex);
       });
       row.append(input, change); body.appendChild(row);
     } else {
@@ -1281,6 +1395,7 @@ function renderNewRecordFields() {
       unset.addEventListener('click', () => selectNewRecordChoice(columnIndex, '', unset));
       list.appendChild(unset);
       body.appendChild(list);
+      appendExistingFieldChangeButton(body, columnIndex);
     }
     if (columnIndex === districtCol) {
       const existing = document.createElement('div'); existing.id = 'newRecordExisting'; body.appendChild(existing);
@@ -1302,7 +1417,7 @@ document.getElementById('propertyHide').addEventListener('click', () => {
   if (index < 0) return;
   const item = propertyRowInfo(selectedPropertyRow);
   hiddenPropertyRecords.push({ row:[...selectedPropertyRow], originalIndex:index, originalOrder:item.order });
-  pendingPropertyChanges.push({ type:'hide', row:[...selectedPropertyRow] });
+  recordPropertyChange('hide', selectedPropertyRow);
   dataArray.splice(index, 1);
   shiftOrdersForRemoval(item.order);
   selectedPropertyRow = null;
@@ -1311,20 +1426,16 @@ document.getElementById('propertyHide').addEventListener('click', () => {
 });
 document.getElementById('propertyRestore').addEventListener('click', () => openPropertyManager('restore'));
 document.getElementById('propertyClearFields').addEventListener('click', clearPropertyRegistrationFields);
-document.getElementById('newRecordMail').addEventListener('click', () => {
-  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
-  const currentHasProperty = propertyCol >= 0 && String(newRecordDraft[propertyCol] || '').trim();
-  const changes = [...pendingPropertyChanges];
-  if (!changes.length && currentHasProperty) changes.push({ type:'register', row:[...newRecordDraft] });
-  if (!changes.length && lastRegisteredRecord) changes.push({ type:'register', row:[...lastRegisteredRecord] });
-  if (!changes.length) {
-    showToast('先に物件情報を入力するか、新規登録してください');
-    return;
-  }
-  const typeLabels = { register:'新規登録', hide:'非表示', restore:'非表示から戻す' };
-  const lines = ['【物件表 登録・変更】', `ファイル：${currentFilename}`, `シート：${currentSheetName}`];
+function openPropertyHistoryForMail() {
+  if (typeof window.openPropertyHistoryPanel === 'function') window.openPropertyHistoryPanel();
+}
+
+function sendPropertyChangeMail(changes) {
+  if (!changes.length) { showToast('送信する変更履歴を選択してください'); return false; }
+  const typeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す' };
+  const lines = ['【物件表 登録・変更】'];
   changes.forEach((change, changeIndex) => {
-    lines.push('', `【${changeIndex + 1}件目：${typeLabels[change.type] || '変更'}】`);
+    lines.push('', `【${changeIndex + 1}件目：${typeLabels[change.type] || '変更'}】`, `ファイル：${change.filename || currentFilename}`, `シート：${change.sheetName || currentSheetName}`);
     headers.slice(0, 26).forEach((header, index) => {
       const value = String(change.row[index] || '').trim();
       if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
@@ -1334,8 +1445,15 @@ document.getElementById('newRecordMail').addEventListener('click', () => {
   link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 登録・変更')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
   link.style.display = 'none'; document.body.appendChild(link); link.click();
   setTimeout(() => link.remove(), 1000);
-});
+  return true;
+}
+
+document.getElementById('newRecordMail').addEventListener('click', openPropertyHistoryForMail);
 document.getElementById('newRecordSubmit').addEventListener('click', () => {
+  if (selectedPropertyRow) {
+    showToast('既存物件は各項目の変更ボタンで保存し、閉じるを押してください');
+    return;
+  }
   const districtCol = findHeaderIndex(['地区', '地区名']);
   const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
   const orderCol = findHeaderIndex(['整理番号']);
@@ -1359,6 +1477,7 @@ document.getElementById('newRecordSubmit').addEventListener('click', () => {
   dataArray.splice(insertIndex, 0, newRow);
   lastRegisteredRecord = [...newRow];
   pendingPropertyChanges.push({ type:'register', row:[...newRow] });
+  recordPropertyChange('register', newRow);
   filterState = { colIdx:null, selectedValues:new Set(), filterType:'exact' };
   searchInput.value = '';
   assignmentFilter = { active:false, staff:new Set(), days:new Set() };
@@ -2131,8 +2250,18 @@ window._colviewCtx = {
     <span>📌 列ビュー 履歴</span>
     <button onclick="closeHistPanel()">✕</button>
   </div>
+  <div class="property-history-section">
+    <div class="property-history-title">物件の変更履歴</div>
+    <div id="property-change-list"></div>
+    <div class="property-history-actions">
+      <button type="button" onclick="sendSelectedPropertyHistory()">選択してメール送信</button>
+      <button type="button" onclick="removeSelectedSentPropertyHistory()">送信済みを外す</button>
+    </div>
+  </div>
+  <div class="column-history-title">列表示の履歴</div>
   <button id="hist-save-btn" onclick="saveHistItem()">💾 今の状態を保存</button>
   <div id="hist-list"></div>
+  <button id="hist-close-btn" type="button" onclick="closeHistPanel()">閉じる</button>
 </div>
 
 <script>
@@ -2201,6 +2330,69 @@ window._colviewCtx = {
     const d = new Date(ts), p = n => String(n).padStart(2,'0');
     return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
+
+  const propertyTypeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す' };
+
+  window.renderPropertyChangeHistory = function() {
+    const host = document.getElementById('property-change-list');
+    if (!host) return;
+    const items = getPropertyChangeHistory();
+    host.innerHTML = '';
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.id = 'hist-empty';
+      empty.textContent = '物件の変更履歴はありません';
+      host.appendChild(empty);
+      return;
+    }
+    const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+    const orderCol = findHeaderIndex(['整理番号']);
+    const registrationCol = findHeaderIndex(['登録番号']);
+    items.forEach(item => {
+      const label = document.createElement('label');
+      label.className = `property-change-item${item.sentAt ? ' sent' : ''}`;
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.className = 'property-change-check'; checkbox.value = item.id;
+      const body = document.createElement('div');
+      const name = document.createElement('div'); name.className = 'property-change-name';
+      const savedSummary = item.summary || {};
+      const property = savedSummary.property || (propertyCol >= 0 ? String(item.row[propertyCol] || '') : '') || '名称未入力';
+      name.textContent = `${propertyTypeLabels[item.type] || '変更'}：${property}`;
+      const meta = document.createElement('div'); meta.className = 'property-change-meta';
+      const order = savedSummary.order || (orderCol >= 0 ? String(item.row[orderCol] || '') : '') || '-';
+      const registration = savedSummary.registration || (registrationCol >= 0 ? String(item.row[registrationCol] || '') : '') || '-';
+      meta.textContent = `整理番号 ${order}／登録番号 ${registration}／${fmtTime(item.timestamp)}／${item.sentAt ? `送信済み ${fmtTime(item.sentAt)}` : '未送信'}`;
+      body.append(name, meta); label.append(checkbox, body); host.appendChild(label);
+    });
+  };
+
+  function selectedPropertyHistoryIds() {
+    return [...document.querySelectorAll('.property-change-check:checked')].map(input => input.value);
+  }
+
+  window.sendSelectedPropertyHistory = function() {
+    const ids = new Set(selectedPropertyHistoryIds());
+    const history = getPropertyChangeHistory();
+    const selected = history.filter(item => ids.has(item.id) && !item.sentAt);
+    if (!selected.length) { showToast('未送信の変更履歴を選択してください'); return; }
+    if (!sendPropertyChangeMail(selected)) return;
+    const sentAt = Date.now();
+    history.forEach(item => { if (ids.has(item.id) && !item.sentAt) item.sentAt = sentAt; });
+    setPropertyChangeHistory(history);
+    pendingPropertyChanges = pendingPropertyChanges.filter(change => !selected.some(item => item.type === change.type && JSON.stringify(item.row) === JSON.stringify(change.row)));
+    window.renderPropertyChangeHistory();
+    showToast(`${selected.length}件を送信済みにしました`);
+  };
+
+  window.removeSelectedSentPropertyHistory = function() {
+    const ids = new Set(selectedPropertyHistoryIds());
+    const history = getPropertyChangeHistory();
+    const removable = history.filter(item => ids.has(item.id) && item.sentAt);
+    if (!removable.length) { showToast('外す送信済み履歴を選択してください'); return; }
+    setPropertyChangeHistory(history.filter(item => !(ids.has(item.id) && item.sentAt)));
+    window.renderPropertyChangeHistory();
+    showToast(`${removable.length}件の送信済み履歴を外しました`);
+  };
 
   function renderHist() {
     const items = getHist();
@@ -2311,8 +2503,14 @@ window._colviewCtx = {
     if (panel.classList.contains('open')) {
       panel.classList.remove('open'); overlay.classList.remove('show');
     } else {
-      renderHist(); panel.classList.add('open'); overlay.classList.add('show');
+      renderHist(); window.renderPropertyChangeHistory(); panel.classList.add('open'); overlay.classList.add('show');
     }
+  };
+  window.openPropertyHistoryPanel = function() {
+    renderHist();
+    window.renderPropertyChangeHistory();
+    document.getElementById('hist-panel').classList.add('open');
+    document.getElementById('hist-overlay').classList.add('show');
   };
   window.closeHistPanel = function() {
     document.getElementById('hist-panel').classList.remove('open');
