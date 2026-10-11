@@ -1769,6 +1769,21 @@ function natCmp(a, b) {
   return 0;
 }
 
+function weekdayAssignmentCmp(a, b, direction) {
+  const parse = value => {
+    const match = String(value || '').trim().replace('－', '-').match(/^([NKM])-\s*(\d+)?$/i);
+    return match ? { staff:match[1].toUpperCase(), order:match[2] ? Number(match[2]) : null } : null;
+  };
+  const pa = parse(a), pb = parse(b);
+  if (!pa || !pb) return direction * natCmp(a, b);
+  const staffOrder = pa.staff.localeCompare(pb.staff, 'ja');
+  if (staffOrder !== 0) return direction * staffOrder;
+  if (pa.order === null && pb.order === null) return 0;
+  if (pa.order === null) return 1;
+  if (pb.order === null) return -1;
+  return direction * (pa.order - pb.order);
+}
+
 function districtBackground(district) {
   const text = String(district || '').trim();
   if (!text) return '#fff';
@@ -1897,10 +1912,12 @@ function renderTable() {
 
   if (!assignmentFilter.active && sortState.col >= 0 && sortState.dir !== 0) {
     const ci = sortState.col;
+    const isWeekdayColumn = /^[月火水木金土日]曜日$/.test(String(headers[ci] || '').trim());
     rows = [...rows].sort((a,b) => {
       const va=String(a[ci]||'').trim(), vb=String(b[ci]||'').trim();
       if(va===''&&vb==='') return 0;
       if(va==='') return 1; if(vb==='') return -1;
+      if(isWeekdayColumn) return weekdayAssignmentCmp(va, vb, sortState.dir);
       return sortState.dir * natCmp(va,vb);
     });
   }
