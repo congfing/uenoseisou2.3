@@ -631,6 +631,8 @@ let committedCollectionOrders = {};
 let draftCollectionOrders = {};
 let collectionOrderUndoStack = [];
 let collectionOrderRenderTimer = null;
+const HIDDEN_PROPERTY_SHEET = '非表示物件';
+const HIDDEN_PROPERTY_META_HEADERS = ['元シート', '元の整理番号', '元の位置'];
 
 function closeApp() {
   if (window.parent && window.parent !== window) {
@@ -836,6 +838,56 @@ function syncCurrentSheetToWorkbook() {
   sheetDataRowCounts[currentSheetName] = dataArray.length;
 }
 
+function hasPropertyTableHeaders() {
+  const normalized = headers.map(header => String(header || '').trim());
+  return normalized.includes('整理番号') && normalized.some(header => ['契約物件', '物件名', '名前'].includes(header));
+}
+
+function syncHiddenPropertySheetToWorkbook() {
+  if (!workbook || !headers.length || !hasPropertyTableHeaders()) return;
+  const rows = hiddenPropertyRecords.map(record => [
+    ...headers.map((_, index) => record.row[index] ?? ''),
+    record.sourceSheet || currentSheetName,
+    record.originalOrder || '',
+    Number.isInteger(record.originalIndex) ? record.originalIndex : ''
+  ]);
+  workbook.Sheets[HIDDEN_PROPERTY_SHEET] = XLSX.utils.aoa_to_sheet([
+    [...headers, ...HIDDEN_PROPERTY_META_HEADERS],
+    ...rows
+  ]);
+  if (!workbook.SheetNames.includes(HIDDEN_PROPERTY_SHEET)) workbook.SheetNames.push(HIDDEN_PROPERTY_SHEET);
+  workbook.Workbook = workbook.Workbook || {};
+  workbook.Workbook.Sheets = workbook.Workbook.Sheets || [];
+  const sheetIndex = workbook.SheetNames.indexOf(HIDDEN_PROPERTY_SHEET);
+  workbook.Workbook.Sheets[sheetIndex] = {
+    ...(workbook.Workbook.Sheets[sheetIndex] || {}),
+    name:HIDDEN_PROPERTY_SHEET,
+    Hidden:1
+  };
+}
+
+function loadHiddenPropertyRecordsFromWorkbook() {
+  if (!hasPropertyTableHeaders()) return;
+  hiddenPropertyRecords = [];
+  if (!workbook || !workbook.Sheets[HIDDEN_PROPERTY_SHEET]) return;
+  const raw = XLSX.utils.sheet_to_json(workbook.Sheets[HIDDEN_PROPERTY_SHEET], { header:1, defval:'' });
+  if (!raw.length) return;
+  const hiddenHeaders = raw[0].map(value => String(value || '').trim());
+  const sourceSheetCol = hiddenHeaders.indexOf('元シート');
+  const originalOrderCol = hiddenHeaders.indexOf('元の整理番号');
+  const originalIndexCol = hiddenHeaders.indexOf('元の位置');
+  raw.slice(1).forEach((savedRow, index) => {
+    const row = headers.map((_, columnIndex) => savedRow[columnIndex] ?? '');
+    if (!row.some(value => String(value || '').trim())) return;
+    hiddenPropertyRecords.push({
+      row,
+      sourceSheet:sourceSheetCol >= 0 ? String(savedRow[sourceSheetCol] || '') : currentSheetName,
+      originalOrder:originalOrderCol >= 0 ? Number(savedRow[originalOrderCol]) || 0 : 0,
+      originalIndex:originalIndexCol >= 0 ? Number(savedRow[originalIndexCol]) || index : index
+    });
+  });
+}
+
 // 指定シートのデータをロードして表示（シート切替にも使用）
 function loadSheet(sheetName) {
   if (!workbook) return;
@@ -849,6 +901,7 @@ function loadSheet(sheetName) {
   headers   = raw[hIdx] ? [...raw[hIdx]] : [];
   dataArray = raw.slice(hIdx+1);
   sheetDataRowCounts[sheetName] = dataArray.length;
+  loadHiddenPropertyRecordsFromWorkbook();
   visibleCols  = new Set(headers.map((_,i) => i));
   sortState    = { col:-1, dir:0 };
   filterState  = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
@@ -872,18 +925,20 @@ function loadWorkbookData(buf, filename, sourcePath) {
 
     // シートセレクタを更新
     sheetSel.innerHTML = '';
-    wb.SheetNames.forEach(name => {
+    const selectableSheets = wb.SheetNames.filter(name => name !== HIDDEN_PROPERTY_SHEET);
+    if (!selectableSheets.length) throw new Error('表示できるシートがありません');
+    selectableSheets.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
       sheetSel.appendChild(opt);
     });
-    sheetSel.value = wb.SheetNames[0];
+    sheetSel.value = selectableSheets[0];
     sheetSel.disabled = false;
-    currentSheetName = wb.SheetNames[0];
+    currentSheetName = selectableSheets[0];
 
     // 最初のシートのデータを展開
-    const ws  = wb.Sheets[wb.SheetNames[0]];
+    const ws  = wb.Sheets[currentSheetName];
     const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' })
                     .map(r => r.map(c => c===null||c===undefined ? '' : String(c)));
     const hIdx = detectHeaderRow(raw);
@@ -891,6 +946,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
     headers   = raw[hIdx] ? [...raw[hIdx]] : [];
     dataArray = raw.slice(hIdx+1);
     sheetDataRowCounts[currentSheetName] = dataArray.length;
+    loadHiddenPropertyRecordsFromWorkbook();
     currentFilename = filename;
     visibleCols  = new Set(headers.map((_,i) => i));
     sortState    = { col:-1, dir:0 };
@@ -914,6 +970,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
 sheetSel.addEventListener('change', function() {
   if (!workbook || !this.value) return;
   syncCurrentSheetToWorkbook();
+  syncHiddenPropertySheetToWorkbook();
   loadSheet(this.value);
 });
 
@@ -1234,7 +1291,11 @@ function renderPropertySearchResults() {
   results.innerHTML = '';
   selectedPropertyRow = null;
   info.textContent = propertyManageMode === 'restore' ? '戻す物件を選択してください' : '物件を選択してください';
-  const source = propertyManageMode === 'restore' ? hiddenPropertyRecords.map(item => item.row) : dataArray;
+  const source = propertyManageMode === 'restore'
+    ? hiddenPropertyRecords
+        .filter(item => !item.sourceSheet || item.sourceSheet === currentSheetName)
+        .map(item => item.row)
+    : dataArray;
   const query = normalizePropertySearch(input.value);
   const orderQuery = String(orderInput.value || '').trim();
   if (propertyManageMode === 'search' && !orderQuery && query.length < 2) {
@@ -1308,6 +1369,7 @@ function restoreHiddenProperty(row) {
   if (orderCol >= 0) record.row[orderCol] = String(record.originalOrder);
   dataArray.splice(Math.min(record.originalIndex, dataArray.length), 0, record.row);
   hiddenPropertyRecords.splice(hiddenIndex, 1);
+  syncHiddenPropertySheetToWorkbook();
   recordPropertyChange('restore', record.row);
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
@@ -1515,10 +1577,16 @@ document.getElementById('propertyHide').addEventListener('click', () => {
   const index = dataArray.indexOf(selectedPropertyRow);
   if (index < 0) return;
   const item = propertyRowInfo(selectedPropertyRow);
-  hiddenPropertyRecords.push({ row:[...selectedPropertyRow], originalIndex:index, originalOrder:item.order });
+  hiddenPropertyRecords.push({
+    row:[...selectedPropertyRow],
+    sourceSheet:currentSheetName,
+    originalIndex:index,
+    originalOrder:item.order
+  });
   recordPropertyChange('hide', selectedPropertyRow);
   dataArray.splice(index, 1);
   shiftOrdersForRemoval(item.order);
+  syncHiddenPropertySheetToWorkbook();
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
   showToast(`${item.property}を非表示にしました`);
@@ -2255,6 +2323,7 @@ function doSaveExcel(filename) {
     return;
   }
   syncCurrentSheetToWorkbook();
+  syncHiddenPropertySheetToWorkbook();
   XLSX.writeFile(workbook, filename, { bookType:'xlsx', cellStyles:true, compression:true });
   showToast('✅ 全シートを保持して ' + filename + ' を保存しました');
 }
