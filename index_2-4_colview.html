@@ -1042,6 +1042,13 @@ function propertyRowInfo(row) {
   };
 }
 
+function loadPropertyIntoRegistrationFields(row) {
+  newRecordDraft = Array(headers.length).fill('').map((_, index) => String(row[index] || ''));
+  const orderCol = findHeaderIndex(['整理番号']);
+  newRecordOrderPreview = orderCol >= 0 ? Number(newRecordDraft[orderCol]) || null : null;
+  renderNewRecordFields();
+}
+
 function renderPropertySearchResults() {
   const results = document.getElementById('propertySearchResults');
   const input = document.getElementById('propertySearchInput');
@@ -1067,6 +1074,7 @@ function renderPropertySearchResults() {
     button.addEventListener('click', () => {
       results.querySelectorAll('.property-search-result').forEach(entry => entry.classList.toggle('selected', entry === button));
       selectedPropertyRow = row;
+      loadPropertyIntoRegistrationFields(row);
       info.textContent = `選択中：${item.property}　地区：${item.district || '-'}　整理番号：${item.order || '-'}　登録番号：${item.registration || '-'}`;
       if (propertyManageMode === 'restore') restoreHiddenProperty(row);
     });
@@ -1203,6 +1211,7 @@ function renderNewRecordFields() {
     if (isManualText) {
       const input = document.createElement('input'); input.type = 'text'; input.placeholder = '物件名を入力';
       if (columnIndex !== propertyCol) input.placeholder = `${header}を入力`;
+      input.value = newRecordDraft[columnIndex] || '';
       input.addEventListener('input', () => {
         newRecordDraft[columnIndex] = input.value;
         summary.textContent = input.value || '未入力';
@@ -1214,6 +1223,7 @@ function renderNewRecordFields() {
     } else if (columnIndex === orderCol) {
       const row = document.createElement('div'); row.className = 'new-record-order-row';
       const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.inputMode = 'numeric';
+      input.value = newRecordDraft[columnIndex] || '';
       const change = document.createElement('button'); change.type = 'button'; change.textContent = '変更';
       change.addEventListener('click', () => {
         const value = Number(input.value);
@@ -1230,10 +1240,12 @@ function renderNewRecordFields() {
       }
       values.forEach(value => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'new-record-choice'; button.textContent = value;
+        if (String(newRecordDraft[columnIndex] || '') === value) button.classList.add('selected');
         button.addEventListener('click', () => selectNewRecordChoice(columnIndex, value, button)); list.appendChild(button);
       });
       const unset = document.createElement('button');
       unset.type = 'button'; unset.className = 'new-record-choice'; unset.textContent = '未選択';
+      if (!String(newRecordDraft[columnIndex] || '')) unset.classList.add('selected');
       unset.addEventListener('click', () => selectNewRecordChoice(columnIndex, '', unset));
       list.appendChild(unset);
       body.appendChild(list);
