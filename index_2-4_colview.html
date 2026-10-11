@@ -263,6 +263,11 @@
     box-sizing:border-box; border:1px solid #999;
   }
   #dataTable tbody td.rn { color:#aaa; font-size:11px; text-align:right; min-width:32px; }
+  #dataTable tbody td.property-name-cell {
+    width:220px; min-width:160px; max-width:260px;
+    white-space:normal; overflow:visible; text-overflow:clip;
+    overflow-wrap:anywhere; word-break:normal; line-height:1.4;
+  }
   #dataTable th.weekday-col,
   #dataTable td.weekday-col {
     width:58px; min-width:58px; max-width:58px;
@@ -271,6 +276,10 @@
   @media (max-width:620px) {
     #dataTable thead th { padding:5px 4px; font-size:12px; }
     #dataTable tbody td { padding:3px 4px; font-size:12px; max-width:150px; }
+    #dataTable tbody td.property-name-cell {
+      width:170px; min-width:140px; max-width:190px;
+      white-space:normal; overflow:visible; text-overflow:clip;
+    }
     #dataTable th.weekday-col,
     #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
   }
@@ -2019,6 +2028,7 @@ function renderTable() {
       const tdDistrict = document.createElement('td');
       tdDistrict.textContent = district;
       const tdProperty = document.createElement('td');
+      tdProperty.className = 'property-name-cell';
       tdProperty.textContent = propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '';
       const tdOrder = document.createElement('td');
       const orderEditor = document.createElement('div');
@@ -2068,6 +2078,7 @@ function renderTable() {
         const cell = String(row[ci] || '').trim();
         const header = String(headers[ci] || '').trim();
         if (/^[月火水木金土日]曜日$/.test(header)) td.classList.add('weekday-col');
+        if (['契約物件', '物件名', '名前'].includes(header)) td.classList.add('property-name-cell');
         if ((header === '計量' && cell !== '') || cell === '計量') {
           td.classList.add('keiryou-td');
           td.textContent = '計量';
