@@ -918,11 +918,11 @@ function latestPropertyTableName(names) {
   const prefix = '2026年度物件表_KMN置換_列移動_';
   const candidates = names.map(name => {
     if (!name.startsWith(prefix)) return null;
-    const dated = name.match(/_(\d{4})-(\d{2})-(\d{2})(?:_(\d{8})_(\d{4,6}))?\.xlsx$/i);
+    const timestamped = name.match(/_(\d{8})_(\d{4,6})\.xlsx$/i);
+    if (timestamped) return { name, score: `${timestamped[1]}${timestamped[2].padEnd(6, '0')}` };
+    const dated = name.match(/_(\d{4})-(\d{2})-(\d{2})\.xlsx$/i);
     if (!dated) return null;
-    const dateScore = `${dated[1]}${dated[2]}${dated[3]}`;
-    const timeScore = dated[5] ? dated[5].padEnd(6, '0') : '000000';
-    return { name, score: `${dated[4] || dateScore}${timeScore}` };
+    return { name, score: `${dated[1]}${dated[2]}${dated[3]}000000` };
   }).filter(Boolean);
   candidates.sort((a, b) => b.score.localeCompare(a.score) || b.name.localeCompare(a.name, 'ja'));
   return candidates.length ? candidates[0].name : null;
