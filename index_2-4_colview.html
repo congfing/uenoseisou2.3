@@ -767,7 +767,8 @@ function buildStateSnapshot() {
       staff: [...assignmentFilter.staff],
       days: [...assignmentFilter.days]
     },
-    collectionOrders: { ...committedCollectionOrders }
+    collectionOrders: { ...committedCollectionOrders },
+    hiddenPropertyRecords: hiddenPropertyRecords.map(record => ({...record,row:[...record.row]}))
   };
 }
 
@@ -868,6 +869,29 @@ function collectionOrdersFromWeekdayCells(staffSet, daySet) {
 // 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
   if (!saved) return;
+  if (Array.isArray(saved.hiddenPropertyRecords) && hasPropertyTableHeaders()) {
+    const registrationCol = findHeaderIndex(['登録番号']);
+    const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+    const identity = row => {
+      const registration = registrationCol >= 0 ? String(row[registrationCol] ?? '').trim() : '';
+      return registration ? `id:${registration}` : `name:${propertyCol >= 0 ? String(row[propertyCol] ?? '').trim() : ''}`;
+    };
+    saved.hiddenPropertyRecords.forEach(record => {
+      if (!Array.isArray(record.row) || record.sourceSheet !== currentSheetName) return;
+      const key = identity(record.row);
+      if (key === 'name:') return;
+      const index = dataArray.findIndex(row => identity(row) === key);
+      if (index >= 0) {
+        const item = propertyRowInfo(dataArray[index]);
+        dataArray.splice(index, 1);
+        shiftOrdersForRemoval(item.order);
+      }
+      if (!hiddenPropertyRecords.some(item => item.sourceSheet === record.sourceSheet && identity(item.row) === key)) {
+        hiddenPropertyRecords.push({...record,row:[...record.row]});
+      }
+    });
+    syncHiddenPropertySheetToWorkbook();
+  }
   // 列表示
   if (saved.visibleCols && saved.visibleCols.length) {
     visibleCols = new Set(saved.visibleCols.filter(i => i < headers.length));
@@ -1633,6 +1657,7 @@ function restoreHiddenProperty(row) {
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
   showToast(`${item.property}を元の位置へ戻しました`);
+  saveState();
 }
 
 function renderExistingDistrictProperties() {
@@ -1856,6 +1881,7 @@ document.getElementById('propertyHide').addEventListener('click', () => {
   selectedPropertyRow = null;
   renderTable(); renderPropertySearchResults();
   showToast(`${item.property}を非表示にしました`);
+  saveState();
 });
 document.getElementById('propertyRestore').addEventListener('click', () => openPropertyManager('restore'));
 document.getElementById('propertyClearFields').addEventListener('click', clearPropertyRegistrationFields);
