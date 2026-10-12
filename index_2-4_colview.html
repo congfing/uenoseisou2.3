@@ -19,14 +19,14 @@
   #app-header h1 { margin:0; font-size:15px; font-weight:700; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #backBtn {
     padding:5px 14px; background:rgba(255,255,255,0.2);
-    border:1px solid rgba(255,255,255,0.5); border-radius:4px;
+    border:0.5px solid rgba(255,255,255,0.5); border-radius:4px;
     color:#fff; font-size:12px; cursor:pointer; white-space:nowrap; font-family:inherit;
   }
   #backBtn:hover { background:rgba(255,255,255,0.35); }
   #fileNameDisplay { font-size:10px; opacity:0.8; line-height:1.3; text-align:right; flex-shrink:0; max-width:38%; overflow:hidden; }
 
   #toolbar {
-    border-bottom:1px solid #b5cef5;
+    border-bottom:0.5px solid #b5cef5;
     position:sticky; top:44px; z-index:119;
   }
   #toolbar-inner {
@@ -41,21 +41,21 @@
   #toolbar-toggle {
     display:flex; align-items:center; justify-content:center;
     width:100%; padding:2px 0;
-    border:none; border-top:1px solid #b5cef5;
+    border:none; border-top:0.5px solid #b5cef5;
     cursor:pointer; font-size:10px; color:#4a6fa5;
     font-family:inherit; transition:background 0.15s;
   }
   #toolbar-toggle:active { background:#bdd6f5; }
   #toolbar.collapsed #toolbar-toggle { border-top:none; padding:4px 0; }
   .tb-btn {
-    padding:4px 10px; border:1px solid #a0b8d8; border-radius:4px;
+    padding:4px 10px; border:0.5px solid #a0b8d8; border-radius:4px;
     cursor:pointer; font-size:11px; font-family:inherit; white-space:nowrap;
   }
   .tb-btn:hover { background:#d4e5f9; }
   .toolbar-search { position:relative; width:150px; flex:0 0 150px; }
   #searchInput {
     box-sizing:border-box; width:100%; padding:4px 30px 4px 8px;
-    border:1px solid #a0b8d8; border-radius:4px;
+    border:0.5px solid #a0b8d8; border-radius:4px;
     font-size:12px; font-family:inherit;
   }
   #searchClear {
@@ -66,11 +66,11 @@
   }
   #searchInput:placeholder-shown + #searchClear { display:none; }
   #gitFileSelector {
-    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
+    padding:4px 8px; border:0.5px solid #a0b8d8; border-radius:4px;
     font-size:12px; max-width:190px;
   }
   #sheetSelector {
-    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
+    padding:4px 8px; border:0.5px solid #a0b8d8; border-radius:4px;
     font-size:12px; max-width:150px;
   }
   #sheetSelector:disabled { color: #aaa; }
@@ -146,7 +146,7 @@
 
   /* 列チェックボックスパネル */
   #colPanel {
-    border-bottom:2px solid #b5cef5;
+    border-bottom:0.5px solid #b5cef5;
     padding:8px 14px; display:none; flex-wrap:wrap; gap:6px; align-items:center;
     position:sticky; top:88px; z-index:118;
     max-height:160px; overflow-y:auto;
@@ -154,14 +154,14 @@
   #colPanel.active { display:flex; }
   .col-lbl {
     display:inline-flex; align-items:center; gap:4px;
-    padding:3px 9px; border:1px solid #b5cef5; border-radius:12px;
+    padding:3px 9px; border:0.5px solid #b5cef5; border-radius:12px;
     cursor:pointer; font-size:11px; white-space:nowrap; user-select:none;
   }
   .col-lbl:hover { background:#d4e5f9; }
   .col-lbl input { cursor:pointer; margin:0; }
   .col-lbl.on { background:#1a6eb5; color:#fff; border-color:#1558a0; }
   #btnNewRecord {
-    padding:4px 11px; border:1px solid #222; border-radius:4px;
+    padding:4px 11px; border:0.5px solid #222; border-radius:4px;
     background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer;
   }
   #btnAssignment { font-weight:700; }
