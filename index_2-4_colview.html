@@ -730,6 +730,30 @@ function restoreCollectionOrdersToRows(collectionOrders) {
   return restored;
 }
 
+function loadCollectionOrdersFromWeekdayCells(staffSet, daySet) {
+  if (!staffSet?.size || !daySet?.size) return 0;
+  let loaded = 0;
+  dataArray.forEach(row => {
+    daySet.forEach(day => {
+      const dayCol = headers.findIndex(h => String(h || '').trim() === day);
+      if (dayCol < 0) return;
+      const value = String(row[dayCol] || '').trim().replace('－', '-');
+      const staff = [...staffSet].find(prefix => value.startsWith(prefix));
+      if (!staff) return;
+      const suffix = value.slice(staff.length).match(/^\s*(\d+)/);
+      if (!suffix) return;
+      const key = assignmentRowKey(row, staff, day);
+      if (Object.prototype.hasOwnProperty.call(draftCollectionOrders, key)) return;
+      const order = normalizedCollectionOrder(suffix[1]);
+      if (order === null) return;
+      draftCollectionOrders[key] = order;
+      committedCollectionOrders[key] = order;
+      loaded++;
+    });
+  });
+  return loaded;
+}
+
 // 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
   if (!saved) return;
@@ -762,6 +786,9 @@ function applyRestoredState(saved) {
     ? { ...saved.collectionOrders }
     : {};
   draftCollectionOrders = { ...committedCollectionOrders };
+  if (assignmentFilter.active) {
+    loadCollectionOrdersFromWeekdayCells(assignmentFilter.staff, assignmentFilter.days);
+  }
   restoreCollectionOrdersToRows(committedCollectionOrders);
   collectionOrderUndoStack = [];
   updateAssignmentButton();
@@ -1147,6 +1174,7 @@ document.getElementById('assignmentApply').addEventListener('click', () => {
     draftCollectionOrders = { ...committedCollectionOrders };
     collectionOrderUndoStack = [];
   }
+  loadCollectionOrdersFromWeekdayCells(staff, days);
   sortState = { col:-1, dir:0 };
   assignmentDialog.classList.remove('active');
   renderTable();
