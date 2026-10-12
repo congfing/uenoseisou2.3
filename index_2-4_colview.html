@@ -1325,8 +1325,8 @@ function loadPropertyIntoRegistrationFields(row) {
 function syncNewRecordMode() {
   const submit = document.getElementById('newRecordSubmit');
   const editing = !!selectedPropertyRow;
-  submit.disabled = editing;
-  submit.textContent = editing ? '既存物件を変更中' : '新規登録します';
+  submit.disabled = false;
+  submit.textContent = editing ? '変更を反映する' : '新規登録します';
 }
 
 function clearPropertyRegistrationFields() {
@@ -1700,10 +1700,27 @@ function sendLatestNewRecordMail() {
   showToast('新規登録1件を送信済みにしました');
 }
 
+function applyAllExistingPropertyChanges() {
+  if (!selectedPropertyRow || !dataArray.includes(selectedPropertyRow)) {
+    showToast('変更する既存物件を選択してください');
+    return;
+  }
+  const changedColumns = headers.slice(0, 26)
+    .map((_, index) => index)
+    .filter(index => String(selectedPropertyRow[index] || '').trim() !== String(newRecordDraft[index] || '').trim());
+  if (!changedColumns.length) {
+    showToast('変更された項目はありません');
+    return;
+  }
+  changedColumns.forEach(columnIndex => applyExistingPropertyField(columnIndex));
+  loadPropertyIntoRegistrationFields(selectedPropertyRow);
+  showToast(`${changedColumns.length}項目の変更を反映しました`);
+}
+
 document.getElementById('newRecordMail').addEventListener('click', sendLatestNewRecordMail);
 document.getElementById('newRecordSubmit').addEventListener('click', () => {
   if (selectedPropertyRow) {
-    showToast('既存物件は各項目の変更ボタンで保存し、閉じるを押してください');
+    applyAllExistingPropertyChanges();
     return;
   }
   const districtCol = findHeaderIndex(['地区', '地区名']);
