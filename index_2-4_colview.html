@@ -52,10 +52,19 @@
     cursor:pointer; font-size:11px; font-family:inherit; white-space:nowrap;
   }
   .tb-btn:hover { background:#d4e5f9; }
+  .toolbar-search { position:relative; width:150px; flex:0 0 150px; }
   #searchInput {
-    padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
-    font-size:12px; font-family:inherit; width:150px;
+    box-sizing:border-box; width:100%; padding:4px 30px 4px 8px;
+    border:1px solid #a0b8d8; border-radius:4px;
+    font-size:12px; font-family:inherit;
   }
+  #searchClear {
+    position:absolute; top:50%; right:3px; transform:translateY(-50%);
+    width:24px; height:24px; padding:0; border:0; background:transparent;
+    color:#222; font-size:19px; line-height:24px; font-family:inherit;
+    font-weight:700; cursor:pointer;
+  }
+  #searchInput:placeholder-shown + #searchClear { display:none; }
   #gitFileSelector {
     padding:4px 8px; border:1px solid #a0b8d8; border-radius:4px;
     font-size:12px; max-width:190px;
@@ -429,6 +438,7 @@
   .property-change-item input { width:18px; height:18px; margin-top:2px; }
   .property-change-name { font-size:13px; font-weight:800; }
   .property-change-meta { margin-top:2px; font-size:11px; line-height:1.5; }
+  .property-change-detail { margin-top:3px; font-size:12px; font-weight:700; line-height:1.5; }
   .property-history-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .property-history-actions button { flex:1 1 46%; min-height:38px; padding:6px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
 
@@ -455,7 +465,10 @@
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
     <button class="tb-btn" id="btnAllOff">全列非表示</button>
-    <input type="text" id="searchInput" placeholder="🔍 検索">
+    <div class="toolbar-search">
+      <input type="text" id="searchInput" placeholder="🔍 検索">
+      <button type="button" id="searchClear" aria-label="検索文字を消す" title="検索文字を消す">×</button>
+    </div>
     <button class="tb-btn" id="btnSave" style="background:#27ae60;color:#fff;border-color:#1e8449;font-weight:700;">💾 エクセル保存</button>
     <button class="tb-btn" onclick="toggleHistPanel()" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:700;">📌 履歴</button>
     <span id="statusBar">— 読み込み中 —</span>
@@ -626,6 +639,7 @@ let gitListLoading = false;
 let gitListLoadedAt = 0;
 const ASSIGNMENT_STAFF = ['N-', 'K-', 'M-'];
 const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', 'PETアルミ', '段紙', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
 let draftCollectionOrders = {};
@@ -1228,7 +1242,7 @@ function setPropertyChangeHistory(items) {
   try { localStorage.setItem(PROPERTY_CHANGE_HISTORY_KEY, JSON.stringify(items.slice(0, 200))); } catch (e) {}
 }
 
-function recordPropertyChange(type, row) {
+function recordPropertyChange(type, row, fieldChange = null) {
   const items = getPropertyChangeHistory();
   const summary = propertyRowInfo(row);
   const registrationCol = findHeaderIndex(['登録番号']);
@@ -1241,8 +1255,25 @@ function recordPropertyChange(type, row) {
     existing.row = [...row];
     existing.summary = summary;
     existing.timestamp = Date.now();
+    if (fieldChange) {
+      existing.changes = Array.isArray(existing.changes) ? existing.changes : [];
+      const savedChange = existing.changes.find(change => change.index === fieldChange.index);
+      if (savedChange) {
+        savedChange.after = fieldChange.after;
+        if (savedChange.before === savedChange.after) {
+          existing.changes = existing.changes.filter(change => change !== savedChange);
+        }
+      } else if (fieldChange.before !== fieldChange.after) {
+        existing.changes.push({ ...fieldChange });
+      }
+    }
   } else {
-    items.unshift({ id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, timestamp:Date.now(), type, row:[...row], summary, filename:currentFilename, sheetName:currentSheetName, sentAt:null });
+    items.unshift({
+      id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      timestamp:Date.now(), type, row:[...row], summary,
+      changes:fieldChange && fieldChange.before !== fieldChange.after ? [{ ...fieldChange }] : [],
+      filename:currentFilename, sheetName:currentSheetName, sentAt:null
+    });
   }
   setPropertyChangeHistory(items);
   if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
@@ -1453,7 +1484,7 @@ function selectNewRecordChoice(columnIndex, value, button) {
   if (columnIndex === findHeaderIndex(['地区', '地区名'])) renderExistingDistrictProperties();
 }
 
-function rememberExistingPropertyChange(row) {
+function rememberExistingPropertyChange(row, fieldChange) {
   const registrationCol = findHeaderIndex(['登録番号']);
   const registration = registrationCol >= 0 ? String(row[registrationCol] || '') : '';
   pendingPropertyChanges = pendingPropertyChanges.filter(change => {
@@ -1461,7 +1492,7 @@ function rememberExistingPropertyChange(row) {
     return registrationCol < 0 || String(change.row[registrationCol] || '') !== registration;
   });
   pendingPropertyChanges.push({ type:'update', row:[...row] });
-  recordPropertyChange('update', row);
+  recordPropertyChange('update', row, fieldChange);
 }
 
 function applyExistingPropertyField(columnIndex) {
@@ -1470,6 +1501,7 @@ function applyExistingPropertyField(columnIndex) {
     return;
   }
   const orderCol = findHeaderIndex(['整理番号']);
+  const beforeValue = String(selectedPropertyRow[columnIndex] || '').trim();
   if (columnIndex === orderCol) {
     const oldOrder = Number(selectedPropertyRow[orderCol]);
     const newOrder = Number(newRecordDraft[orderCol]);
@@ -1487,7 +1519,13 @@ function applyExistingPropertyField(columnIndex) {
   } else {
     selectedPropertyRow[columnIndex] = newRecordDraft[columnIndex];
   }
-  rememberExistingPropertyChange(selectedPropertyRow);
+  const afterValue = String(selectedPropertyRow[columnIndex] || '').trim();
+  rememberExistingPropertyChange(selectedPropertyRow, {
+    index:columnIndex,
+    header:String(headers[columnIndex] || `列${columnIndex + 1}`).trim(),
+    before:beforeValue,
+    after:afterValue
+  });
   renderTable();
   renderExistingDistrictProperties();
   const item = propertyRowInfo(selectedPropertyRow);
@@ -1569,9 +1607,9 @@ function renderNewRecordFields() {
     } else {
       const list = document.createElement('div'); list.className = 'new-record-choice-list';
       let values = uniqueColumnValues(columnIndex);
-      if (/^[月火水木金土日]曜日$/.test(header)) {
+      if (ASSIGNMENT_DAYS.includes(header)) {
         list.classList.add('weekday-choice-list');
-        values = [...new Set(['N-', 'M-', 'K-', ...values])];
+        values = [...WEEKDAY_FIXED_CHOICES];
       }
       values.forEach(value => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'new-record-choice'; button.textContent = value;
@@ -1631,6 +1669,12 @@ function sendPropertyChangeMail(changes) {
       const value = String(change.row[index] || '').trim();
       if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
     });
+    if (Array.isArray(change.changes) && change.changes.length) {
+      lines.push('変更内容：');
+      change.changes.forEach(field => {
+        lines.push(`${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`);
+      });
+    }
   });
   const link = document.createElement('a');
   link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 登録・変更')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
@@ -1742,6 +1786,17 @@ function adjustWrapperHeight() {
 
 // 検索
 searchInput.addEventListener('input', () => { renderTable(); saveState(); });
+document.getElementById('searchClear').addEventListener('click', () => {
+  searchInput.value = '';
+  renderTable();
+  saveState();
+  requestAnimationFrame(() => {
+    const wrapper = document.getElementById('tableWrapper');
+    if (wrapper) wrapper.scrollTo({ top:0, left:0, behavior:'auto' });
+    window.scrollTo({ top:0, left:0, behavior:'auto' });
+  });
+  searchInput.focus();
+});
 
 // ===== プレフィックス抽出（例: "N-1" → "N-", "K-30" → "K-"）=====
 function extractPrefix(v) {
@@ -2544,7 +2599,16 @@ window._colviewCtx = {
       const order = savedSummary.order || (orderCol >= 0 ? String(item.row[orderCol] || '') : '') || '-';
       const registration = savedSummary.registration || (registrationCol >= 0 ? String(item.row[registrationCol] || '') : '') || '-';
       meta.textContent = `整理番号 ${order}／登録番号 ${registration}／${fmtTime(item.timestamp)}／${item.sentAt ? `送信済み ${fmtTime(item.sentAt)}` : '未送信'}`;
-      body.append(name, meta); label.append(checkbox, body); host.appendChild(label);
+      body.append(name, meta);
+      if (Array.isArray(item.changes) && item.changes.length) {
+        const detail = document.createElement('div');
+        detail.className = 'property-change-detail';
+        detail.textContent = item.changes.map(field =>
+          `${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`
+        ).join('／');
+        body.appendChild(detail);
+      }
+      label.append(checkbox, body); host.appendChild(label);
     });
   };
 
