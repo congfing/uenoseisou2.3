@@ -2183,7 +2183,9 @@ function natCmp(a, b) {
 
 function weekdayAssignmentCmp(a, b, direction) {
   const parse = value => {
-    const match = String(value || '').trim().replace('－', '-').match(/^([NKM])-\s*(\d+)?$/i);
+    // 担当者記号は画面から追加できるので特定の文字を列挙しない。
+    // 「記号＋区切り（＋番号）」の形ならすべて対象にする。
+    const match = String(value || '').trim().replace('－', '-').match(/^([^\d\s-]{1,10})-\s*(\d+)?$/);
     return match ? { staff:match[1].toUpperCase(), order:match[2] ? Number(match[2]) : null } : null;
   };
   const pa = parse(a), pb = parse(b);
@@ -2288,7 +2290,9 @@ function renderTable() {
         let ok = false;
         for (const sel of filterState.selectedValues) {
           if (sel.startsWith('\x00exact:')) { if (v === sel.slice(7)) { ok=true; break; } }
-          else { if (v.startsWith(sel)) { ok=true; break; } }
+          // 接頭辞グループ（H-…）に入るのは「記号＋番号」の値だけ。
+          // 値そのものが H- の行は単独項目として別に出しているので、ここでは拾わない。
+          else { if (extractPrefix(v) === sel) { ok=true; break; } }
         }
         if (!ok) return false;
       } else {
@@ -2484,7 +2488,22 @@ function renderTable() {
 
   dataTable.style.display = rows.length ? '' : 'none';
   emptyMsg.style.display  = rows.length ? 'none' : 'block';
-  if (!rows.length) emptyMsg.textContent = '表示するデータがありません';
+  if (!rows.length) {
+    emptyMsg.textContent = '表示するデータがありません';
+    // 0件だと表ごと隠れて見出しのフィルターに触れなくなるので、ここから解除できるようにする
+    if (filterState.colIdx !== null && filterState.selectedValues.size > 0) {
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.textContent = `🔽 ${headers[filterState.colIdx] || ''} のフィルターを解除`;
+      clearBtn.style.cssText = 'display:block;margin:16px auto 0;padding:10px 18px;font-size:14px;cursor:pointer;';
+      clearBtn.addEventListener('click', () => {
+        filterState = { colIdx:null, selectedValues:new Set(), filterType:'exact' };
+        renderTable();
+        saveState();
+      });
+      emptyMsg.appendChild(clearBtn);
+    }
+  }
   const filterInfo = (filterState.colIdx !== null && filterState.selectedValues.size > 0)
     ? ` 🔽${headers[filterState.colIdx]||''}フィルター中` : '';
   const assignmentInfo = assignmentFilter.active ? `　担当者・曜日選択:${rows.length}件` : '';
