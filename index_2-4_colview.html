@@ -94,6 +94,9 @@
   .assignment-options { display:flex; flex-wrap:wrap; gap:7px 10px; }
   .assignment-option { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; }
   .assignment-option input { width:16px; height:16px; margin:0; cursor:pointer; accent-color:#1a6eb5; }
+  .assignment-add-row { display:flex; gap:6px; margin-top:10px; }
+  .assignment-add-row input { min-width:0; width:120px; padding:6px 8px; border:1px solid #777; background:#fff; color:#111; font:inherit; }
+  .assignment-add-row button { padding:6px 10px; border:1px solid #222; background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer; }
   .assignment-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:24px; }
   .assignment-actions button {
     padding:7px 13px; border:1px solid #a0b8d8; border-radius:4px;
@@ -486,6 +489,11 @@
           <label class="assignment-option"><input type="checkbox" value="N-">N-</label>
           <label class="assignment-option"><input type="checkbox" value="K-">K-</label>
           <label class="assignment-option"><input type="checkbox" value="M-">M-</label>
+          <label class="assignment-option"><input type="checkbox" value="H-">H-</label>
+        </div>
+        <div class="assignment-add-row">
+          <input type="text" id="assignmentStaffAddInput" placeholder="担当者記号" maxlength="10" aria-label="追加する担当者記号">
+          <button type="button" id="assignmentStaffAdd">追加</button>
         </div>
       </div>
       <div>
@@ -561,6 +569,7 @@
 <div id="collectionOrderActions" aria-label="収集順の変更操作">
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
+  <button type="button" id="collectionOrderInitialize">初期設定に戻す</button>
   <button type="button" id="collectionOrderSave">保存して反映</button>
   <button type="button" id="collectionOrderCommit">メール送信</button>
   <button type="button" id="collectionOrderSaveExit">閉じる</button>
@@ -637,13 +646,24 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const ASSIGNMENT_STAFF = ['N-', 'K-', 'M-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-'];
+const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
+const ASSIGNMENT_STAFF = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ASSIGNMENT_STAFF_STORAGE_KEY) || '[]');
+    return [...new Set([...DEFAULT_ASSIGNMENT_STAFF, ...(Array.isArray(saved) ? saved : [])])];
+  } catch (e) {
+    return [...DEFAULT_ASSIGNMENT_STAFF];
+  }
+})();
 const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
 const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', 'PETアルミ', '段紙', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
 let draftCollectionOrders = {};
 let collectionOrderUndoStack = [];
+let collectionOrderSessionOrders = {};
+let collectionOrderInitialResetGroups = new Set();
 let collectionOrderRenderTimer = null;
 const HIDDEN_PROPERTY_SHEET = '非表示物件';
 const HIDDEN_PROPERTY_META_HEADERS = ['元シート', '元の整理番号', '元の位置'];
@@ -666,6 +686,65 @@ window.closeApp = closeApp;
 // ===== localStorage 状態保存・復元 =====
 const STORAGE_KEY = 'keiryou_colview_state';
 const STORAGE_MAP_KEY = 'keiryou_colview_state_by_sheet';
+const LAST_FILE_SOURCE_KEY = 'colview_last_file_source_v1';
+const LAST_WORKBOOK_DB = 'colview_last_workbook_v1';
+const LAST_WORKBOOK_STORE = 'files';
+
+function openLastWorkbookDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(LAST_WORKBOOK_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(LAST_WORKBOOK_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function storeLastWorkbook(buf, filename) {
+  try { localStorage.setItem(LAST_FILE_SOURCE_KEY, JSON.stringify({ type:'local', filename })); } catch (e) {}
+  try {
+    const db = await openLastWorkbookDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LAST_WORKBOOK_STORE, 'readwrite');
+      tx.objectStore(LAST_WORKBOOK_STORE).put({ filename, buf }, 'last');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (e) {
+    console.warn('前回ファイルの端末保存に失敗:', e);
+  }
+}
+
+async function readLastWorkbook() {
+  try {
+    const db = await openLastWorkbookDb();
+    const result = await new Promise((resolve, reject) => {
+      const tx = db.transaction(LAST_WORKBOOK_STORE, 'readonly');
+      const request = tx.objectStore(LAST_WORKBOOK_STORE).get('last');
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return result;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getLastFileSource() {
+  try { return JSON.parse(localStorage.getItem(LAST_FILE_SOURCE_KEY) || 'null'); } catch (e) { return null; }
+}
+
+function showLocalFileOption(filename) {
+  let localOpt = gitFileSel.querySelector('option[value="__local__"]');
+  if (!localOpt) {
+    localOpt = document.createElement('option');
+    localOpt.value = '__local__';
+    gitFileSel.insertBefore(localOpt, gitFileSel.firstChild);
+  }
+  localOpt.textContent = '📁 ' + filename;
+  gitFileSel.value = '__local__';
+}
 
 function makeStorageId(filename, sheetName) {
   return String(filename || '') + '::' + String(sheetName || '');
@@ -768,6 +847,24 @@ function loadCollectionOrdersFromWeekdayCells(staffSet, daySet) {
   return loaded;
 }
 
+function collectionOrdersFromWeekdayCells(staffSet, daySet) {
+  const orders = {};
+  if (!staffSet?.size || !daySet?.size) return orders;
+  dataArray.forEach(row => {
+    daySet.forEach(day => {
+      const dayCol = headers.findIndex(h => String(h || '').trim() === day);
+      if (dayCol < 0) return;
+      const value = String(row[dayCol] || '').trim().replace('－', '-');
+      const staff = [...staffSet].find(prefix => value.startsWith(prefix));
+      if (!staff) return;
+      const suffix = value.slice(staff.length).match(/^\s*(\d+)/);
+      const order = suffix ? normalizedCollectionOrder(suffix[1]) : null;
+      if (order !== null) orders[assignmentRowKey(row, staff, day)] = order;
+    });
+  });
+  return orders;
+}
+
 // 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
   if (!saved) return;
@@ -803,6 +900,8 @@ function applyRestoredState(saved) {
   if (assignmentFilter.active) {
     loadCollectionOrdersFromWeekdayCells(assignmentFilter.staff, assignmentFilter.days);
   }
+  collectionOrderSessionOrders = { ...draftCollectionOrders };
+  collectionOrderInitialResetGroups = new Set();
   restoreCollectionOrdersToRows(committedCollectionOrders);
   collectionOrderUndoStack = [];
   updateAssignmentButton();
@@ -950,6 +1049,8 @@ function loadSheet(sheetName) {
   committedCollectionOrders = {};
   draftCollectionOrders = {};
   collectionOrderUndoStack = [];
+  collectionOrderSessionOrders = {};
+  collectionOrderInitialResetGroups = new Set();
   searchInput.value = '';
   buildColPanel();
   const saved = loadSavedState();
@@ -996,11 +1097,18 @@ function loadWorkbookData(buf, filename, sourcePath) {
     committedCollectionOrders = {};
     draftCollectionOrders = {};
     collectionOrderUndoStack = [];
+    collectionOrderSessionOrders = {};
+    collectionOrderInitialResetGroups = new Set();
     searchInput.value = '';
     buildColPanel();
     // 保存済み状態を復元（同じファイル・同じシートの場合のみ）
     const saved = loadSavedState();
-    if (saved) applyRestoredState(saved);
+    if (saved) {
+      const restored = String(sourcePath || '').startsWith('GitHub:')
+        ? { ...saved, collectionOrders:{} }
+        : saved;
+      applyRestoredState(restored);
+    }
     renderTable();
     saveState();
     showToast('✅ ' + filename + ' を読み込みました');
@@ -1051,7 +1159,7 @@ function getGitHubXlsxNames() {
     });
 }
 
-function fetchGitHubFileList() {
+function fetchGitHubFileList(loadFile = false, forceLatest = false) {
   if (gitListLoading) return;
   gitListLoading = true;
   const previousValue = gitFileSel.value;
@@ -1073,8 +1181,14 @@ function fetchGitHubFileList() {
       gitListLoadedAt = Date.now();
       const latestPropertyTable = latestPropertyTableName(xlsxNames);
       const defaultFile = xlsxNames.includes(DEFAULT_GITHUB_XLSX) ? DEFAULT_GITHUB_XLSX : null;
-      const target = latestPropertyTable || defaultFile || xlsxNames[0];
-      if (target) {
+      const lastSource = getLastFileSource();
+      const savedGitFile = lastSource?.type === 'git' && xlsxNames.includes(lastSource.filename)
+        ? lastSource.filename
+        : null;
+      const target = forceLatest
+        ? (latestPropertyTable || defaultFile || xlsxNames[0])
+        : (savedGitFile || latestPropertyTable || defaultFile || xlsxNames[0]);
+      if (target && loadFile) {
         gitFileSel.value = encodeURIComponent(target);
         loadFromGitHub(target);
       } else {
@@ -1102,6 +1216,7 @@ function loadFromGitHub(filename) {
     })
     .then(buf => {
       loadWorkbookData(buf, filename, 'GitHub: ' + GITHUB_REPO_LABEL);
+      localStorage.setItem(LAST_FILE_SOURCE_KEY, JSON.stringify({ type:'git', filename }));
     })
     .catch(e => updateStatus('⚠️ 読み込み失敗: '+e.message))
     .finally(() => { btn.textContent='🔄 GITの最新を取得'; btn.disabled=false; });
@@ -1111,32 +1226,27 @@ gitFileSel.addEventListener('change', function() {
   if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
 });
 gitFileSel.addEventListener('pointerdown', function() {
-  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList(false);
 });
 gitFileSel.addEventListener('focus', function() {
-  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList();
+  if (Date.now() - gitListLoadedAt > 3000) fetchGitHubFileList(false);
 });
 
 // ローカルファイルを開く
 document.getElementById('localFileInput').addEventListener('change', function() {
   const file = this.files[0];
   if (!file) return;
-  // ドロップダウンにローカルファイル名を表示
-  let localOpt = gitFileSel.querySelector('option[value="__local__"]');
-  if (!localOpt) {
-    localOpt = document.createElement('option');
-    localOpt.value = '__local__';
-    gitFileSel.insertBefore(localOpt, gitFileSel.firstChild);
-  }
-  localOpt.textContent = '📁 ' + file.name;
-  gitFileSel.value = '__local__';
+  showLocalFileOption(file.name);
   const reader = new FileReader();
-  reader.onload = e => loadWorkbookData(e.target.result, file.name, 'ローカルファイル');
+  reader.onload = e => {
+    storeLastWorkbook(e.target.result, file.name);
+    loadWorkbookData(e.target.result, file.name, 'ローカルファイル');
+  };
   reader.readAsArrayBuffer(file);
   this.value = '';
 });
 document.getElementById('btnReload').addEventListener('click', () => {
-  fetchGitHubFileList();
+  fetchGitHubFileList(true, true);
 });
 
 function updateAssignmentButton(count) {
@@ -1145,11 +1255,53 @@ function updateAssignmentButton(count) {
     : '';
 }
 
+function normalizeAssignmentStaff(value) {
+  const normalized = String(value || '').normalize('NFKC').trim().replace(/－/g, '-').replace(/\s+/g, '');
+  if (!normalized) return '';
+  return normalized.endsWith('-') ? normalized : `${normalized}-`;
+}
+
+function renderAssignmentStaffOptions() {
+  const host = document.getElementById('staffOptions');
+  host.querySelectorAll('[data-custom-staff="true"]').forEach(item => item.remove());
+  ASSIGNMENT_STAFF.filter(value => !DEFAULT_ASSIGNMENT_STAFF.includes(value)).forEach(value => {
+    const label = document.createElement('label');
+    label.className = 'assignment-option';
+    label.dataset.customStaff = 'true';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = value;
+    input.checked = assignmentFilter.staff.has(value);
+    label.append(input, document.createTextNode(value));
+    host.appendChild(label);
+  });
+}
+
 btnAssignment.addEventListener('click', () => {
+  renderAssignmentStaffOptions();
   assignmentPanel.querySelectorAll('#staffOptions input').forEach(cb => cb.checked = assignmentFilter.staff.has(cb.value));
   assignmentPanel.querySelectorAll('#weekdayOptions input').forEach(cb => cb.checked = assignmentFilter.days.has(cb.value));
   assignmentDialog.classList.add('active');
   assignmentPanel.querySelector('input').focus();
+});
+
+document.getElementById('assignmentStaffAdd').addEventListener('click', () => {
+  const input = document.getElementById('assignmentStaffAddInput');
+  const value = normalizeAssignmentStaff(input.value);
+  if (!value) { showToast('追加する担当者記号を入力してください'); input.focus(); return; }
+  if (!ASSIGNMENT_STAFF.includes(value)) {
+    ASSIGNMENT_STAFF.push(value);
+    try { localStorage.setItem(ASSIGNMENT_STAFF_STORAGE_KEY, JSON.stringify(ASSIGNMENT_STAFF)); } catch (e) {}
+  }
+  renderAssignmentStaffOptions();
+  const checkbox = [...document.querySelectorAll('#staffOptions input')].find(item => item.value === value);
+  if (checkbox) checkbox.checked = true;
+  input.value = '';
+  showToast(`${value}を担当者候補に追加しました`);
+});
+
+document.getElementById('assignmentStaffAddInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') document.getElementById('assignmentStaffAdd').click();
 });
 
 document.getElementById('assignmentCancel').addEventListener('click', () => {
@@ -1189,6 +1341,10 @@ document.getElementById('assignmentApply').addEventListener('click', () => {
     collectionOrderUndoStack = [];
   }
   loadCollectionOrdersFromWeekdayCells(staff, days);
+  if (!sameSelection) {
+    collectionOrderSessionOrders = { ...draftCollectionOrders };
+    collectionOrderInitialResetGroups = new Set();
+  }
   sortState = { col:-1, dir:0 };
   assignmentDialog.classList.remove('active');
   renderTable();
@@ -1275,6 +1431,50 @@ function recordPropertyChange(type, row, fieldChange = null) {
       filename:currentFilename, sheetName:currentSheetName, sentAt:null
     });
   }
+  setPropertyChangeHistory(items);
+  if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+}
+
+function recordCollectionOrderChanges(changes) {
+  if (!Array.isArray(changes) || !changes.length) return;
+  const items = getPropertyChangeHistory();
+  const first = changes[0];
+  items.unshift({
+    id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    timestamp:Date.now(),
+    type:'collection_order',
+    row:[...first.row],
+    summary:{
+      ...propertyRowInfo(first.row),
+      property:`${first.staff}／${first.day}（${changes.length}件）`
+    },
+    changes:changes.map(change => ({
+      index:change.dayCol,
+      header:`${change.day}（${change.property || '名称未入力'}）`,
+      before:change.before,
+      after:change.after
+    })),
+    filename:currentFilename,
+    sheetName:currentSheetName,
+    sentAt:null
+  });
+  setPropertyChangeHistory(items);
+  if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+}
+
+function recordExcelSave(filename) {
+  const items = getPropertyChangeHistory();
+  items.unshift({
+    id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    timestamp:Date.now(),
+    type:'excel_save',
+    row:[],
+    summary:{ property:filename, district:'', registration:'', order:0 },
+    changes:[{ index:-1, header:'保存したファイル名', before:'', after:filename }],
+    filename,
+    sheetName:currentSheetName,
+    sentAt:null
+  });
   setPropertyChangeHistory(items);
   if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
 }
@@ -1661,18 +1861,24 @@ document.getElementById('propertyRestore').addEventListener('click', () => openP
 document.getElementById('propertyClearFields').addEventListener('click', clearPropertyRegistrationFields);
 function sendPropertyChangeMail(changes) {
   if (!changes.length) { showToast('送信する変更履歴を選択してください'); return false; }
-  const typeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す' };
+  const typeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す', collection_order:'収集順の保存・変更', excel_save:'エクセル保存' };
   const lines = ['【物件表 登録・変更】'];
   changes.forEach((change, changeIndex) => {
     lines.push('', `【${changeIndex + 1}件目：${typeLabels[change.type] || '変更'}】`, `ファイル：${change.filename || currentFilename}`, `シート：${change.sheetName || currentSheetName}`);
-    headers.slice(0, 26).forEach((header, index) => {
-      const value = String(change.row[index] || '').trim();
-      if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
-    });
+    if (!['collection_order', 'excel_save'].includes(change.type)) {
+      headers.slice(0, 26).forEach((header, index) => {
+        const value = String(change.row[index] || '').trim();
+        if (value) lines.push(`${header || `列${index + 1}`}：${value}`);
+      });
+    }
     if (Array.isArray(change.changes) && change.changes.length) {
       lines.push('変更内容：');
       change.changes.forEach(field => {
-        lines.push(`${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`);
+        if (change.type === 'excel_save') {
+          lines.push(`保存したファイル名：${field.after || change.filename}`);
+        } else {
+          lines.push(`${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`);
+        }
       });
     }
   });
@@ -2015,6 +2221,19 @@ function collectionOrderGroupPrefix(staff, day) {
   return `${staff}||${day}||`;
 }
 
+function collectionOrderSnapshot() {
+  return {
+    orders:{ ...draftCollectionOrders },
+    initialResetGroups:[...collectionOrderInitialResetGroups]
+  };
+}
+
+function selectedCollectionOrderPrefixes() {
+  return [...assignmentFilter.staff].flatMap(staff =>
+    [...assignmentFilter.days].map(day => collectionOrderGroupPrefix(staff, day))
+  );
+}
+
 function nextCollectionOrder(staff, day) {
   const prefix = collectionOrderGroupPrefix(staff, day);
   let max = 0;
@@ -2226,7 +2445,7 @@ function renderTable() {
           orderInput.focus();
           return;
         }
-        collectionOrderUndoStack.push({ ...draftCollectionOrders });
+        collectionOrderUndoStack.push(collectionOrderSnapshot());
         insertCollectionOrder(item, value);
         renderTable();
         const currentPosition = displayedAssignmentRows.findIndex(entry => entry.key === item.key) + 1;
@@ -2235,6 +2454,7 @@ function renderTable() {
       orderInput.addEventListener('keydown', event => {
         if (event.key === 'Enter') orderChange.click();
       });
+      orderInput.addEventListener('input', () => { orderInput.dataset.edited = 'true'; });
       orderEditor.append(orderInput, orderChange);
       tdOrder.appendChild(orderEditor);
       const tdAssignment = document.createElement('td');
@@ -2279,15 +2499,36 @@ document.getElementById('collectionOrderUndo').addEventListener('click', () => {
     showToast('戻せる変更はありません');
     return;
   }
-  draftCollectionOrders = previous;
+  draftCollectionOrders = previous.orders ? { ...previous.orders } : { ...previous };
+  collectionOrderInitialResetGroups = new Set(previous.initialResetGroups || []);
   renderTable();
 });
 
 document.getElementById('collectionOrderReset').addEventListener('click', () => {
-  collectionOrderUndoStack.push({ ...draftCollectionOrders });
-  draftCollectionOrders = {};
+  collectionOrderUndoStack.push(collectionOrderSnapshot());
+  const selectedPrefixes = selectedCollectionOrderPrefixes();
+  const restored = { ...draftCollectionOrders };
+  Object.keys(restored).forEach(key => {
+    if (selectedPrefixes.some(prefix => key.startsWith(prefix))) delete restored[key];
+  });
+  Object.entries(collectionOrderSessionOrders).forEach(([key, value]) => {
+    if (selectedPrefixes.some(prefix => key.startsWith(prefix))) restored[key] = value;
+  });
+  selectedPrefixes.forEach(prefix => collectionOrderInitialResetGroups.delete(prefix));
+  draftCollectionOrders = restored;
   renderTable();
-  showToast('収集順を全て元に戻しました');
+  showToast('変更前の設定へ全て戻しました');
+});
+
+document.getElementById('collectionOrderInitialize').addEventListener('click', () => {
+  collectionOrderUndoStack.push(collectionOrderSnapshot());
+  const selectedPrefixes = selectedCollectionOrderPrefixes();
+  Object.keys(draftCollectionOrders).forEach(key => {
+    if (selectedPrefixes.some(prefix => key.startsWith(prefix))) delete draftCollectionOrders[key];
+  });
+  selectedPrefixes.forEach(prefix => collectionOrderInitialResetGroups.add(prefix));
+  renderTable();
+  showToast('番号なしの初期設定に戻しました。保存して反映を押してください');
 });
 
 function getCollectionOrderMailTo() {
@@ -2352,31 +2593,65 @@ function openCollectionOrderMail() {
 }
 
 function applyCollectionOrdersToWeekdayCells() {
-  let changed = 0;
+  const changes = [];
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
   displayedAssignmentRows.forEach(item => {
     const order = normalizedCollectionOrder(draftCollectionOrders[item.key]);
-    if (order === null) return;
     const dayCol = headers.findIndex(h => String(h || '').trim() === item.day);
     if (dayCol < 0) return;
-    const nextValue = `${item.staff}${order}`;
-    if (String(item.row[dayCol] || '').trim() === nextValue) return;
+    const groupPrefix = collectionOrderGroupPrefix(item.staff, item.day);
+    if (order === null && !collectionOrderInitialResetGroups.has(groupPrefix)) return;
+    const nextValue = order === null ? item.staff : `${item.staff}${order}`;
+    const before = String(item.row[dayCol] || '').trim();
+    if (before === nextValue) return;
     item.row[dayCol] = nextValue;
-    changed++;
+    changes.push({
+      row:item.row,
+      staff:item.staff,
+      day:item.day,
+      dayCol,
+      property:propertyCol >= 0 ? String(item.row[propertyCol] || '').trim() : '',
+      before,
+      after:nextValue
+    });
   });
-  return changed;
+  return changes;
 }
 
 function saveCollectionOrderProgress(applyToWeekdayCells = false) {
   clearTimeout(collectionOrderRenderTimer);
   committedCollectionOrders = { ...draftCollectionOrders };
-  const changed = applyToWeekdayCells ? applyCollectionOrdersToWeekdayCells() : 0;
+  const changes = applyToWeekdayCells ? applyCollectionOrdersToWeekdayCells() : [];
+  if (applyToWeekdayCells) {
+    recordCollectionOrderChanges(changes);
+    collectionOrderInitialResetGroups = new Set();
+    collectionOrderSessionOrders = { ...committedCollectionOrders };
+  }
   collectionOrderUndoStack = [];
   saveState();
   renderTable();
-  return changed;
+  return changes.length;
+}
+
+function captureVisibleCollectionOrderInputs() {
+  const inputs = [...document.querySelectorAll('.collection-order-input')];
+  inputs.forEach((input, index) => {
+    const item = displayedAssignmentRows[index];
+    if (!item) return;
+    // 未登録のまま手入力もされていない欄の値は、画面に出しているだけの候補番号。
+    // これを保存すると触っていない物件に番号が入ってしまうので対象外にする。
+    if (input.dataset.registered === 'false' && input.dataset.edited !== 'true') {
+      delete draftCollectionOrders[item.key];
+      return;
+    }
+    const order = normalizedCollectionOrder(input.value);
+    if (order === null) delete draftCollectionOrders[item.key];
+    else draftCollectionOrders[item.key] = order;
+  });
 }
 
 document.getElementById('collectionOrderSave').addEventListener('click', () => {
+  captureVisibleCollectionOrderInputs();
   const changed = saveCollectionOrderProgress(true);
   showToast(changed > 0
     ? `${changed}件を曜日欄に記入しました`
@@ -2387,6 +2662,7 @@ document.getElementById('collectionOrderSaveExit').addEventListener('click', () 
   clearTimeout(collectionOrderRenderTimer);
   draftCollectionOrders = { ...committedCollectionOrders };
   collectionOrderUndoStack = [];
+  collectionOrderInitialResetGroups = new Set();
   assignmentFilter = { active:false, staff:new Set(), days:new Set() };
   visibleCols = new Set(headers.map((_, i) => i));
   colPanel.classList.remove('active');
@@ -2424,7 +2700,14 @@ function doSaveExcel(filename) {
   }
   syncCurrentSheetToWorkbook();
   syncHiddenPropertySheetToWorkbook();
+  const savedBuffer = XLSX.write(workbook, { bookType:'xlsx', type:'array', cellStyles:true, compression:true });
   XLSX.writeFile(workbook, filename, { bookType:'xlsx', cellStyles:true, compression:true });
+  currentFilename = filename;
+  showLocalFileOption(filename);
+  storeLastWorkbook(savedBuffer, filename);
+  saveState();
+  recordExcelSave(filename);
+  updateStatus('保存したファイル名：' + filename);
   showToast('✅ 全シートを保持して ' + filename + ' を保存しました');
 }
 
@@ -2456,7 +2739,21 @@ document.getElementById('sdlgCancel').addEventListener('click', () => {
   saveDialog.classList.remove('active');
 });
 
-fetchGitHubFileList();
+async function openLastUsedFile() {
+  const lastSource = getLastFileSource();
+  if (lastSource?.type === 'local') {
+    const saved = await readLastWorkbook();
+    if (saved?.buf && saved?.filename) {
+      showLocalFileOption(saved.filename);
+      loadWorkbookData(saved.buf, saved.filename, '前回保存した端末ファイル');
+      fetchGitHubFileList(false);
+      return;
+    }
+  }
+  fetchGitHubFileList(true, false);
+}
+
+openLastUsedFile();
 
 // 初期高さ設定（フォント/レイアウト確定後）
 window.addEventListener('load', adjustWrapperHeight);
@@ -2585,7 +2882,7 @@ window._colviewCtx = {
     return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
-  const propertyTypeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す' };
+  const propertyTypeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す', collection_order:'収集順の保存・変更', excel_save:'エクセル保存' };
 
   window.renderPropertyChangeHistory = function() {
     const host = document.getElementById('property-change-list');
@@ -2620,9 +2917,12 @@ window._colviewCtx = {
       if (Array.isArray(item.changes) && item.changes.length) {
         const detail = document.createElement('div');
         detail.className = 'property-change-detail';
-        detail.textContent = item.changes.map(field =>
-          `${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`
-        ).join('／');
+        const changeTexts = item.changes.map(field => item.type === 'excel_save'
+          ? `保存したファイル名：${field.after || item.filename}`
+          : `${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`
+        );
+        detail.textContent = changeTexts.slice(0, 3).join('／') +
+          (changeTexts.length > 3 ? `／ほか${changeTexts.length - 3}件` : '');
         body.appendChild(detail);
       }
       label.append(checkbox, body); host.appendChild(label);
