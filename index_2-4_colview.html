@@ -110,7 +110,7 @@
     width:64px; padding:5px 6px; border:1px solid #777; border-radius:4px;
     background:#fff; color:#111; font:inherit; text-align:center;
   }
-  .collection-order-input[data-registered="true"] { background:#e6e6e6 !important; }
+  .collection-order-input[data-registered="true"] { background:#d9d9d9 !important; }
   .collection-order-input:focus { outline:2px solid #222; outline-offset:1px; }
   .collection-order-editor { display:flex; align-items:center; gap:5px; }
   .collection-order-change {
@@ -120,7 +120,7 @@
   }
   .collection-order-change:active { font-weight:900; }
   /* 登録済みは収集順の入力欄と同じグレーにする */
-  .collection-order-change.registered { background:#e6e6e6; }
+  .collection-order-change.registered { background:#d9d9d9 !important; }
   /* 地点登録ボタン */
   .geo-register-btn {
     padding:5px 8px; border:1px solid #222; border-radius:4px;
@@ -128,7 +128,7 @@
     white-space:nowrap;
   }
   .geo-register-btn:active { font-weight:900; }
-  .geo-register-btn.registered { background:#e6e6e6; }
+  .geo-register-btn.registered { background:#d9d9d9 !important; }
   #collectionOrderActions {
     display:none; position:fixed; z-index:170; left:0; right:0; bottom:0;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
@@ -2290,10 +2290,13 @@ function updateGeoButtonState(btn, name) {
   if (g) {
     btn.textContent = '登録済み';
     btn.classList.add('registered');
+    // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
+    btn.style.setProperty('background-color', '#d9d9d9', 'important');
     btn.title = `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
   } else {
     btn.textContent = '地点登録';
     btn.classList.remove('registered');
+    btn.style.removeProperty('background-color');
     btn.title = 'ここで押すと現在地をこの物件の座標として登録します';
   }
 }
@@ -2574,7 +2577,11 @@ function renderTable() {
       orderChange.type = 'button';
       orderChange.className = 'collection-order-change';
       orderChange.textContent = registeredOrder === null ? '変更' : '変更済み';
-      if (registeredOrder !== null) orderChange.classList.add('registered');
+      if (registeredOrder !== null) {
+        orderChange.classList.add('registered');
+        // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
+        orderChange.style.setProperty('background-color', '#d9d9d9', 'important');
+      }
       orderChange.setAttribute('aria-label', `${tdProperty.textContent}の収集順を変更`);
       orderChange.addEventListener('click', () => {
         const value = normalizedCollectionOrder(orderInput.value);
