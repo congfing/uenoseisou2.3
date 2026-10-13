@@ -303,19 +303,17 @@
     /* 収集順の操作列はボタンを優先して確保する */
     #dataTable tbody td.collection-order-cell,
     #dataTable thead th.collection-order-cell {
-      width:132px; min-width:132px; max-width:132px;
+      width:190px; min-width:190px; max-width:190px;
       padding-left:3px; padding-right:3px;
+      white-space:normal; overflow:visible;
     }
     .collection-order-editor { gap:3px; flex-wrap:wrap; justify-content:flex-start; }
     .collection-order-input { width:44px; min-width:44px; }
     .collection-order-change,
     .geo-register-btn { padding:5px 6px; font-size:12px; }
-    /* 担当者情報は狭めてよい */
+    /* 担当者情報はグループ見出しに同じ内容があるので隠す */
     #dataTable tbody td.assignment-info-cell,
-    #dataTable thead th.assignment-info-cell {
-      width:72px; min-width:72px; max-width:72px;
-      white-space:normal; overflow-wrap:anywhere; font-size:11px;
-    }
+    #dataTable thead th.assignment-info-cell { display:none; }
     #dataTable th.weekday-col,
     #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
   }
