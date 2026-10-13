@@ -1326,6 +1326,8 @@ window.onload = function(){
   } else {
     updateNav(1);
   }
+  // 物件表（colview）の「計量」から ?prop=... で呼ばれた場合はその物件の入力画面を開く
+  handleColviewDeepLink();
 };
 
 // ===== NAVIGATION =====
@@ -2310,6 +2312,7 @@ function savePropertyData(){
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
   const savedName = prop.name;
+  if(returnToColviewIfRequested()) return;
   if(returnScreen===9){
     renderPropertyListA();showScreen(9);
   } else {
@@ -2342,7 +2345,38 @@ function clearPropertyData(){
   else { renderPropertyList();showScreen(3); }
 }
 
+/* ===== 物件表（colview）から「計量」で呼ばれたときの処理 ===== */
+let colviewReturnUrl = '';
+function returnToColviewIfRequested(){
+  if(!colviewReturnUrl) return false;
+  const url = colviewReturnUrl;
+  colviewReturnUrl = '';
+  location.href = url;
+  return true;
+}
+function handleColviewDeepLink(){
+  let params;
+  try { params = new URLSearchParams(location.search); } catch(e){ return; }
+  const name = (params.get('prop') || '').trim();
+  if(!name) return;
+  if(params.get('from') === 'colview') colviewReturnUrl = 'index_2-4_colview.html';
+  if(!state.date || !state.selectedStaff){
+    colviewReturnUrl = '';
+    alert('先に日付と担当者を選んでください。\n選んだあと、物件表の「計量」をもう一度押してください。');
+    return;
+  }
+  const idx = allProperties.findIndex(p => p.name === name);
+  if(idx < 0){
+    colviewReturnUrl = '';
+    alert(`「${name}」は計量物件の一覧にありません。\n物件リストから選んでください。`);
+    renderPropertyListA(); showScreen(9);
+    return;
+  }
+  openEntry(idx, {stopPropagation:()=>{}}, 9);
+}
+
 function closePropertyEntry(){
+  if(returnToColviewIfRequested()) return;
   const returnScreen = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
   const currentPropName = allProperties[state.currentPropertyIndex]?.name;
   if(returnScreen === 9){

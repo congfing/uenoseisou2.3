@@ -129,6 +129,13 @@
   }
   .geo-register-btn:active { font-weight:900; }
   .geo-register-btn.registered { background:#d9d9d9 !important; }
+  /* 計量物件だけに出る、計量データ入力（3-20）を開くボタン */
+  .keiryou-open-btn {
+    padding:5px 8px; border:1px solid #14558f; border-radius:4px;
+    background:#1a6eb5; color:#fff; font:inherit; font-weight:700; cursor:pointer;
+    white-space:nowrap;
+  }
+  .keiryou-open-btn:active { background:#14558f; }
   #collectionOrderActions {
     display:none; position:fixed; z-index:170; left:0; right:0; bottom:0;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
@@ -314,7 +321,8 @@
     .collection-order-editor { gap:4px; flex-wrap:nowrap; justify-content:flex-start; }
     .collection-order-input { width:52px; min-width:52px; }
     .collection-order-change,
-    .geo-register-btn { padding:5px 7px; font-size:12px; }
+    .geo-register-btn,
+    .keiryou-open-btn { padding:5px 7px; font-size:12px; }
     #dataTable tbody td.assignment-info-cell,
     #dataTable thead th.assignment-info-cell {
       white-space:nowrap; font-size:11px;
@@ -2301,6 +2309,30 @@ function updateGeoButtonState(btn, name) {
   }
 }
 
+/* ===== 計量データ入力（3-20）を物件指定で開く ===== */
+function hasUncommittedCollectionOrders() {
+  const keys = new Set([
+    ...Object.keys(draftCollectionOrders || {}),
+    ...Object.keys(committedCollectionOrders || {}),
+  ]);
+  for (const key of keys) {
+    const a = normalizedCollectionOrder(draftCollectionOrders[key]);
+    const b = normalizedCollectionOrder(committedCollectionOrders[key]);
+    if (a !== b) return true;
+  }
+  return false;
+}
+
+function openKeiryouEntry(name) {
+  if (!name) return;
+  // 収集順の下書きはページを離れると消えるので、先に確認する。
+  if (hasUncommittedCollectionOrders()) {
+    if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
+  }
+  saveState();
+  location.href = `index_3-20.html?from=colview&prop=${encodeURIComponent(name)}`;
+}
+
 function geoRegisteredCount() {
   const store = loadGeoStore();
   const total = displayedAssignmentRows.length;
@@ -2607,6 +2639,22 @@ function renderTable() {
       updateGeoButtonState(geoBtn, tdProperty.textContent);
       geoBtn.addEventListener('click', () => registerGeoPoint(geoBtn, tdProperty.textContent));
       orderEditor.append(orderInput, orderChange, geoBtn);
+
+      // 「計量」列に印がある物件だけ、計量データ入力（3-20）を開くボタンを出す。
+      const keiryouCol = headers.findIndex(h => String(h || '').trim() === '計量');
+      const isKeiryou = keiryouCol >= 0 && String(row[keiryouCol] || '').trim() !== '';
+      if (isKeiryou) {
+        const keiryouBtn = document.createElement('button');
+        keiryouBtn.type = 'button';
+        keiryouBtn.className = 'keiryou-open-btn';
+        keiryouBtn.textContent = '計量';
+        keiryouBtn.title = 'この物件の計量データ入力（3-20）を開きます';
+        keiryouBtn.setAttribute('aria-label', `${tdProperty.textContent}の計量データを入力`);
+        const keiryouName = tdProperty.textContent;
+        keiryouBtn.addEventListener('click', () => openKeiryouEntry(keiryouName));
+        orderEditor.appendChild(keiryouBtn);
+      }
+
       tdOrder.appendChild(orderEditor);
       const tdAssignment = document.createElement('td');
       tdAssignment.className = 'assignment-info-cell';
