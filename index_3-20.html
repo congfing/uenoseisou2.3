@@ -2314,6 +2314,8 @@ function savePropertyData(){
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
   const savedName = prop.name;
+  // 物件表の「計量」から入った場合は、保存したら物件表まで戻る。
+  if(returnToColviewIfRequested()) return;
   if(returnScreen===9){
     renderPropertyListA();showScreen(9);
   } else {
@@ -2350,6 +2352,14 @@ function clearPropertyData(){
 let colviewReturnUrl = '';
 let colviewCloseTab = false;
 function returnToColviewIfRequested(){
+  if(!colviewCloseTab && !colviewReturnUrl) return false;
+  // 入力画面から直接戻るので、次に開いたときは物件リスト２列から始まるようにしておく。
+  if(state.currentScreen === 4){
+    state.currentScreen = 9;
+    state.currentPropertyIndex = -1;
+    state.entryReturnScreen = 9;
+    saveSession();
+  }
   if(colviewCloseTab){
     // 物件表から別タブで開かれた場合は、このタブを閉じて物件表に戻る。
     colviewCloseTab = false;
@@ -2378,7 +2388,9 @@ function handleColviewDeepLink(){
 }
 
 function closePropertyEntry(){
-  // 入力画面の「閉じる」は物件リスト２列へ戻る。物件表へ戻るのは２列画面の戻る／閉じる。
+  // 物件表の「計量」から入った場合は、入力画面の「閉じる」で物件表まで戻る。
+  // 計量入力パネル（タブ）から入った場合は、これまでどおり物件リスト２列へ戻る。
+  if(returnToColviewIfRequested()) return;
   const returnScreen = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
   const currentPropName = allProperties[state.currentPropertyIndex]?.name;
   if(returnScreen === 9){
