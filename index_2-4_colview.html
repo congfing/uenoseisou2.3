@@ -2068,8 +2068,12 @@ function adjustWrapperHeight() {
   const panelH   = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
   const orderActions = document.getElementById('collectionOrderActions');
   const actionsH = orderActions.classList.contains('active') ? orderActions.offsetHeight : 0;
+  // ページを直接開いたときは上部のタブバーが body に余白を足すので、その分も引く。
+  // （パネルの中ではタブバーが出ないので 0 になる）
+  const tabbar = document.getElementById('uenoGlobalTabbar');
+  const tabbarH = tabbar ? tabbar.offsetHeight : 0;
   document.getElementById('tableWrapper').style.height =
-    `calc(100vh - ${headerH + toolbarH + panelH + actionsH}px)`;
+    `calc(100vh - ${headerH + toolbarH + panelH + actionsH + tabbarH}px)`;
 }
 
 // 検索
