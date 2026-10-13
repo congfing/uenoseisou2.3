@@ -2410,38 +2410,20 @@ function isKeiryoSavedIn320(propertyName) {
   return !!loadKeiryoSavedToday()[keiryoNameNorm(mapped)];
 }
 
-/* 計量済みの印は「その日だけ」有効。日付が変われば自動で消える。 */
-const KEIRYO_DONE_KEY = 'uenoseisou_keiryo_done_v1';
 function keiryoTodayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function loadKeiryoDone() {
-  try {
-    const all = JSON.parse(localStorage.getItem(KEIRYO_DONE_KEY) || '{}');
-    return all[keiryoTodayKey()] || {};
-  } catch (e) { return {}; }
-}
-function saveKeiryoDone(map) {
-  // 当日分だけを残す（古い日付は保存しない）。
-  try { localStorage.setItem(KEIRYO_DONE_KEY, JSON.stringify({ [keiryoTodayKey()]: map })); } catch (e) {}
-}
-/* 3-20で当日保存されていれば計量済み。対応表に無い物件は手動の印で判定する。 */
-function isKeiryoDone(name) {
-  if (isKeiryoSavedIn320(name)) return true;
-  return !!loadKeiryoDone()[name];
-}
 
+/* 計量済みかどうかは、3-20が当日保存したデータだけで判定する。 */
 function updateKeiryouButtonState(btn, name) {
-  if (isKeiryoDone(name)) {
+  if (isKeiryoSavedIn320(name)) {
     btn.textContent = '計量済み';
     btn.classList.add('registered');
     // 収集順の入力欄と同じ方法で指定する。
     btn.style.setProperty('background-color', '#d9d9d9', 'important');
     btn.style.setProperty('color', '#111', 'important');
-    btn.title = isKeiryoSavedIn320(name)
-      ? `計量データ入力で本日保存済み（${keiryoEntryName(name)}）。押すともう一度開きます`
-      : '計量済みにしています。押すと解除または再度開くかを選べます';
+    btn.title = `計量データ入力で本日保存済み（${keiryoEntryName(name)}）。押すともう一度開きます`;
   } else {
     btn.textContent = '計量';
     btn.classList.remove('registered');
@@ -2451,26 +2433,8 @@ function updateKeiryouButtonState(btn, name) {
   }
 }
 
-function openKeiryouEntry(name, btn) {
-  if (name) {
-    if (keiryoEntryName(name)) {
-      // 対応表にある物件は、3-20で保存された時点で自動的に「計量済み」になる。
-      // ここでは印を付けない。
-    } else if (loadKeiryoDone()[name]) {
-      // 対応表に無い物件は手動の印。もう一度押したときは解除も選べる。
-      if (confirm(`「${name}」は計量済みにしています。\n\nOK：計量済みを解除する\nキャンセル：計量画面をもう一度開く`)) {
-        const map = loadKeiryoDone();
-        delete map[name];
-        saveKeiryoDone(map);
-        if (btn) updateKeiryouButtonState(btn, name);
-        return;
-      }
-    } else {
-      const map = loadKeiryoDone();
-      map[name] = true;
-      saveKeiryoDone(map);
-    }
-  }
+function openKeiryouEntry() {
+  // 「計量済み」は3-20で保存した時点で自動的に付くので、ここでは印を付けない。
   // 収集順の下書きはページを離れると消えるので、先に確認する。
   if (hasUncommittedCollectionOrders()) {
     if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
@@ -2481,20 +2445,28 @@ function openKeiryouEntry(name, btn) {
   location.href = 'index_3-20.html?from=colview';
 }
 
-/* 表示中の計量物件のうち、本日計量済みにした件数 */
+/* 表示中の計量物件のうち、本日3-20で保存済みの件数 */
 function keiryoDoneCount() {
-  const done_map = loadKeiryoDone();
   const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
   const keiryouCol = findHeaderIndex(['計量']);
   let total = 0, done = 0;
   if (propertyCol < 0 || keiryouCol < 0) return { done: 0, total: 0 };
   displayedAssignmentRows.forEach(item => {
-    if (String(item.row[keiryouCol] || '').trim() === '') return;
-    total++;
     const nm = String(item.row[propertyCol] || '').trim();
-    if (nm && (isKeiryoSavedIn320(nm) || done_map[nm])) done++;
+    if (!isKeiryouProperty(item.row, keiryouCol, nm)) return;
+    total++;
+    if (isKeiryoSavedIn320(nm)) done++;
   });
   return { done, total };
+}
+
+/* 計量物件かどうか：物件表の「計量」列に印があり、かつ対応表にある物件。
+   物件表に印はあっても計量対象でない物件（スターバックス等）を除外するため、
+   対応表を正式な計量物件の一覧として扱う。 */
+function isKeiryouProperty(row, keiryouCol, name) {
+  if (keiryouCol < 0) return false;
+  if (String(row[keiryouCol] || '').trim() === '') return false;
+  return !!keiryoEntryName(name);
 }
 
 function geoRegisteredCount() {
@@ -2804,17 +2776,16 @@ function renderTable() {
       geoBtn.addEventListener('click', () => registerGeoPoint(geoBtn, tdProperty.textContent));
       orderEditor.append(orderInput, orderChange, geoBtn);
 
-      // 「計量」列に印がある物件だけ、計量データ入力（3-20）を開くボタンを出す。
+      // 計量物件（「計量」列に印があり、かつ対応表にある物件）だけボタンを出す。
       const keiryouCol = headers.findIndex(h => String(h || '').trim() === '計量');
-      const isKeiryou = keiryouCol >= 0 && String(row[keiryouCol] || '').trim() !== '';
-      if (isKeiryou) {
+      const keiryouName = tdProperty.textContent;
+      if (isKeiryouProperty(row, keiryouCol, keiryouName)) {
         const keiryouBtn = document.createElement('button');
         keiryouBtn.type = 'button';
         keiryouBtn.className = 'keiryou-open-btn';
         keiryouBtn.setAttribute('aria-label', '計量データ入力を開く');
-        const keiryouName = tdProperty.textContent;
         updateKeiryouButtonState(keiryouBtn, keiryouName);
-        keiryouBtn.addEventListener('click', () => openKeiryouEntry(keiryouName, keiryouBtn));
+        keiryouBtn.addEventListener('click', () => openKeiryouEntry());
         orderEditor.appendChild(keiryouBtn);
       }
 
