@@ -119,6 +119,8 @@
     white-space:nowrap;
   }
   .collection-order-change:active { font-weight:900; }
+  /* 登録済みは収集順の入力欄と同じグレーにする */
+  .collection-order-change.registered { background:#e6e6e6; }
   /* 地点登録ボタン */
   .geo-register-btn {
     padding:5px 8px; border:1px solid #222; border-radius:4px;
@@ -126,7 +128,7 @@
     white-space:nowrap;
   }
   .geo-register-btn:active { font-weight:900; }
-  .geo-register-btn.registered { background:#d9edd9; }
+  .geo-register-btn.registered { background:#e6e6e6; }
   #collectionOrderActions {
     display:none; position:fixed; z-index:170; left:0; right:0; bottom:0;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
@@ -2572,6 +2574,7 @@ function renderTable() {
       orderChange.type = 'button';
       orderChange.className = 'collection-order-change';
       orderChange.textContent = registeredOrder === null ? '変更' : '変更済み';
+      if (registeredOrder !== null) orderChange.classList.add('registered');
       orderChange.setAttribute('aria-label', `${tdProperty.textContent}の収集順を変更`);
       orderChange.addEventListener('click', () => {
         const value = normalizedCollectionOrder(orderInput.value);
