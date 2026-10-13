@@ -2323,14 +2323,15 @@ function hasUncommittedCollectionOrders() {
   return false;
 }
 
-function openKeiryouEntry(name) {
-  if (!name) return;
+function openKeiryouEntry() {
   // 収集順の下書きはページを離れると消えるので、先に確認する。
   if (hasUncommittedCollectionOrders()) {
     if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
   }
   saveState();
-  location.href = `index_3-20.html?from=colview&prop=${encodeURIComponent(name)}`;
+  // 物件はこのあと3-20の「物件リスト２列」から選ぶ。
+  // 初回は日付選択、以降は２列のリストが開く。
+  location.href = 'index_3-20.html?from=colview';
 }
 
 function geoRegisteredCount() {
@@ -2648,10 +2649,9 @@ function renderTable() {
         keiryouBtn.type = 'button';
         keiryouBtn.className = 'keiryou-open-btn';
         keiryouBtn.textContent = '計量';
-        keiryouBtn.title = 'この物件の計量データ入力（3-20）を開きます';
-        keiryouBtn.setAttribute('aria-label', `${tdProperty.textContent}の計量データを入力`);
-        const keiryouName = tdProperty.textContent;
-        keiryouBtn.addEventListener('click', () => openKeiryouEntry(keiryouName));
+        keiryouBtn.title = '計量データ入力（3-20）を開きます';
+        keiryouBtn.setAttribute('aria-label', '計量データ入力を開く');
+        keiryouBtn.addEventListener('click', () => openKeiryouEntry());
         orderEditor.appendChild(keiryouBtn);
       }
 

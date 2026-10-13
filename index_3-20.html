@@ -2355,24 +2355,12 @@ function returnToColviewIfRequested(){
   return true;
 }
 function handleColviewDeepLink(){
+  // 物件表の「計量」から来たときは、いつも通りの画面（初回は日付選択、
+  // 以降は物件リスト２列）を出すだけ。物件はこのアプリの一覧から選ぶ。
+  // 入力画面の「保存」「閉じる」で物件表に戻るように、戻り先だけ覚えておく。
   let params;
   try { params = new URLSearchParams(location.search); } catch(e){ return; }
-  const name = (params.get('prop') || '').trim();
-  if(!name) return;
   if(params.get('from') === 'colview') colviewReturnUrl = 'index_2-4_colview.html';
-  if(!state.date || !state.selectedStaff){
-    colviewReturnUrl = '';
-    alert('先に日付と担当者を選んでください。\n選んだあと、物件表の「計量」をもう一度押してください。');
-    return;
-  }
-  const idx = allProperties.findIndex(p => p.name === name);
-  if(idx < 0){
-    colviewReturnUrl = '';
-    alert(`「${name}」は計量物件の一覧にありません。\n物件リストから選んでください。`);
-    renderPropertyListA(); showScreen(9);
-    return;
-  }
-  openEntry(idx, {stopPropagation:()=>{}}, 9);
 }
 
 function closePropertyEntry(){
