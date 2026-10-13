@@ -136,6 +136,10 @@
     white-space:nowrap;
   }
   .keiryou-open-btn:active { background:#14558f; }
+  /* 計量済みは収集順の入力欄と同じグレーにする */
+  .keiryou-open-btn.registered {
+    background:#d9d9d9 !important; color:#111 !important; border-color:#222;
+  }
   #collectionOrderActions {
     display:none; position:fixed; z-index:170; left:0; right:0; bottom:0;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
@@ -2323,7 +2327,56 @@ function hasUncommittedCollectionOrders() {
   return false;
 }
 
-function openKeiryouEntry() {
+/* 計量済みの印は「その日だけ」有効。日付が変われば自動で消える。 */
+const KEIRYO_DONE_KEY = 'uenoseisou_keiryo_done_v1';
+function keiryoTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function loadKeiryoDone() {
+  try {
+    const all = JSON.parse(localStorage.getItem(KEIRYO_DONE_KEY) || '{}');
+    return all[keiryoTodayKey()] || {};
+  } catch (e) { return {}; }
+}
+function saveKeiryoDone(map) {
+  // 当日分だけを残す（古い日付は保存しない）。
+  try { localStorage.setItem(KEIRYO_DONE_KEY, JSON.stringify({ [keiryoTodayKey()]: map })); } catch (e) {}
+}
+function isKeiryoDone(name) { return !!loadKeiryoDone()[name]; }
+
+function updateKeiryouButtonState(btn, name) {
+  if (isKeiryoDone(name)) {
+    btn.textContent = '計量済み';
+    btn.classList.add('registered');
+    // 収集順の入力欄と同じ方法で指定する。
+    btn.style.setProperty('background-color', '#d9d9d9', 'important');
+    btn.style.setProperty('color', '#111', 'important');
+    btn.title = '本日この物件の計量を開きました。押すともう一度開きます（長押しのかわりに「計量済み」の解除は確認が出ます）';
+  } else {
+    btn.textContent = '計量';
+    btn.classList.remove('registered');
+    btn.style.removeProperty('background-color');
+    btn.style.removeProperty('color');
+    btn.title = '計量データ入力（3-20）を開きます';
+  }
+}
+
+function openKeiryouEntry(name, btn) {
+  // すでに計量済みのときは、解除するか、もう一度開くかを選べるようにする。
+  if (name && isKeiryoDone(name)) {
+    if (confirm(`「${name}」は計量済みです。\n\nOK：計量済みを解除する\nキャンセル：計量画面をもう一度開く`)) {
+      const map = loadKeiryoDone();
+      delete map[name];
+      saveKeiryoDone(map);
+      if (btn) updateKeiryouButtonState(btn, name);
+      return;
+    }
+  } else if (name) {
+    const map = loadKeiryoDone();
+    map[name] = true;
+    saveKeiryoDone(map);
+  }
   // 収集順の下書きはページを離れると消えるので、先に確認する。
   if (hasUncommittedCollectionOrders()) {
     if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
@@ -2332,6 +2385,22 @@ function openKeiryouEntry() {
   // 物件はこのあと3-20の「物件リスト２列」から選ぶ。
   // 初回は日付選択、以降は２列のリストが開く。
   location.href = 'index_3-20.html?from=colview';
+}
+
+/* 表示中の計量物件のうち、本日計量済みにした件数 */
+function keiryoDoneCount() {
+  const done_map = loadKeiryoDone();
+  const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+  const keiryouCol = findHeaderIndex(['計量']);
+  let total = 0, done = 0;
+  if (propertyCol < 0 || keiryouCol < 0) return { done: 0, total: 0 };
+  displayedAssignmentRows.forEach(item => {
+    if (String(item.row[keiryouCol] || '').trim() === '') return;
+    total++;
+    const nm = String(item.row[propertyCol] || '').trim();
+    if (nm && done_map[nm]) done++;
+  });
+  return { done, total };
 }
 
 function geoRegisteredCount() {
@@ -2648,10 +2717,10 @@ function renderTable() {
         const keiryouBtn = document.createElement('button');
         keiryouBtn.type = 'button';
         keiryouBtn.className = 'keiryou-open-btn';
-        keiryouBtn.textContent = '計量';
-        keiryouBtn.title = '計量データ入力（3-20）を開きます';
         keiryouBtn.setAttribute('aria-label', '計量データ入力を開く');
-        keiryouBtn.addEventListener('click', () => openKeiryouEntry());
+        const keiryouName = tdProperty.textContent;
+        updateKeiryouButtonState(keiryouBtn, keiryouName);
+        keiryouBtn.addEventListener('click', () => openKeiryouEntry(keiryouName, keiryouBtn));
         orderEditor.appendChild(keiryouBtn);
       }
 
@@ -2706,6 +2775,8 @@ function renderTable() {
   if (assignmentFilter.active) {
     const g = geoRegisteredCount();
     assignmentInfo += `　📍${g.done}/${g.total}`;
+    const k = keiryoDoneCount();
+    if (k.total) assignmentInfo += `　計量${k.done}/${k.total}`;
   }
   updateAssignmentButton(rows.length);
   updateStatus(`${rows.length}件 ／ 全${dataArray.length}件　列:${visArr.length}/${headers.length}${filterInfo}${assignmentInfo}`);
