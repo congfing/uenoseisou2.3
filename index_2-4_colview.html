@@ -2327,6 +2327,89 @@ function hasUncommittedCollectionOrders() {
   return false;
 }
 
+/* ===== 物件表の「契約物件」→ 計量データ入力（3-20）の物件名 対応表 =====
+   物件表は廃棄物の種類で行が分かれているため、複数行が3-20の1物件に対応する。
+   （例：イオンタウン可燃・イオンタウン段紙 → イオンタウン伊賀）
+   照合のときは半角・全角の空白を無視するので、空白の違いは気にしなくてよい。 */
+const KEIRYO_NAME_MAP = {
+  'あみやき亭': 'あみやき亭 伊賀上野店',
+  'いがっこ佐那具給食センター': '伊賀市小学校給食センター',
+  'すき家': 'すき家',
+  'ほっともっと桑町店': 'ほっともっと 伊賀桑町店',
+  'ほっともっと白鳳店': 'ほっともっと 伊賀白鳳店',
+  'やさいの戸島屋': 'やさいの戸島屋',
+  'イオンタウン可燃': 'イオンタウン伊賀',
+  'イオンタウン段紙': 'イオンタウン伊賀',
+  'クスリのアオキ伊賀上野店': '株式会社クスリのアオキ 伊賀上野店',
+  'クスリのアオキ平野東店': '株式会社クスリのアオキ 平野東店',
+  'コカ・コーラ': 'コカ・コーラボトラーズ',
+  'コメリ': 'コメリ',
+  'セブンイレブン伊賀平野東町店': '7.11 伊賀平野東町店',
+  'セブンイレブン伊賀忍者駅南店': '7.11 伊賀忍者市駅南店',
+  'セブンイレブン伊賀東条店': '7.11 伊賀東条店',
+  'セブンイレブン四十九店': '7.11 伊賀四十九町北店',
+  'セブンイレブン平野北谷店': '7.11 伊賀平野北谷店',
+  'セブンイレブン緑ヶ丘本町店': '7.11 伊賀緑ヶ丘本町店',
+  'セブンイレブン緑ヶ丘東町店': '7.11 伊賀緑ヶ丘東町店',
+  'チョーヤ梅酒': 'チョーヤ梅酒伊賀上野工場',
+  'ナフコ伊賀店': 'ナフコ伊賀店（㈱アレックス）',
+  'マックスPETアルミ紙P': 'マックスバリュ上野店',
+  'マックスバリュ可燃': 'マックスバリュ上野店',
+  'マックス段紙': 'マックスバリュ上野店',
+  'マックス発泡': 'マックスバリュ上野店',
+  'マックスバリュー佐那具': 'マックスバリュ佐那具店',
+  'ライフテクノサービス': 'ライフテクノサービス',
+  'ラム―': 'LA・MU',
+  'ラムー': 'LA・MU',
+  '伊賀神戸駅': '近鉄日本鉄道伊賀神戸駅',
+  '創価学会': '創価学会',
+  '厚板プレス工業': '厚板プレス工業 伊賀工場',
+  '古本市場': '古本市場 上野店',
+  '旧上野庁舎SAKAKURABASE': '旧上野庁舎 SAKAKURA BASE',
+  '検察庁': '検察庁',
+  '法務局': '法務局',
+  '特別養護老人ホーム伊賀の街': '伊賀の街',
+  '裁判所': '津地方裁判所伊賀支部',
+  '西松屋': '（株）西松屋チェーン 伊賀上野店',
+  '農業屋': 'クラギ（株）農業屋 伊賀上野店',
+  '飯田金属工業': '飯田金属',
+  '魚民': '魚民（㈱モンテローザ）',
+};
+function keiryoNameNorm(s) { return String(s || '').replace(/[\s　]/g, ''); }
+const KEIRYO_NAME_MAP_NORM = (() => {
+  const m = {};
+  Object.keys(KEIRYO_NAME_MAP).forEach(k => { m[keiryoNameNorm(k)] = KEIRYO_NAME_MAP[k]; });
+  return m;
+})();
+function keiryoEntryName(propertyName) {
+  return KEIRYO_NAME_MAP_NORM[keiryoNameNorm(propertyName)] || null;
+}
+
+/* 3-20（計量データ入力）が当日保存した物件名を読む。
+   キーは3-20側と共通の 'keiryo_session'。日付が今日でなければ無視する。 */
+const LS_KEIRYO_SESSION = 'keiryo_session';
+let _keiryoSavedCache = null;
+let _keiryoSavedCacheAt = 0;
+function loadKeiryoSavedToday() {
+  const now = Date.now();
+  if (_keiryoSavedCache && now - _keiryoSavedCacheAt < 1500) return _keiryoSavedCache;
+  let out = {};
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEIRYO_SESSION) || 'null');
+    if (s && s.date === keiryoTodayKey()) {
+      Object.keys(s.entryData || {}).forEach(n => { out[keiryoNameNorm(n)] = true; });
+    }
+  } catch (e) { out = {}; }
+  _keiryoSavedCache = out;
+  _keiryoSavedCacheAt = now;
+  return out;
+}
+function isKeiryoSavedIn320(propertyName) {
+  const mapped = keiryoEntryName(propertyName);
+  if (!mapped) return false;
+  return !!loadKeiryoSavedToday()[keiryoNameNorm(mapped)];
+}
+
 /* 計量済みの印は「その日だけ」有効。日付が変われば自動で消える。 */
 const KEIRYO_DONE_KEY = 'uenoseisou_keiryo_done_v1';
 function keiryoTodayKey() {
@@ -2343,7 +2426,11 @@ function saveKeiryoDone(map) {
   // 当日分だけを残す（古い日付は保存しない）。
   try { localStorage.setItem(KEIRYO_DONE_KEY, JSON.stringify({ [keiryoTodayKey()]: map })); } catch (e) {}
 }
-function isKeiryoDone(name) { return !!loadKeiryoDone()[name]; }
+/* 3-20で当日保存されていれば計量済み。対応表に無い物件は手動の印で判定する。 */
+function isKeiryoDone(name) {
+  if (isKeiryoSavedIn320(name)) return true;
+  return !!loadKeiryoDone()[name];
+}
 
 function updateKeiryouButtonState(btn, name) {
   if (isKeiryoDone(name)) {
@@ -2352,7 +2439,9 @@ function updateKeiryouButtonState(btn, name) {
     // 収集順の入力欄と同じ方法で指定する。
     btn.style.setProperty('background-color', '#d9d9d9', 'important');
     btn.style.setProperty('color', '#111', 'important');
-    btn.title = '本日この物件の計量を開きました。押すともう一度開きます（長押しのかわりに「計量済み」の解除は確認が出ます）';
+    btn.title = isKeiryoSavedIn320(name)
+      ? `計量データ入力で本日保存済み（${keiryoEntryName(name)}）。押すともう一度開きます`
+      : '計量済みにしています。押すと解除または再度開くかを選べます';
   } else {
     btn.textContent = '計量';
     btn.classList.remove('registered');
@@ -2363,19 +2452,24 @@ function updateKeiryouButtonState(btn, name) {
 }
 
 function openKeiryouEntry(name, btn) {
-  // すでに計量済みのときは、解除するか、もう一度開くかを選べるようにする。
-  if (name && isKeiryoDone(name)) {
-    if (confirm(`「${name}」は計量済みです。\n\nOK：計量済みを解除する\nキャンセル：計量画面をもう一度開く`)) {
+  if (name) {
+    if (keiryoEntryName(name)) {
+      // 対応表にある物件は、3-20で保存された時点で自動的に「計量済み」になる。
+      // ここでは印を付けない。
+    } else if (loadKeiryoDone()[name]) {
+      // 対応表に無い物件は手動の印。もう一度押したときは解除も選べる。
+      if (confirm(`「${name}」は計量済みにしています。\n\nOK：計量済みを解除する\nキャンセル：計量画面をもう一度開く`)) {
+        const map = loadKeiryoDone();
+        delete map[name];
+        saveKeiryoDone(map);
+        if (btn) updateKeiryouButtonState(btn, name);
+        return;
+      }
+    } else {
       const map = loadKeiryoDone();
-      delete map[name];
+      map[name] = true;
       saveKeiryoDone(map);
-      if (btn) updateKeiryouButtonState(btn, name);
-      return;
     }
-  } else if (name) {
-    const map = loadKeiryoDone();
-    map[name] = true;
-    saveKeiryoDone(map);
   }
   // 収集順の下書きはページを離れると消えるので、先に確認する。
   if (hasUncommittedCollectionOrders()) {
@@ -2398,7 +2492,7 @@ function keiryoDoneCount() {
     if (String(item.row[keiryouCol] || '').trim() === '') return;
     total++;
     const nm = String(item.row[propertyCol] || '').trim();
-    if (nm && done_map[nm]) done++;
+    if (nm && (isKeiryoSavedIn320(nm) || done_map[nm])) done++;
   });
   return { done, total };
 }
