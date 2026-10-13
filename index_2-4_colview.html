@@ -2437,6 +2437,10 @@ function updateKeiryouButtonState(btn, name) {
    同じタブで開くと物件表が読み込み直しになり、ツールバー（担当者・曜日の枠）が閉じ、
    スクロール位置も先頭に戻ってしまうため。物件は3-20の「物件リスト２列」から選ぶ。 */
 function openKeiryouEntry() {
+  // 別タブが開けない環境では同じタブに切り替わるので、下書きの確認は先に出す。
+  if (hasUncommittedCollectionOrders()) {
+    if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われることがあります。開きますか？')) return;
+  }
   saveState();
   let win = null;
   // 同じ名前のタブを使い回すので、2回目以降は同じタブが前面に出る。
@@ -2447,9 +2451,6 @@ function openKeiryouEntry() {
     return;
   }
   // 別タブが開けなかった場合は同じタブで開く（戻るときに読み込み直しになる）。
-  if (hasUncommittedCollectionOrders()) {
-    if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
-  }
   location.href = 'index_3-20.html?from=colview';
 }
 
