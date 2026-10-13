@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R8資源ごみ収集カレンダー</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #050507;
+  --panel: #0e1018;
+  --panel-2: #151827;
+  --line: rgba(255,255,255,.16);
+  --muted: rgba(255,255,255,.66);
+  --text: #ffffff;
+  --holiday: #ff5a7a;
+  --sat: #67b7ff;
+  --accent: #ffd166;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(0, 229, 255, .12), transparent 28rem),
+    radial-gradient(circle at 90% 12%, rgba(255, 83, 160, .12), transparent 24rem),
+    linear-gradient(135deg, #040405 0%, #0a0d16 48%, #030305 100%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "YuGothic", "Noto Sans JP", sans-serif;
+}
+header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 20;
+  background: rgba(3, 4, 8, .88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+body.single-line header {
+  width: 100vw;
+}
+.header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 16px 12px;
+}
+.title-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+h1 {
+  margin: 0;
+  font-size: clamp(22px, 4vw, 40px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.month-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: visible;
+  scrollbar-width: none;
+  padding: 2px 0 4px;
+}
+.month-tabs::-webkit-scrollbar { display: none; }
+.month-tab {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,.22);
+  background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+  color: #fff;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.month-tab.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #00d4ff, #ff4da6 55%, #ffd166);
+  color: #060606;
+}
+.display-toggle {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, .75);
+  background: rgba(255, 209, 102, .16);
+  color: #ffd166;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.display-toggle[aria-pressed="true"] {
+  background: #ffd166;
+  color: #070707;
+}
+main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 22px 16px 54px;
+}
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 18px currentColor;
+}
+.month-section {
+  scroll-margin-top: 116px;
+  width: 100%;
+  margin-bottom: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+body.single-line .month-section {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.month-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  background: linear-gradient(90deg, rgba(0, 212, 255, .25), rgba(255, 77, 166, .2), rgba(255, 209, 102, .18));
+  border-bottom: 1px solid var(--line);
+}
+.month-heading h2 {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 30px);
+  letter-spacing: 0;
+}
+.month-count {
+  font-size: 13px;
+  color: rgba(255,255,255,.78);
+  font-weight: 700;
+}
+.week-grid, .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-grid {
+  align-items: stretch;
+}
+.week-name {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 800;
+  background: rgba(255,255,255,.08);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.week-name:nth-child(6) { color: var(--sat); }
+.week-name:nth-child(7) { color: var(--holiday); border-right: 0; }
+.day {
+  min-width: 0;
+  min-height: 218px;
+  height: auto;
+  padding: 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(9, 12, 22, .88);
+}
+.day:nth-child(7n) { border-right: 0; }
+.day.outside {
+  background: rgba(255,255,255,.025);
+  color: rgba(255,255,255,.22);
+}
+.day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 25px;
+  margin-bottom: 7px;
+}
+.day-num {
+  font-size: 17px;
+  font-weight: 900;
+}
+.day.sat .day-num { color: var(--sat); }
+.day.sun .day-num, .day.holiday .day-num { color: var(--holiday); }
+.holiday-name {
+  min-width: 0;
+  color: #ffb3c2;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: right;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+.event {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  min-height: 27px;
+  height: auto;
+  padding: 4px 7px 4px 4px;
+  border-radius: 7px;
+  color: #050505;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 6px 16px rgba(0,0,0,.18);
+}
+.event span:last-child {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+body.single-line .event span:last-child,
+body.single-line .holiday-name {
+  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+body.single-line .week-grid,
+body.single-line .calendar-grid {
+  width: 100%;
+  min-width: 1330px;
+}
+body.single-line .event {
+  grid-template-columns: 22px max-content;
+  width: 182px;
+  min-width: 182px;
+}
+body.single-line main {
+  width: 100%;
+  max-width: 1280px;
+}
+.group {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+.item-metal { background: linear-gradient(135deg, #84fab0, #8fd3f4); }
+.item-paper { background: linear-gradient(135deg, #f6d365, #fda085); }
+.item-pet { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+.item-hard { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+.item-landfill { background: linear-gradient(135deg, #cfd9df, #e2ebf0); }
+.item-plastic { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+.today-ring { outline: 2px solid #ffd166; outline-offset: -3px; }
+@media (max-width: 760px) {
+  .title-row { align-items: start; flex-direction: column; }
+  .meta { white-space: normal; }
+  .header-inner { padding-left: 8px; padding-right: 8px; }
+  .month-tabs { gap: 6px; }
+  .month-tab,
+  .display-toggle {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  main { padding-left: 4px; padding-right: 4px; }
+  .month-section { border-radius: 8px; }
+  .week-grid, .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .week-name { font-size: 12px; padding: 8px 1px; }
+  .day { min-height: 210px; height: auto; padding: 3px; overflow: visible; }
+  .day-head { align-items: flex-start; gap: 2px; margin-bottom: 4px; }
+  .day-num { font-size: 14px; line-height: 1; }
+  .holiday-name { font-size: 9px; }
+  .event { grid-template-columns: 16px minmax(0, 1fr); gap: 3px; width: 100%; min-height: 25px; height: auto; padding: 3px 4px 3px 3px; font-size: 10px; border-radius: 6px; }
+  .group { width: 16px; height: 16px; font-size: 9px; }
+  body.single-line main { width: 100%; max-width: none; }
+  body.single-line .month-section {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  body.single-line .day { min-height: 185px; overflow: hidden; }
+  body.single-line .week-grid,
+  body.single-line .calendar-grid {
+    width: 100%;
+    min-width: 1120px;
+  }
+  body.single-line .event { grid-template-columns: 16px max-content; width: 160px; min-width: 160px; font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="title-row">
+      <h1>R8資源ごみ収集カレンダー</h1>
+      <div class="meta">2026年4月 - 2027年3月</div>
+    </div>
+    <nav class="month-tabs" id="monthTabs" aria-label="月選択"></nav>
+  </div>
+</header>
+<main>
+  <section class="legend" id="legend" aria-label="品目別カラー"></section>
+  <div id="calendar"></div>
+</main>
+<script>
+const DATA = {"months": [{"id": "2026-04", "year": 2026, "month": 4, "label": "2026年4月", "days": [{"date": "2026-03-30", "day": 30, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-03-31", "day": 31, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-04-01", "day": 1, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}]}, {"date": "2026-04-02", "day": 2, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-04-03", "day": 3, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-04-04", "day": 4, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-04-05", "day": 5, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-04-06", "day": 6, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-04-07", "day": 7, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-04-08", "day": 8, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-04-09", "day": 9, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-04-10", "day": 10, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-04-11", "day": 11, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-04-12", "day": 12, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-04-13", "day": 13, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "E", "item": "金属類"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-04-14", "day": 14, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-04-15", "day": 15, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "金属類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-04-16", "day": 16, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-04-17", "day": 17, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-04-18", "day": 18, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-04-19", "day": 19, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-04-20", "day": 20, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-04-21", "day": 21, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-04-22", "day": 22, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-04-23", "day": 23, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "紙布類・びん類"}]}, {"date": "2026-04-24", "day": 24, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-04-25", "day": 25, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-04-26", "day": 26, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-04-27", "day": 27, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-04-28", "day": 28, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-04-29", "day": 29, "inMonth": true, "weekday": "水", "holiday": "昭和の日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-04-30", "day": 30, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "金属類"}]}, {"date": "2026-05-01", "day": 1, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-05-02", "day": 2, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-03", "day": 3, "inMonth": false, "weekday": "日", "holiday": "憲法記念日", "events": []}, {"date": "2026-05-04", "day": 4, "inMonth": false, "weekday": "月", "holiday": "みどりの日", "events": []}, {"date": "2026-05-05", "day": 5, "inMonth": false, "weekday": "火", "holiday": "こどもの日", "events": []}, {"date": "2026-05-06", "day": 6, "inMonth": false, "weekday": "水", "holiday": "振替休日", "events": []}, {"date": "2026-05-07", "day": 7, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-05-08", "day": 8, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-05-09", "day": 9, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-10", "day": 10, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-05", "year": 2026, "month": 5, "label": "2026年5月", "days": [{"date": "2026-04-27", "day": 27, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-04-28", "day": 28, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-04-29", "day": 29, "inMonth": false, "weekday": "水", "holiday": "昭和の日", "events": []}, {"date": "2026-04-30", "day": 30, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-05-01", "day": 1, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "金属類"}]}, {"date": "2026-05-02", "day": 2, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-03", "day": 3, "inMonth": true, "weekday": "日", "holiday": "憲法記念日", "events": []}, {"date": "2026-05-04", "day": 4, "inMonth": true, "weekday": "月", "holiday": "みどりの日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-05-05", "day": 5, "inMonth": true, "weekday": "火", "holiday": "こどもの日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-05-06", "day": 6, "inMonth": true, "weekday": "水", "holiday": "振替休日", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-05-07", "day": 7, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-05-08", "day": 8, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-05-09", "day": 9, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-10", "day": 10, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-05-11", "day": 11, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "埋立ごみ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-05-12", "day": 12, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2026-05-13", "day": 13, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-05-14", "day": 14, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "E", "item": "埋立ごみ"}]}, {"date": "2026-05-15", "day": 15, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-05-16", "day": 16, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-17", "day": 17, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-05-18", "day": 18, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-05-19", "day": 19, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "埋立ごみ"}]}, {"date": "2026-05-20", "day": 20, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "B", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-05-21", "day": 21, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2026-05-22", "day": 22, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-05-23", "day": 23, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-24", "day": 24, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-05-25", "day": 25, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-05-26", "day": 26, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-05-27", "day": 27, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-05-28", "day": 28, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "金属類"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2026-05-29", "day": 29, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-05-30", "day": 30, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-05-31", "day": 31, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-06-01", "day": 1, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-06-02", "day": 2, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-06-03", "day": 3, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-06-04", "day": 4, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-06-05", "day": 5, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-06-06", "day": 6, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-06-07", "day": 7, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-06", "year": 2026, "month": 6, "label": "2026年6月", "days": [{"date": "2026-06-01", "day": 1, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-06-02", "day": 2, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "金属類"}]}, {"date": "2026-06-03", "day": 3, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-06-04", "day": 4, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-06-05", "day": 5, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-06-06", "day": 6, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-06-07", "day": 7, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-06-08", "day": 8, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-06-09", "day": 9, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-06-10", "day": 10, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-06-11", "day": 11, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-06-12", "day": 12, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-06-13", "day": 13, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-06-14", "day": 14, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-06-15", "day": 15, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-06-16", "day": 16, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-06-17", "day": 17, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "B", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-06-18", "day": 18, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "E", "item": "金属類"}]}, {"date": "2026-06-19", "day": 19, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-06-20", "day": 20, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-06-21", "day": 21, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-06-22", "day": 22, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-06-23", "day": 23, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-06-24", "day": 24, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-06-25", "day": 25, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2026-06-26", "day": 26, "inMonth": true, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-06-27", "day": 27, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-06-28", "day": 28, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-06-29", "day": 29, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-06-30", "day": 30, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-07-01", "day": 1, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-07-02", "day": 2, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-07-03", "day": 3, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-07-04", "day": 4, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-05", "day": 5, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-07-06", "day": 6, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-07-07", "day": 7, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-07-08", "day": 8, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-07-09", "day": 9, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-07-10", "day": 10, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-07-11", "day": 11, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-12", "day": 12, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-07", "year": 2026, "month": 7, "label": "2026年7月", "days": [{"date": "2026-06-29", "day": 29, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-06-30", "day": 30, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-07-01", "day": 1, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-07-02", "day": 2, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-07-03", "day": 3, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "金属類"}]}, {"date": "2026-07-04", "day": 4, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-05", "day": 5, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-07-06", "day": 6, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-07-07", "day": 7, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-07-08", "day": 8, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "紙布類・びん類"}, {"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-07-09", "day": 9, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "埋立ごみ"}, {"group": "E", "item": "埋立ごみ"}]}, {"date": "2026-07-10", "day": 10, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-07-11", "day": 11, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-12", "day": 12, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-07-13", "day": 13, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2026-07-14", "day": 14, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "埋立ごみ"}]}, {"date": "2026-07-15", "day": 15, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-07-16", "day": 16, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "金属類"}]}, {"date": "2026-07-17", "day": 17, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-07-18", "day": 18, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-19", "day": 19, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-07-20", "day": 20, "inMonth": true, "weekday": "月", "holiday": "海の日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-07-21", "day": 21, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-07-22", "day": 22, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-07-23", "day": 23, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-07-24", "day": 24, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}]}, {"date": "2026-07-25", "day": 25, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-07-26", "day": 26, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-07-27", "day": 27, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-07-28", "day": 28, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-07-29", "day": 29, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-07-30", "day": 30, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "金属類"}]}, {"date": "2026-07-31", "day": 31, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-08-01", "day": 1, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-02", "day": 2, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-03", "day": 3, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-08-04", "day": 4, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-08-05", "day": 5, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-08-06", "day": 6, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-08-07", "day": 7, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-08-08", "day": 8, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-09", "day": 9, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-08", "year": 2026, "month": 8, "label": "2026年8月", "days": [{"date": "2026-07-27", "day": 27, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-07-28", "day": 28, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-07-29", "day": 29, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-07-30", "day": 30, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-07-31", "day": 31, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-08-01", "day": 1, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-02", "day": 2, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-03", "day": 3, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-08-04", "day": 4, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-08-05", "day": 5, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-08-06", "day": 6, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "金属類"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-08-07", "day": 7, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2026-08-08", "day": 8, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-09", "day": 9, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-10", "day": 10, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-08-11", "day": 11, "inMonth": true, "weekday": "火", "holiday": "山の日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-08-12", "day": 12, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-08-13", "day": 13, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "金属類"}]}, {"date": "2026-08-14", "day": 14, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "金属類"}]}, {"date": "2026-08-15", "day": 15, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-16", "day": 16, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-17", "day": 17, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-08-18", "day": 18, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-08-19", "day": 19, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}, {"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-08-20", "day": 20, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2026-08-21", "day": 21, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-08-22", "day": 22, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-23", "day": 23, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-24", "day": 24, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-08-25", "day": 25, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-08-26", "day": 26, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "D", "item": "金属類"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-08-27", "day": 27, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-08-28", "day": 28, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-08-29", "day": 29, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-08-30", "day": 30, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-08-31", "day": 31, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-09-01", "day": 1, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-09-02", "day": 2, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-09-03", "day": 3, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-09-04", "day": 4, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-09-05", "day": 5, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-09-06", "day": 6, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-09", "year": 2026, "month": 9, "label": "2026年9月", "days": [{"date": "2026-08-31", "day": 31, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-09-01", "day": 1, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "金属類"}]}, {"date": "2026-09-02", "day": 2, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "埋立ごみ"}]}, {"date": "2026-09-03", "day": 3, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "埋立ごみ"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-09-04", "day": 4, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-09-05", "day": 5, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-09-06", "day": 6, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-09-07", "day": 7, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-09-08", "day": 8, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-09-09", "day": 9, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "埋立ごみ"}, {"group": "C", "item": "紙布類・びん類"}, {"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2026-09-10", "day": 10, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "金属類"}]}, {"date": "2026-09-11", "day": 11, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-09-12", "day": 12, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-09-13", "day": 13, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-09-14", "day": 14, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-09-15", "day": 15, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-09-16", "day": 16, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-09-17", "day": 17, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "金属類"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2026-09-18", "day": 18, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "埋立ごみ"}]}, {"date": "2026-09-19", "day": 19, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-09-20", "day": 20, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-09-21", "day": 21, "inMonth": true, "weekday": "月", "holiday": "敬老の日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-09-22", "day": 22, "inMonth": true, "weekday": "火", "holiday": "国民の休日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-09-23", "day": 23, "inMonth": true, "weekday": "水", "holiday": "秋分の日", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-09-24", "day": 24, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "E", "item": "紙布類・びん類"}]}, {"date": "2026-09-25", "day": 25, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-09-26", "day": 26, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-09-27", "day": 27, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-09-28", "day": 28, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-09-29", "day": 29, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-09-30", "day": 30, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-10-01", "day": 1, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-10-02", "day": 2, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-10-03", "day": 3, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-04", "day": 4, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-10-05", "day": 5, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-10-06", "day": 6, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-10-07", "day": 7, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-10-08", "day": 8, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-10-09", "day": 9, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-10-10", "day": 10, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-11", "day": 11, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-10", "year": 2026, "month": 10, "label": "2026年10月", "days": [{"date": "2026-09-28", "day": 28, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-09-29", "day": 29, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-09-30", "day": 30, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-10-01", "day": 1, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-10-02", "day": 2, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "金属類"}]}, {"date": "2026-10-03", "day": 3, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-04", "day": 4, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-10-05", "day": 5, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-10-06", "day": 6, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-10-07", "day": 7, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-10-08", "day": 8, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-10-09", "day": 9, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-10-10", "day": 10, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-11", "day": 11, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-10-12", "day": 12, "inMonth": true, "weekday": "月", "holiday": "スポーツの日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-10-13", "day": 13, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-10-14", "day": 14, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-10-15", "day": 15, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-10-16", "day": 16, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2026-10-17", "day": 17, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-18", "day": 18, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-10-19", "day": 19, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-10-20", "day": 20, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-10-21", "day": 21, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-10-22", "day": 22, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2026-10-23", "day": 23, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-10-24", "day": 24, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-10-25", "day": 25, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-10-26", "day": 26, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-10-27", "day": 27, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-10-28", "day": 28, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-10-29", "day": 29, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "紙布類・びん類"}]}, {"date": "2026-10-30", "day": 30, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-10-31", "day": 31, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-01", "day": 1, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-02", "day": 2, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-11-03", "day": 3, "inMonth": false, "weekday": "火", "holiday": "文化の日", "events": []}, {"date": "2026-11-04", "day": 4, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-11-05", "day": 5, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-11-06", "day": 6, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-11-07", "day": 7, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-08", "day": 8, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-11", "year": 2026, "month": 11, "label": "2026年11月", "days": [{"date": "2026-10-26", "day": 26, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-10-27", "day": 27, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-10-28", "day": 28, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-10-29", "day": 29, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-10-30", "day": 30, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-10-31", "day": 31, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-01", "day": 1, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-02", "day": 2, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-11-03", "day": 3, "inMonth": true, "weekday": "火", "holiday": "文化の日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-11-04", "day": 4, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "埋立ごみ"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-11-05", "day": 5, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-11-06", "day": 6, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "B", "item": "埋立ごみ"}, {"group": "C", "item": "金属類"}]}, {"date": "2026-11-07", "day": 7, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-08", "day": 8, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-09", "day": 9, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-11-10", "day": 10, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-11-11", "day": 11, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "E", "item": "埋立ごみ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-11-12", "day": 12, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-11-13", "day": 13, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-11-14", "day": 14, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-15", "day": 15, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-16", "day": 16, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-11-17", "day": 17, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-11-18", "day": 18, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "埋立ごみ"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-11-19", "day": 19, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "E", "item": "紙布類・びん類"}]}, {"date": "2026-11-20", "day": 20, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2026-11-21", "day": 21, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-22", "day": 22, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-23", "day": 23, "inMonth": true, "weekday": "月", "holiday": "勤労感謝の日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-11-24", "day": 24, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-11-25", "day": 25, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "E", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-11-26", "day": 26, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2026-11-27", "day": 27, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2026-11-28", "day": 28, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-11-29", "day": 29, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-11-30", "day": 30, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-12-01", "day": 1, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-12-02", "day": 2, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-12-03", "day": 3, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2026-12-04", "day": 4, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2026-12-05", "day": 5, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-12-06", "day": 6, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2026-12", "year": 2026, "month": 12, "label": "2026年12月", "days": [{"date": "2026-11-30", "day": 30, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-12-01", "day": 1, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "C", "item": "金属類"}]}, {"date": "2026-12-02", "day": 2, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-12-03", "day": 3, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "紙布類・びん類"}]}, {"date": "2026-12-04", "day": 4, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-12-05", "day": 5, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-12-06", "day": 6, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-12-07", "day": 7, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-12-08", "day": 8, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2026-12-09", "day": 9, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2026-12-10", "day": 10, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-12-11", "day": 11, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2026-12-12", "day": 12, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-12-13", "day": 13, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-12-14", "day": 14, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-12-15", "day": 15, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-12-16", "day": 16, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "B", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-12-17", "day": 17, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "E", "item": "金属類"}]}, {"date": "2026-12-18", "day": 18, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2026-12-19", "day": 19, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-12-20", "day": 20, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-12-21", "day": 21, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2026-12-22", "day": 22, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2026-12-23", "day": 23, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2026-12-24", "day": 24, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "金属類"}]}, {"date": "2026-12-25", "day": 25, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2026-12-26", "day": 26, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2026-12-27", "day": 27, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2026-12-28", "day": 28, "inMonth": true, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-12-29", "day": 29, "inMonth": true, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-12-30", "day": 30, "inMonth": true, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-12-31", "day": 31, "inMonth": true, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-01-01", "day": 1, "inMonth": false, "weekday": "金", "holiday": "元日", "events": []}, {"date": "2027-01-02", "day": 2, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-03", "day": 3, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-01-04", "day": 4, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2027-01-05", "day": 5, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2027-01-06", "day": 6, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2027-01-07", "day": 7, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-01-08", "day": 8, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-01-09", "day": 9, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-10", "day": 10, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2027-01", "year": 2027, "month": 1, "label": "2027年1月", "days": [{"date": "2026-12-28", "day": 28, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2026-12-29", "day": 29, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2026-12-30", "day": 30, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2026-12-31", "day": 31, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-01-01", "day": 1, "inMonth": true, "weekday": "金", "holiday": "元日", "events": []}, {"date": "2027-01-02", "day": 2, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-03", "day": 3, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-01-04", "day": 4, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-01-05", "day": 5, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "金属類"}]}, {"date": "2027-01-06", "day": 6, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-01-07", "day": 7, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2027-01-08", "day": 8, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2027-01-09", "day": 9, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-10", "day": 10, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-01-11", "day": 11, "inMonth": true, "weekday": "月", "holiday": "成人の日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-01-12", "day": 12, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "埋立ごみ"}]}, {"date": "2027-01-13", "day": 13, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2027-01-14", "day": 14, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "埋立ごみ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-01-15", "day": 15, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2027-01-16", "day": 16, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-17", "day": 17, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-01-18", "day": 18, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-01-19", "day": 19, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-01-20", "day": 20, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "B", "item": "紙布類・びん類"}, {"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2027-01-21", "day": 21, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2027-01-22", "day": 22, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "金属類"}]}, {"date": "2027-01-23", "day": 23, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-24", "day": 24, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-01-25", "day": 25, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "E", "item": "金属類"}]}, {"date": "2027-01-26", "day": 26, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-01-27", "day": 27, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "埋立ごみ"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-01-28", "day": 28, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "埋立ごみ"}, {"group": "F", "item": "金属類"}]}, {"date": "2027-01-29", "day": 29, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2027-01-30", "day": 30, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-01-31", "day": 31, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-02-01", "day": 1, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2027-02-02", "day": 2, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2027-02-03", "day": 3, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2027-02-04", "day": 4, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-02-05", "day": 5, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-02-06", "day": 6, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-02-07", "day": 7, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2027-02", "year": 2027, "month": 2, "label": "2027年2月", "days": [{"date": "2027-02-01", "day": 1, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-02-02", "day": 2, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2027-02-03", "day": 3, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-02-04", "day": 4, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "金属類"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2027-02-05", "day": 5, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}]}, {"date": "2027-02-06", "day": 6, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-02-07", "day": 7, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-02-08", "day": 8, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-02-09", "day": 9, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-02-10", "day": 10, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-02-11", "day": 11, "inMonth": true, "weekday": "木", "holiday": "建国記念の日", "events": []}, {"date": "2027-02-12", "day": 12, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "金属類"}]}, {"date": "2027-02-13", "day": 13, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-02-14", "day": 14, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-02-15", "day": 15, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-02-16", "day": 16, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-02-17", "day": 17, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}, {"group": "E", "item": "金属類"}]}, {"date": "2027-02-18", "day": 18, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "F", "item": "金属類"}]}, {"date": "2027-02-19", "day": 19, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "紙布類・びん類"}]}, {"date": "2027-02-20", "day": 20, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-02-21", "day": 21, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-02-22", "day": 22, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-02-23", "day": 23, "inMonth": true, "weekday": "火", "holiday": "天皇誕生日", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2027-02-24", "day": 24, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}]}, {"date": "2027-02-25", "day": 25, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2027-02-26", "day": 26, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}]}, {"date": "2027-02-27", "day": 27, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-02-28", "day": 28, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-03-01", "day": 1, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2027-03-02", "day": 2, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2027-03-03", "day": 3, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2027-03-04", "day": 4, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-03-05", "day": 5, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-03-06", "day": 6, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-07", "day": 7, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-03-08", "day": 8, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2027-03-09", "day": 9, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2027-03-10", "day": 10, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2027-03-11", "day": 11, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-03-12", "day": 12, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-03-13", "day": 13, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-14", "day": 14, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}, {"id": "2027-03", "year": 2027, "month": 3, "label": "2027年3月", "days": [{"date": "2027-03-01", "day": 1, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-03-02", "day": 2, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2027-03-03", "day": 3, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "紙布類・びん類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "D", "item": "金属類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-03-04", "day": 4, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "ペットボトルアルミ缶"}, {"group": "E", "item": "ペットボトルアルミ缶"}]}, {"date": "2027-03-05", "day": 5, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "ペットボトルアルミ缶"}, {"group": "B", "item": "ペットボトルアルミ缶"}]}, {"date": "2027-03-06", "day": 6, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-07", "day": 7, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-03-08", "day": 8, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "金属類"}]}, {"date": "2027-03-09", "day": 9, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2027-03-10", "day": 10, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "埋立ごみ"}, {"group": "C", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-03-11", "day": 11, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "埋立ごみ"}, {"group": "F", "item": "ペットボトルアルミ缶"}, {"group": "F", "item": "硬プラ・革製品"}]}, {"date": "2027-03-12", "day": 12, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "埋立ごみ"}, {"group": "C", "item": "金属類"}]}, {"date": "2027-03-13", "day": 13, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-14", "day": 14, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-03-15", "day": 15, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-03-16", "day": 16, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-03-17", "day": 17, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "A", "item": "硬プラ・革製品"}, {"group": "B", "item": "硬プラ・革製品"}, {"group": "C", "item": "紙布類・びん類"}, {"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-03-18", "day": 18, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "E", "item": "金属類"}, {"group": "F", "item": "紙布類・びん類"}]}, {"date": "2027-03-19", "day": 19, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "A", "item": "金属類"}, {"group": "C", "item": "埋立ごみ"}]}, {"date": "2027-03-20", "day": 20, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-21", "day": 21, "inMonth": true, "weekday": "日", "holiday": "春分の日", "events": []}, {"date": "2027-03-22", "day": 22, "inMonth": true, "weekday": "月", "holiday": "振替休日", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}]}, {"date": "2027-03-23", "day": 23, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}]}, {"date": "2027-03-24", "day": 24, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "B", "item": "金属類"}, {"group": "C", "item": "容器包装プラ"}, {"group": "E", "item": "紙布類・びん類"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-03-25", "day": 25, "inMonth": true, "weekday": "木", "holiday": "", "events": [{"group": "D", "item": "紙布類・びん類"}, {"group": "E", "item": "埋立ごみ"}]}, {"date": "2027-03-26", "day": 26, "inMonth": true, "weekday": "金", "holiday": "", "events": [{"group": "B", "item": "紙布類・びん類"}, {"group": "C", "item": "ペットボトルアルミ缶"}, {"group": "C", "item": "硬プラ・革製品"}]}, {"date": "2027-03-27", "day": 27, "inMonth": true, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-03-28", "day": 28, "inMonth": true, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-03-29", "day": 29, "inMonth": true, "weekday": "月", "holiday": "", "events": [{"group": "D", "item": "容器包装プラ"}, {"group": "E", "item": "容器包装プラ"}, {"group": "F", "item": "容器包装プラ"}]}, {"date": "2027-03-30", "day": 30, "inMonth": true, "weekday": "火", "holiday": "", "events": [{"group": "A", "item": "容器包装プラ"}, {"group": "B", "item": "容器包装プラ"}, {"group": "C", "item": "容器包装プラ"}]}, {"date": "2027-03-31", "day": 31, "inMonth": true, "weekday": "水", "holiday": "", "events": [{"group": "D", "item": "硬プラ・革製品"}, {"group": "E", "item": "硬プラ・革製品"}, {"group": "F", "item": "埋立ごみ"}]}, {"date": "2027-04-01", "day": 1, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-04-02", "day": 2, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-04-03", "day": 3, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-04-04", "day": 4, "inMonth": false, "weekday": "日", "holiday": "", "events": []}, {"date": "2027-04-05", "day": 5, "inMonth": false, "weekday": "月", "holiday": "", "events": []}, {"date": "2027-04-06", "day": 6, "inMonth": false, "weekday": "火", "holiday": "", "events": []}, {"date": "2027-04-07", "day": 7, "inMonth": false, "weekday": "水", "holiday": "", "events": []}, {"date": "2027-04-08", "day": 8, "inMonth": false, "weekday": "木", "holiday": "", "events": []}, {"date": "2027-04-09", "day": 9, "inMonth": false, "weekday": "金", "holiday": "", "events": []}, {"date": "2027-04-10", "day": 10, "inMonth": false, "weekday": "土", "holiday": "", "events": []}, {"date": "2027-04-11", "day": 11, "inMonth": false, "weekday": "日", "holiday": "", "events": []}]}], "itemCounts": {"紙布類・びん類": 72, "ペットボトルアルミ缶": 72, "金属類": 72, "容器包装プラ": 306, "硬プラ・革製品": 72, "埋立ごみ": 36}};
+const ITEM_CLASSES = {
+  '金属類': 'item-metal',
+  '紙布類・びん類': 'item-paper',
+  'ペットボトルアルミ缶': 'item-pet',
+  '硬プラ・革製品': 'item-hard',
+  '埋立ごみ': 'item-landfill',
+  '容器包装プラ': 'item-plastic'
+};
+const ITEM_COLORS = {
+  '金属類': '#8fd3f4',
+  '紙布類・びん類': '#fda085',
+  'ペットボトルアルミ缶': '#d9a7ff',
+  '硬プラ・革製品': '#ff9a9e',
+  '埋立ごみ': '#dfe9f3',
+  '容器包装プラ': '#43e97b'
+};
+const WEEKDAYS = ['月','火','水','木','金','土','日'];
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function eventClass(item) { return ITEM_CLASSES[item] || 'item-plastic'; }
+function localTodayKey() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function renderTabs() {
+  const tabs = document.getElementById('monthTabs');
+  tabs.innerHTML = DATA.months.map((m, i) => `<button class="month-tab${i===0?' active':''}" type="button" data-target="${m.id}">${escapeHtml(m.month + '月')}</button>`).join('') +
+    '<button class="display-toggle" id="lineToggle" type="button" aria-pressed="false">1行表示</button>';
+  tabs.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-target]');
+    if (!btn) return;
+    document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('lineToggle').addEventListener('click', e => {
+    const pressed = document.body.classList.toggle('single-line');
+    e.currentTarget.setAttribute('aria-pressed', String(pressed));
+    e.currentTarget.textContent = pressed ? '折返し表示' : '1行表示';
+  });
+}
+function renderLegend() {
+  const items = Object.keys(ITEM_CLASSES);
+  document.getElementById('legend').innerHTML = items.map(item => `
+    <div class="legend-chip"><span class="dot" style="color:${ITEM_COLORS[item]};background:${ITEM_COLORS[item]}"></span>${escapeHtml(item)} <span style="margin-left:auto;color:rgba(255,255,255,.55)">${DATA.itemCounts[item] || 0}</span></div>
+  `).join('');
+}
+function renderCalendar() {
+  const today = localTodayKey();
+  document.getElementById('calendar').innerHTML = DATA.months.map(month => {
+    const count = month.days.reduce((sum, day) => sum + (day.inMonth ? day.events.length : 0), 0);
+    const days = month.days.map(day => {
+      const dowIndex = WEEKDAYS.indexOf(day.weekday);
+      const classes = ['day'];
+      if (!day.inMonth) classes.push('outside');
+      if (dowIndex === 5) classes.push('sat');
+      if (dowIndex === 6) classes.push('sun');
+      if (day.holiday) classes.push('holiday');
+      if (day.date === today) classes.push('today-ring');
+      const events = day.events.map(ev => `
+        <div class="event ${eventClass(ev.item)}"><span class="group">${escapeHtml(ev.group)}</span><span>${escapeHtml(ev.item)}</span></div>
+      `).join('');
+      return `<article class="${classes.join(' ')}">
+        <div class="day-head"><span class="day-num">${day.day}</span>${day.holiday ? `<span class="holiday-name">${escapeHtml(day.holiday)}</span>` : ''}</div>
+        <div class="event-list">${events}</div>
+      </article>`;
+    }).join('');
+    return `<section class="month-section" id="${month.id}">
+      <div class="month-heading"><h2>${escapeHtml(month.label)}</h2><div class="month-count">${count}件</div></div>
+      <div class="week-grid">${WEEKDAYS.map(w => `<div class="week-name">${w}</div>`).join('')}</div>
+      <div class="calendar-grid">${days}</div>
+    </section>`;
+  }).join('');
+}
+function observeActiveMonth() {
+  const tabs = Array.from(document.querySelectorAll('.month-tab'));
+  const byId = new Map(tabs.map(tab => [tab.dataset.target, tab]));
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.target === visible.target.id));
+    byId.get(visible.target.id)?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, { rootMargin: '-28% 0px -62% 0px', threshold: [0, .2, .6] });
+  document.querySelectorAll('.month-section').forEach(section => observer.observe(section));
+}
+function openCurrentMonth() {
+  const today = localTodayKey();
+  const month = DATA.months.find(m => m.days.some(day => day.inMonth && day.date === today));
+  if (!month) return;
+  requestAnimationFrame(() => {
+    document.getElementById(month.id)?.scrollIntoView({ block: 'start' });
+    document.querySelectorAll('.month-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.target === month.id);
+    });
+  });
+}
+renderTabs();
+renderLegend();
+renderCalendar();
+observeActiveMonth();
+openCurrentMonth();
+</script>
+</body>
+</html>

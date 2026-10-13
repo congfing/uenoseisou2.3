@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>収集カレンダービューア</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  height: 100%; overflow: hidden;
+  display: flex; flex-direction: column;
+  font-family: 'Hiragino Sans', 'ヒラギノ角ゴ ProN', 'Meiryo', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== HEADER ===== */
+#app-header {
+  height: 44px;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25); flex-shrink: 0;
+}
+#app-header h1 { font-size: 14px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#file-label { font-size: 10px; opacity: 0.65; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+
+/* ===== TOOL PANEL ===== */
+#tool-panel { flex-shrink: 0; }
+#tool-panel-inner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+}
+#tool-panel.collapsed #tool-panel-inner { display: none; }
+
+#open-btn, #gh-btn {
+  border: 1px solid; padding: 6px 13px; border-radius: 7px; font-size: 12px;
+  cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+#gh-btn:disabled { opacity: 0.5; cursor: default; }
+#save-btn {
+  border: 1px solid; padding: 6px 11px; border-radius: 7px; font-size: 12px;
+  cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+}
+#save-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ===== TOOLBAR TOGGLE ===== */
+#toolbar-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 2px 0;
+  border: none; border-top: 1px solid;
+  cursor: pointer; font-size: 10px;
+  font-family: inherit;
+}
+#tool-panel.collapsed #toolbar-toggle { border-top: none; padding: 4px 0; }
+
+/* ===== GITHUB FILE DROPDOWN ===== */
+#gh-dropdown {
+  display: none; position: fixed;
+  border: 1px solid;
+  border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+  z-index: 1000; min-width: 270px; overflow: hidden;
+}
+#gh-dropdown.open { display: block; }
+#gh-dropdown-title {
+  font-size: 11px; font-weight: 700;
+  padding: 8px 12px 6px; border-bottom: 1px solid;
+}
+.gh-file-item {
+  display: block; width: 100%; text-align: left;
+  padding: 9px 14px; font-size: 12px; font-family: inherit;
+  background: none; border: none; cursor: pointer;
+  border-bottom: 1px solid;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gh-file-item:last-child { border-bottom: none; }
+
+/* ===== PATH BAR ===== */
+#path-bar {
+  font-size: 10px; padding: 3px 10px;
+  border-bottom: 1px solid;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex-shrink: 0; display: none;
+}
+
+/* ===== SHEET TABS ===== */
+#sheet-tabs {
+  border-bottom: 1px solid;
+  padding: 7px 10px; overflow-x: auto; white-space: nowrap;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  min-height: 40px; flex-shrink: 0;
+}
+#sheet-tabs::-webkit-scrollbar { display: none; }
+.sheet-btn {
+  display: inline-block; padding: 5px 13px; margin-right: 6px;
+  border: 1.5px solid;
+  border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; font-family: inherit;
+}
+.sheet-btn.active { font-weight: 700; }
+
+/* ===== SCROLL AREA ===== */
+#cal-wrap {
+  flex: 1; overflow: auto; -webkit-overflow-scrolling: touch;
+  padding: 10px 8px 40px;
+}
+
+/* ===== STATUS ===== */
+#status {
+  text-align: center; padding: 60px 20px;
+  font-size: 14px; line-height: 2;
+}
+
+/* ===== CALENDAR ===== */
+.cal-title {
+  font-size: 13px; font-weight: 700;
+  padding: 7px 12px; border-radius: 8px 8px 0 0;
+  margin-top: 4px; border: 1px solid;
+}
+
+.cal-table {
+  width: 100%; border-collapse: collapse;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+  margin-bottom: 18px;
+}
+
+/* Day of week header */
+.th-day {
+  font-size: 11px; font-weight: 700; text-align: center;
+  padding: 4px 2px; border-right: 1px solid; width: calc(100%/7);
+}
+.th-day.sat { color: #3b5998; }
+.th-day.sun { color: #b91c1c; }
+
+/* Week row */
+.week-row td {
+  vertical-align: top; border: 1px solid;
+  padding: 3px 3px 4px; width: calc(100%/7);
+  min-height: 52px;
+}
+
+.day-head {
+  display: flex; align-items: center; gap: 4px;
+  min-height: 24px; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden;
+}
+.daynum {
+  display: inline-block; font-size: 12px; font-weight: 700;
+  border: 1.5px solid; border-radius: 4px; padding: 1px 4px;
+  line-height: 1.4; min-width: 20px; text-align: center;
+  flex: 0 0 auto;
+  background: transparent !important;
+}
+.week-row td.sat .daynum { color: #3b5998; }
+.week-row td.sun .daynum { color: #b91c1c; }
+.week-row td.today .daynum {
+  background: #f59e0b !important; color: #fff !important;
+  border-radius: 50%; border-color: #f59e0b !important;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; box-shadow: 0 0 0 3px #fde68a;
+}
+.week-row td.today {
+  background: #fffbeb !important;
+  outline: 3px solid #f59e0b; outline-offset: -2px;
+}
+.today-label {
+  font-size: 8px; font-weight: 700; color: #92400e;
+  background: #fde68a; border-radius: 3px; padding: 0 3px;
+  display: inline-block; margin-bottom: 2px;
+}
+
+.day-content {
+  font-size: 9px; line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: block;
+}
+.day-content.holiday-line { color: #b91c1c; font-weight: 700; }
+.holiday-badge {
+  font-size: 8px; font-weight: 700; color: #fff;
+  background: #dc2626; border-radius: 3px; padding: 1px 3px;
+  display: inline-block; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <h1>🗓️ 収集カレンダー</h1>
+  <div id="file-label">ファイルを選択…</div>
+</div>
+<div id="tool-panel" class="collapsed">
+  <div id="tool-panel-inner">
+    <button id="open-btn" onclick="document.getElementById('file-input').click()">📂 開く</button>
+    <button id="gh-btn" onclick="toggleGhDropdown()">☁️ GitHubから開く ▾</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+    <button id="save-btn" onclick="saveState()" title="現在のファイル＋シートを保存">💾 保存</button>
+  </div>
+  <button id="toolbar-toggle" onclick="toggleToolPanel()">▼ ツール</button>
+</div>
+<div id="gh-dropdown">
+  <div id="gh-dropdown-title">☁️ ファイルを選択</div>
+  <!-- ファイルはJSで動的に生成 -->
+</div>
+
+<div id="path-bar"></div>
+<div id="sheet-tabs"><span style="color:#888;font-size:12px;line-height:26px;">ファイルを選択してください</span></div>
+
+<div id="cal-wrap">
+  <div id="status">📂 右上の「開く」ボタンからExcelファイルを選択してください。</div>
+</div>
+
+
+<script>
+// ===== GitHubファイルリスト（ファイルを追加する場合はここに追記）=====
+// リポジトリ: https://github.com/congfing/uenoseisou2.3
+const GH_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
+const GITHUB_FILES = [
+  { name: '令和8年度収集カレンダー.xlsx',
+    url:  GH_BASE + encodeURIComponent('令和8年度収集カレンダー.xlsx') },
+  // 追加例: { name: '収集カレンダー_令和9年度.xlsx', url: GH_BASE + '...' },
+];
+
+// ===== 祝日データ（API自動取得 + フォールバック埋め込み）=====
+// 出典: https://holidays-jp.github.io/api/v1/{year}/date.json
+const _holidayCache = {};   // year → {'YYYY-M-D': '名称'}
+const _holidayFallback = {
+  '2026-4-29':'昭和の日','2026-5-3':'憲法記念日','2026-5-4':'みどりの日',
+  '2026-5-5':'こどもの日','2026-5-6':'振替休日','2026-7-20':'海の日',
+  '2026-8-11':'山の日','2026-9-21':'敬老の日','2026-9-22':'国民の休日',
+  '2026-9-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-3':'文化の日',
+  '2026-11-23':'勤労感謝の日','2027-1-1':'元日','2027-1-11':'成人の日',
+  '2027-2-11':'建国記念の日','2027-2-23':'天皇誕生日',
+  '2027-3-21':'春分の日','2027-3-22':'振替休日',
+};
+
+async function _fetchHolidays(year) {
+  if (_holidayCache[year] !== undefined) return; // already fetched
+  try {
+    const res = await fetch(
+      `https://holidays-jp.github.io/api/v1/${year}/date.json`,
+      { cache: 'force-cache' }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json(); // {"2026-01-01":"元日", ...}
+    const map = {};
+    for (const [dateStr, name] of Object.entries(data)) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      map[`${y}-${m}-${d}`] = name;
+    }
+    _holidayCache[year] = map;
+  } catch(e) {
+    console.warn(`祝日API取得失敗(${year}):`, e.message, '→ フォールバック使用');
+    _holidayCache[year] = null; // null = failed, use fallback
+  }
+}
+
+function getHoliday(year, month, day) {
+  const cache = _holidayCache[year];
+  if (cache) return cache[`${year}-${month}-${day}`] || null;
+  // API未取得 or 失敗 → フォールバック
+  return _holidayFallback[`${year}-${month}-${day}`] || null;
+}
+
+// ===== ドロップダウン初期化 =====
+(function buildDropdown() {
+  const dd = document.getElementById('gh-dropdown');
+  GITHUB_FILES.forEach((f, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'gh-file-item';
+    btn.textContent = f.name;
+    btn.onclick = () => { closeGhDropdown(); loadFromGitHub(f, idx); };
+    dd.appendChild(btn);
+  });
+})();
+
+// ===== ツールパネル開閉 =====
+function toggleToolPanel() {
+  const panel = document.getElementById('tool-panel');
+  const btn = document.getElementById('toolbar-toggle');
+  const isCollapsed = panel.classList.toggle('collapsed');
+  btn.textContent = isCollapsed ? '▼ ツール' : '▲ 閉じる';
+  if (isCollapsed) closeGhDropdown();
+}
+function closeToolPanel() {
+  document.getElementById('tool-panel').classList.add('collapsed');
+  document.getElementById('toolbar-toggle').textContent = '▼ ツール';
+  closeGhDropdown();
+}
+
+// ===== GitHubドロップダウン =====
+function toggleGhDropdown() {
+  if (GITHUB_FILES.length === 1) {
+    loadFromGitHub(GITHUB_FILES[0], 0);
+    return;
+  }
+  const dd = document.getElementById('gh-dropdown');
+  if (dd.classList.contains('open')) { closeGhDropdown(); return; }
+  // ボタン位置に合わせて配置
+  const rect = document.getElementById('gh-btn').getBoundingClientRect();
+  dd.style.top  = (rect.bottom + 4) + 'px';
+  dd.style.left = rect.left + 'px';
+  dd.classList.add('open');
+}
+function closeGhDropdown() {
+  document.getElementById('gh-dropdown').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#gh-btn') && !e.target.closest('#gh-dropdown')) closeGhDropdown();
+});
+
+async function loadFromGitHub(file, idx, restoreSheet = null) {
+  const btn = document.getElementById('gh-btn');
+  const label = document.getElementById('file-label');
+  btn.disabled = true;
+  label.textContent = '読み込み中…';
+  try {
+    const res = await fetch(file.url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    label.textContent = file.name;
+    setPathBar('☁️ ' + file.name, file.url);
+    _currentGhIdx = idx;
+    closeToolPanel();
+    loadWorkbook(buf, file.name, restoreSheet);
+  } catch (e) {
+    label.textContent = '読み込み失敗';
+    alert('GitHubからの読み込みに失敗しました。\n\nエラー: ' + e.message + '\n\nURL:\n' + file.url);
+    console.error('GitHub fetch error:', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ===== ページ復帰時に自動再読み込み =====
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('gcal_last') || 'null');
+    if (saved && saved.src === 'github' && GITHUB_FILES[saved.idx]) {
+      loadFromGitHub(GITHUB_FILES[saved.idx], saved.idx, saved.sheet || null);
+    }
+  } catch(e) {}
+});
+
+// ===== path bar =====
+function setPathBar(name, url) {
+  const bar = document.getElementById('path-bar');
+  bar.textContent = url ? `📄 ${name}  |  ${url}` : `📄 ${name}`;
+  bar.style.display = 'block';
+}
+
+// ===== 状態トラッキング =====
+let workbook = null;
+let _currentGhIdx = -1;   // 現在のGitHubファイルindex (-1=ローカル)
+let _currentSheet = null; // 現在表示中のシート名
+
+// ===== 手動保存 =====
+function saveState() {
+  const btn = document.getElementById('save-btn');
+  if (_currentGhIdx < 0 || !_currentSheet) {
+    btn.textContent = '⚠️ 保存不可';
+    setTimeout(() => { btn.textContent = '💾 保存'; }, 1800);
+    return;
+  }
+  sessionStorage.setItem('gcal_last', JSON.stringify({
+    src: 'github', idx: _currentGhIdx, sheet: _currentSheet
+  }));
+  btn.textContent = '✓ 保存完了';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = '💾 保存'; btn.disabled = false; }, 1800);
+}
+
+// ===== ファイル読み込み =====
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('file-label').textContent = file.name;
+  setPathBar('📂 ' + file.name, '');
+  _currentGhIdx = -1;
+  sessionStorage.removeItem('gcal_last');
+  closeToolPanel();
+  const reader = new FileReader();
+  reader.onload = e => loadWorkbook(e.target.result, file.name);
+  reader.readAsArrayBuffer(file);
+  this.value = '';
+});
+
+function loadWorkbook(buf, filename, restoreSheet = null) {
+  workbook = XLSX.read(new Uint8Array(buf), { type: 'array' });
+  const tabsEl = document.getElementById('sheet-tabs');
+  tabsEl.innerHTML = '';
+  workbook.SheetNames.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sheet-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = name;
+    btn.addEventListener('click', () => selectSheet(name));
+    tabsEl.appendChild(btn);
+  });
+  // 保存済みシートか先頭シートを表示
+  const target = (restoreSheet && workbook.SheetNames.includes(restoreSheet))
+    ? restoreSheet : workbook.SheetNames[0];
+  if (target) {
+    document.querySelectorAll('.sheet-btn').forEach(b =>
+      b.classList.toggle('active', b.textContent === target)
+    );
+    renderSheet(target);
+  }
+}
+
+function selectSheet(name) {
+  _currentSheet = name;
+  document.querySelectorAll('.sheet-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === name);
+  });
+  renderSheet(name);
+}
+
+// ===== カレンダーレンダリング =====
+const TODAY = new Date();
+const TODAY_Y = TODAY.getFullYear();
+const TODAY_M = TODAY.getMonth() + 1;
+const TODAY_D = TODAY.getDate();
+
+async function renderSheet(name) {
+  _currentSheet = name;
+  try {
+    const ws = workbook.Sheets[name];
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+                     .map(r => r.map(c => (c === null || c === undefined) ? '' : String(c)));
+
+    let titleText = '';
+    let dayHeaders = ['月','火','水','木','金','土','日'];
+    let dataStart = 2;
+
+    if (raw[0]) titleText = raw[0].find(c => c.trim() !== '') || name;
+
+    for (let i = 0; i < Math.min(4, raw.length); i++) {
+      const row = raw[i];
+      const dayChars = new Set(['月','火','水','木','金','土','日']);
+      const matches = row.filter(c => dayChars.has(String(c).trim()));
+      if (matches.length >= 5) {
+        dayHeaders = row.map(c => String(c).trim()).filter((_, ci) => ci < 7);
+        dataStart = i + 1;
+        break;
+      }
+    }
+
+    const satIdx = dayHeaders.indexOf('土');
+    const sunIdx = dayHeaders.indexOf('日');
+
+    // 年を取得（令和N → 西暦、年度なら1-3月は+1）
+    // 全角数字を半角に変換してからマッチ
+    const toHalf = s => s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+    const nameH = toHalf(name);
+    const titleH = toHalf(titleText);
+    let sheetYear = TODAY_Y;
+    let sheetMonth = null;
+    const reiwaMatch = titleH.match(/令和(\d+)/) || nameH.match(/令和(\d+)/);
+    if (reiwaMatch) sheetYear = 2018 + parseInt(reiwaMatch[1]);
+    const mMatch = nameH.match(/(\d+)月/) || titleH.match(/(\d+)月/);
+    if (mMatch) {
+      sheetMonth = parseInt(mMatch[1]);
+      // 年度: 4-3月。1-3月は翌年
+      if (sheetMonth <= 3 && reiwaMatch) sheetYear++;
+    }
+
+    // 祝日データをAPIから取得（キャッシュあれば即返る）
+    await _fetchHolidays(sheetYear);
+
+    // 日付行を収集
+    const isDateRow = row => {
+      const ne = row.filter(c => c.trim() !== '');
+      return ne.length > 0 && ne.every(c => /^\d{1,2}$/.test(c.trim()) && +c >= 1 && +c <= 31);
+    };
+    const dateRowIdxs = [];
+    for (let j = dataStart; j < raw.length; j++) {
+      if (isDateRow(raw[j])) dateRowIdxs.push(j);
+    }
+
+    // 日付行〜次の日付行までの全コンテンツ行を列ごとに結合
+    const weeks = dateRowIdxs.map((di, k) => {
+      const nextDi = dateRowIdxs[k + 1] ?? raw.length;
+      const dates = raw[di];
+      const contentRows = raw.slice(di + 1, nextDi);
+      const content = Array.from({ length: dayHeaders.length }, (_, ci) =>
+        contentRows.map(r => (r[ci] ?? '').toString().trim()).filter(v => v).join('\n')
+      );
+      return { dates, content };
+    });
+
+    // カレンダー描画
+    const wrap = document.getElementById('cal-wrap');
+    wrap.innerHTML = '';
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'cal-title';
+    titleDiv.textContent = titleText || name;
+    wrap.appendChild(titleDiv);
+
+    const table = document.createElement('table');
+    table.className = 'cal-table';
+
+    const thead = table.createTHead();
+    const htr = thead.insertRow();
+    dayHeaders.forEach((d, ci) => {
+      const th = document.createElement('th');
+      th.className = 'th-day' + (ci === satIdx ? ' sat' : ci === sunIdx ? ' sun' : '');
+      th.textContent = d;
+      htr.appendChild(th);
+    });
+
+    const tbody = table.createTBody();
+    weeks.forEach(({ dates, content }) => {
+      const tr = document.createElement('tr');
+      tr.className = 'week-row';
+      dayHeaders.forEach((_, ci) => {
+        const td = document.createElement('td');
+        const dateVal = String(dates[ci] || '').trim();
+        const contentVal = String(content[ci] || '').trim();
+
+        if (dateVal === '') { td.className = 'empty'; tr.appendChild(td); return; }
+
+        const d = parseInt(dateVal);
+        const holidayName = sheetMonth ? getHoliday(sheetYear, sheetMonth, d) : null;
+        const isToday = sheetMonth && d === TODAY_D && sheetMonth === TODAY_M && sheetYear === TODAY_Y;
+
+        let cls = ci === satIdx ? 'sat' : ci === sunIdx ? 'sun' : '';
+        if (holidayName) cls = 'sun'; // 祝日は日曜と同じ背景色
+        if (isToday) cls += ' today';
+        td.className = cls.trim();
+
+        // 今日ラベル
+        if (isToday) {
+          const todayLabel = document.createElement('div');
+          todayLabel.className = 'today-label';
+          todayLabel.textContent = '今日';
+          td.appendChild(todayLabel);
+        }
+
+        // 日付番号と祝日名を同じ行に置く（日付位置を動かさない）
+        const dayHead = document.createElement('div');
+        dayHead.className = 'day-head';
+        const numEl = document.createElement('div');
+        numEl.className = 'daynum';
+        if (holidayName) { numEl.style.color = '#dc2626'; numEl.style.borderColor = '#dc2626'; }
+        numEl.textContent = dateVal;
+        dayHead.appendChild(numEl);
+
+        if (holidayName) {
+          const badge = document.createElement('div');
+          badge.className = 'holiday-badge';
+          badge.textContent = holidayName;
+          dayHead.appendChild(badge);
+        }
+        td.appendChild(dayHead);
+
+        // 内容（1行ずつdivで表示・nowrap）
+        if (contentVal) {
+          contentVal.split('\n').forEach(line => {
+            if (!line) return;
+            const el = document.createElement('div');
+            el.className = 'day-content';
+            el.textContent = line;
+            td.appendChild(el);
+          });
+        }
+
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    wrap.appendChild(table);
+
+    // 今日のセルまでスクロール
+    const todayCell = wrap.querySelector('td.today');
+    if (todayCell) todayCell.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+  } catch(err) {
+    console.error('renderSheet error:', err);
+    document.getElementById('cal-wrap').innerHTML =
+      `<div id="status">⚠️ 表示エラー: ${err.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>

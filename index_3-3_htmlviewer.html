@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>カレンダービューア</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; -webkit-text-size-adjust: 100%; }
+body {
+  display: flex; flex-direction: column;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  background: #edf3f8;
+}
+
+/* ===== HEADER ===== */
+#header {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: linear-gradient(180deg, #ffffff, #eef5fc);
+  border-bottom: 1px solid #cfd8e3;
+  box-shadow: 0 2px 8px rgba(15,74,128,0.10);
+  z-index: 10;
+}
+#brand {
+  color: #0f4a80; font-size: 15px; font-weight: 900;
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+.hdr-btn {
+  flex: 0 0 auto;
+  padding: 7px 14px; border: 1px solid #b8cce4; border-radius: 8px;
+  background: #fff; color: #31506f;
+  font: 800 13px 'Hiragino Sans','Meiryo',sans-serif;
+  cursor: pointer; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.hdr-btn.active { background: #fff; border-color: #b8cce4; color: #000; }
+.hdr-btn.gh { background: #f0f7ff; border-color: #7eb3e0; color: #1a6eb5; }
+
+/* ===== GITHUB MODAL ===== */
+#gh-modal {
+  display: none; position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0,0,0,0.45);
+  align-items: center; justify-content: center;
+}
+#gh-modal.open { display: flex; }
+#gh-box {
+  background: #fff; border: 1px solid #cfd8e3; border-radius: 14px;
+  padding: 16px 18px; max-width: 420px; width: 92%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  display: flex; flex-direction: column; max-height: 70vh;
+}
+#gh-title { font-size: 14px; font-weight: 800; color: #0f4a80; margin-bottom: 10px; }
+#gh-search {
+  width: 100%; padding: 8px 10px; border: 1px solid #b8cce4; border-radius: 8px;
+  font: inherit; font-size: 13px; margin-bottom: 8px; outline: none;
+}
+#gh-list {
+  overflow-y: auto; flex: 1; border: 1px solid #cfd8e3; border-radius: 8px; min-height: 60px;
+}
+.gh-item {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 14px; font-size: 12px; font-family: inherit;
+  background: none; border: none; border-bottom: 1px solid #eef2f7;
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: #172033;
+}
+.gh-item:last-child { border-bottom: none; }
+.gh-item:active { background: #eef5fc; }
+.gh-status { padding: 12px 14px; font-size: 12px; color: #888; }
+#gh-footer { display: flex; justify-content: flex-end; margin-top: 12px; }
+#gh-close {
+  padding: 6px 18px; border: 1px solid #b8cce4; border-radius: 8px;
+  background: #fff; color: #31506f; font: 800 12px inherit; cursor: pointer;
+}
+
+/* ===== IFRAME ===== */
+#frame-wrap {
+  flex: 1 1 auto; overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+}
+#cal-frame {
+  display: block; border: 0; width: 100%; height: 100%; min-height: 100%;
+}
+</style>
+</head>
+<body>
+
+<div id="header" class="app-header">
+  <span id="brand">収集カレンダー</span><span style="font-size:10px;color:#999;margin-left:4px;">v3-3</span>
+  <button class="hdr-btn active"
+    onclick="loadCal(this,'令和8年度収集カレンダー（月別）.html')">月別</button>
+  <button class="hdr-btn"
+    onclick="loadCal(this,'令和8年度収集カレンダー（縦通し）.html')">縦通し</button>
+  <button class="hdr-btn gh" onclick="openGhModal()">☁️ GitHub</button>
+</div>
+
+<!-- GitHub ファイル選択モーダル -->
+<div id="gh-modal" onclick="if(event.target===this)closeGhModal()">
+  <div id="gh-box">
+    <div id="gh-title">📄 GitHubからHTMLを開く</div>
+    <input id="gh-search" type="search" placeholder="ファイル名で絞り込み..."
+           oninput="renderGhList(this.value)">
+    <div id="gh-list"><div class="gh-status">読み込み中...</div></div>
+    <div id="gh-footer">
+      <button id="gh-close" onclick="closeGhModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="frame-wrap">
+  <iframe id="cal-frame" src="令和8年度収集カレンダー（月別）.html"></iframe>
+</div>
+
+<script>
+const GH_API = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
+
+let _ghFiles = [];
+
+// 月別/縦通し ボタン切り替え
+function loadCal(btn, file) {
+  document.querySelectorAll('.hdr-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest && document.querySelector('.hdr-btn.gh').classList.remove('active');
+  document.getElementById('cal-frame').src = file;
+  document.getElementById('brand').textContent = '収集カレンダー';
+}
+
+// GitHub モーダル
+async function openGhModal() {
+  document.getElementById('gh-modal').classList.add('open');
+  document.getElementById('gh-search').value = '';
+  document.getElementById('gh-list').innerHTML = '<div class="gh-status">読み込み中...</div>';
+  _ghFiles = [];
+  try {
+    const res = await fetch(GH_API);
+    if (!res.ok) throw new Error('fetch failed');
+    const items = await res.json();
+    _ghFiles = items
+      .filter(f => f.type === 'file' && /\.html$/i.test(f.name) && !/^index_/.test(f.name))
+      .map(f => f.name);
+  } catch(e) {
+    // フォールバック: 既知のファイル
+    _ghFiles = [
+      '令和8年度収集カレンダー（月別）.html',
+      '令和8年度収集カレンダー（縦通し）.html'
+    ];
+  }
+  renderGhList('');
+}
+
+function renderGhList(query) {
+  const list = document.getElementById('gh-list');
+  const q = query.trim().toLowerCase();
+  const filtered = q ? _ghFiles.filter(n => n.toLowerCase().includes(q)) : _ghFiles;
+  if (!filtered.length) {
+    list.innerHTML = '<div class="gh-status">ファイルが見つかりません</div>';
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'gh-item';
+    btn.textContent = '📄 ' + name;
+    btn.onclick = () => {
+      closeGhModal();
+      document.querySelectorAll('.hdr-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('cal-frame').src = name;
+      document.getElementById('brand').textContent = name.replace(/\.html$/i,'');
+    };
+    list.appendChild(btn);
+  });
+}
+
+function closeGhModal() {
+  document.getElementById('gh-modal').classList.remove('open');
+}
+</script>
+
+</body>
+</html>
