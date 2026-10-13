@@ -134,6 +134,10 @@
   .field-group { margin-bottom: 14px; }
   .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
   .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
+  #inputFields .field-label,
+  #inputFields .combined-field-unit { font-size:16px; }
+  #inputFields .field-label > span:not(.field-unit) { font-size:13px; }
+  #inputFields .field-unit.entry-unit { font-size:16px; }
   .auto-multiplier-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 600; color: #555; }
   .auto-multiplier-row select { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; color: #000; }
   .combined-field-row { display: flex; flex-direction: column; gap: 10px; }
@@ -194,6 +198,30 @@
   #backBtn,
   button[onclick*="index.html"] { display:none !important; }
 
+  #entryScreenshot img { display:block; width:100%; height:auto; }
+  #entryScreenshot button { padding:0; width:100%; border:1px solid #000; background:#fff; cursor:zoom-in; }
+  #entryImageDialog { width:96vw; max-width:none; height:90dvh; padding:12px; border:1px solid #000; background:#fff; color:#000; }
+  #entryImageDialog::backdrop { background:rgba(0,0,0,.65); }
+  .entry-image-tools { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+  .entry-image-tools button { background:#fff; color:#000; border:1px solid #000; width:44px; height:44px; font-size:24px; }
+  #entryImageScroll { overflow:auto; height:calc(100% - 60px); touch-action:pan-x pan-y pinch-zoom; }
+  #entryImageFull { display:block; max-width:none; height:auto; }
+  #historyResendDialog {
+    width:fit-content; max-width:calc(100vw - 48px); padding:16px; margin:auto; inset:0;
+    border:0; border-radius:8px;
+    background:rgba(255,255,255,.75); color:#000; box-shadow:none; overflow:hidden;
+  }
+  #historyResendDialog::backdrop { background:rgba(0,0,0,.15); }
+  #historyResendDialog .resend-title { padding:0 0 14px; font-size:18px; color:#000; }
+  #historyResendDialog button {
+    display:block; width:100%; max-width:100%; min-height:48px; padding:12px; border:0;
+    margin:0 0 20px; border-radius:0; background:transparent; color:#000;
+    text-align:left; font:400 18px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:0; cursor:pointer; box-shadow:none; outline:none; font-weight:400;
+  }
+  #historyResendDialog button:hover, #historyResendDialog button:active,
+  #historyResendDialog button:focus-visible { background:transparent; outline:none; box-shadow:none; border:0; font-weight:400; }
+  #historyResendDialog button[data-cancel] { margin-bottom:0; }
 </style>
 
 </head>
@@ -305,6 +333,10 @@
       <button class="btn btn-secondary" style="flex:1" onclick="closePropertyEntry()">✕ 閉じる</button>
       <button class="btn btn-danger" id="clearPropertyButton" style="flex:1" onclick="clearPropertyData()">消去</button>
     </div>
+    <section id="entryScreenshot" hidden style="margin-top:20px">
+      <h3>物件表</h3>
+      <div id="entryScreenshotImages"></div>
+    </section>
   </div>
 </div>
 
@@ -568,10 +600,72 @@
   </div>
 </div>
 
+<dialog id="entryImageDialog" aria-label="物件表の拡大画像">
+  <div class="entry-image-tools">
+    <button type="button" onclick="zoomEntryImage(-.25)" title="縮小" aria-label="縮小">−</button>
+    <span id="entryImageScale">100%</span>
+    <button type="button" onclick="zoomEntryImage(.25)" title="拡大" aria-label="拡大">＋</button>
+    <button type="button" onclick="document.getElementById('entryImageDialog').close()" title="閉じる" aria-label="閉じる" style="margin-left:auto">×</button>
+  </div>
+  <div id="entryImageScroll"><img id="entryImageFull" alt="イオンタウン伊賀の物件表"></div>
+</dialog>
+<script src="property_screenshots/2026-09/manifest.js?v=20261006_second"></script>
 <script>
+let entryImageZoom=1;
+function zoomEntryImage(delta){
+  entryImageZoom=Math.max(.5,Math.min(5,entryImageZoom+delta));
+  const width=document.getElementById('entryImageScroll').clientWidth;
+  document.getElementById('entryImageFull').style.width=`${width*entryImageZoom}px`;
+  document.getElementById('entryImageFull').style.minWidth=`${width*entryImageZoom}px`;
+  document.getElementById('entryImageScale').textContent=`${Math.round(entryImageZoom*100)}%`;
+}
+function openEntryImage(path,name){
+  document.getElementById('entryImageFull').src=path;
+  document.getElementById('entryImageFull').alt=`${name}の物件表`;
+  document.getElementById('entryImageDialog').showModal();
+  entryImageZoom=1;zoomEntryImage(0);
+  document.getElementById('entryImageScroll').scrollTo(0,0);
+}
+function renderEntryScreenshot(prop){
+  const section=document.getElementById('entryScreenshot');
+  const images=document.getElementById('entryScreenshotImages');images.replaceChildren();
+  const normalizeName=name=>name.normalize('NFKC').replace(/\(店舗コード:[^)]*\)/g,'').replace(/\s/g,'');
+  const aliases={
+    'ほっともっと 伊賀白鳳店':'ほっともっと 伊賀白鳳通り店',
+    '伊賀市小学校給食センター':'いがっこ給食センター',
+    'すき家':'すき家 伊賀上野店',
+    '近鉄日本鉄道伊賀神戸駅':'伊賀神戸駅',
+    'チョーヤ梅酒伊賀上野工場':'チョーヤ梅酒',
+    'やさいの戸島屋':'㈱やさいの戸島屋',
+    '厚板プレス工業 伊賀工場':'厚板プレス工業',
+    'あみやき亭 伊賀上野店':'あみやき亭',
+    'コメリ':'コメリ ＨＣ上野店',
+    '魚民（㈱モンテローザ）':'魚民 上野市駅前店',
+    'ナフコ伊賀店（㈱アレックス）':'ナフコ 伊賀店',
+    '（株）西松屋チェーン 伊賀上野店':'西松屋 伊賀上野店',
+    '株式会社クスリのアオキ 伊賀上野店':'クスリのアオキ 伊賀上野店',
+    '株式会社クスリのアオキ 平野東店':'クスリのアオキ 平野東店',
+    '創価学会':'創価学会 伊賀上野文化会館',
+    'クラギ（株）農業屋 伊賀上野店':'農業屋 伊賀上野店'
+  };
+  const name=normalizeName(aliases[prop.name]||prop.name.replace(/^7\.11\s*/,'セブンイレブン '));
+  const manifest=window.MONTHLY_SCREENSHOTS||{};
+  const key=Object.keys(manifest).find(key=>normalizeName(key)===name);
+  const paths=key?manifest[key]:[];
+  section.hidden=false;
+  if(!paths.length){images.textContent='この物件の画像は未登録です。';return;}
+  paths.forEach((path,index)=>{
+    const label=document.createElement('div');label.textContent=`物件表${paths.length>1?` ${index+1}`:''}`;
+    label.style.margin='12px 0 6px';images.append(label);
+    const button=document.createElement('button');button.type='button';
+    button.title='物件表を拡大';button.setAttribute('aria-label',`${prop.name}の物件表${index+1}を拡大`);
+    const img=document.createElement('img');img.src=path;img.alt=`${prop.name}の物件表${index+1}`;
+    button.append(img);button.onclick=()=>openEntryImage(path,prop.name);images.append(button);
+  });
+}
 const DAYS_JP   = ['日','月','火','水','木','金','土'];
 const ORDERED_DAYS = ['月','火','水','木','金','土','日'];
-const FIELD_SUGGESTIONS = ['可燃','不燃','可燃ごみ','不燃ごみ','生活ゴミ（可燃）','生活ゴミ（不燃）','産業廃棄物','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
+const FIELD_SUGGESTIONS = ['可燃','不燃','可燃ごみ','不燃ごみ','生活ゴミ(可燃)','生活ゴミ(不燃)','産業廃棄物','生ごみ','段ボール','アラ','ペット','PET','白','青','黒','段紙','紙','缶','びん','ビン','その他','廃プラ'];
 const LS_PROPERTIES    = 'keiryo_properties';
 const LS_STAFF         = 'keiryo_staff';
 const LS_ORDER_PREFIX  = 'keiryo_order_';
@@ -629,10 +723,10 @@ function canonicalizePropertyData(data){
 }
 const SAKAKURA_PROPERTY_NAME='旧上野庁舎 SAKAKURA BASE';
 const SAKAKURA_AUTO_PAIRS=[
-  {bag:'ホテル（白）可燃ごみ__袋',kg:'ホテル（白）可燃ごみ__kg'},
-  {bag:'図書館（青）可燃ごみ__袋',kg:'図書館（青）可燃ごみ__kg'},
-  {bag:'物販（透明）可燃ごみ__袋',kg:'物販（透明）可燃ごみ__kg'},
-  {bag:'カフェ（黒）可燃ごみ__袋',kg:'カフェ（黒）可燃ごみ__kg'}
+  {group:'ホテル（白）',bag:'ホテル（白）可燃ごみ__袋',kg:'ホテル（白）可燃ごみ__kg',fu:'ホテル（白）不燃ごみ__kg'},
+  {group:'図書館（青）',bag:'図書館（青）可燃ごみ__袋',kg:'図書館（青）可燃ごみ__kg',fu:'図書館（青）不燃ごみ__kg'},
+  {group:'物販（透明）',bag:'物販（透明）可燃ごみ__袋',kg:'物販（透明）可燃ごみ__kg',fu:'物販（透明）不燃ごみ__kg'},
+  {group:'カフェ（黒）',bag:'カフェ（黒）可燃ごみ__袋',kg:'カフェ（黒）可燃ごみ__kg',fu:'カフェ（黒）不燃ごみ__kg'}
 ];
 const LEGACY_MULTIPLIER_SOURCE_KEYS={
   'イオンタウン伊賀::ごみ__袋':'可燃__袋',
@@ -715,15 +809,15 @@ const LEGACY_FIELD_VALUE_KEYS={
   ['上野法務合同庁舎::不燃物__kg']:['不燃__kg','不燃ごみ__kg'],
   ['上野法務合同庁舎::資源ごみ__kg']:['古紙__kg','シュレッダー__kg'],
   ['飯田金属::kg数__kg']:['収集__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(可燃)__袋']:['生ごみ（前）__袋'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(可燃)__kg']:['生ごみ（前）__kg'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(不燃)__袋']:['生ごみ（廃）__袋'],
+  ['株式会社クスリのアオキ 伊賀上野店::生活ゴミ(不燃)__kg']:['生ごみ（廃）__kg'],
   ['株式会社クスリのアオキ 伊賀上野店::産業廃棄物__kg']:['廃業廃棄物__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__袋']:['生ごみ（前）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（可燃）__kg']:['生ごみ（前）__kg'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__袋']:['生ごみ（廃）__袋'],
-  ['株式会社クスリのアオキ 平野東店::生活ゴミ（不燃）__kg']:['生ごみ（廃）__kg'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(可燃)__袋']:['生ごみ（前）__袋'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(可燃)__kg']:['生ごみ（前）__kg'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(不燃)__袋']:['生ごみ（廃）__袋'],
+  ['株式会社クスリのアオキ 平野東店::生活ゴミ(不燃)__kg']:['生ごみ（廃）__kg'],
   ['株式会社クスリのアオキ 平野東店::産業廃棄物__kg']:['廃業廃棄物__kg']
 };
 const LEGACY_FIELD_VALUE_SUM_KEYS={
@@ -740,7 +834,7 @@ const DEFAULT_PROPERTIES = [
   { name:'ほっともっと 伊賀白鳳店', order:2, days:[], fields:[{label:'紙屑',unit:'kg',col:'D'},{label:'厨芥（生ごみ）',unit:'kg',col:'E'},{label:'木屑',unit:'kg',col:'F'},{label:'金属缶',unit:'kg',col:'G'},{label:'ビン・ガラス',unit:'kg',col:'H'},{label:'廃プラ',unit:'kg',col:'I'},{label:'ハッポウ',unit:'kg',col:'J'},{label:'ペットボトル',unit:'kg',col:'K'},{label:'段ボール',unit:'kg',col:'L'}] },
   { name:'LA・MU', order:3, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'G'}] },
   { name:'伊賀市小学校給食センター', order:4, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'金属',unit:'kg',col:'I'},{label:'ビン・割れ物',unit:'kg',col:'M'},{label:'硬質プラスチック',unit:'kg',col:'R'}] },
-  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'O'}] },
+  { name:'すき家', order:5, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'ビン・缶・PET',unit:'袋',col:'G'},{label:'ビン・缶・PET',unit:'kg',col:'I'},{label:'われもの等',unit:'袋',col:'K'},{label:'われもの等',unit:'kg',col:'M'},{label:'ダンボール',unit:'kg',col:'Q'}] },
   { name:'7.11 伊賀四十九町北店', order:6, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
   { name:'7.11 伊賀緑ヶ丘東町店', order:7, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
   { name:'7.11 伊賀東条店', order:8, days:[], fields:[{label:'可燃物',unit:'袋'},{label:'ビン',unit:'袋'},{label:'PET',unit:'袋'},{label:'缶',unit:'袋'},{label:'ダンボール',unit:'kg'}] },
@@ -751,32 +845,32 @@ const DEFAULT_PROPERTIES = [
   { name:'セカンドストリート伊賀小田店', order:14, days:[], fields:[{label:'可燃',unit:'袋'},{label:'不燃ビン缶PET',unit:'袋'},{label:'段ボール',unit:'kg'}] },
 
   { name:'ナフコ伊賀店（㈱アレックス）', order:15, days:[], fields:[{label:'可燃物',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'F'},{label:'発泡スチロール',unit:'kg',col:'I'},{label:'木くず',unit:'kg',col:'K'},{label:'その他',unit:'kg',col:'M'}] },
-  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'}] },
-  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg'},{label:'不燃ごみ',unit:'kg'}] },
-  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'その他',unit:'kg',col:'E'}] },
+  { name:'伊賀の街', order:16, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'L'},{label:'可燃ごみ',unit:'kg',col:'M'}] },
+  { name:'ライフテクノサービス', order:17, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
+  { name:'創価学会', order:18, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
   { name:'クラギ（株）農業屋 伊賀上野店', order:20, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'C'},{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'袋',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'袋',col:'G'},{label:'その他',unit:'kg',col:'H'},{label:'段ボール',unit:'kg',col:'J'}] },
   { name:'津地方裁判所伊賀支部', order:21, days:[], fields:[{label:'シュレッダーごみ',unit:'kg',col:'C'},{label:'新聞・雑誌',unit:'kg',col:'D'},{label:'可燃ごみ',unit:'kg',col:'E'},{label:'不燃ごみ',unit:'kg',col:'F'}] },
   { name:'（株）西松屋チェーン 伊賀上野店', order:22, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'D'},{label:'不燃物',unit:'袋',col:'E'},{label:'不燃物',unit:'kg',col:'F'},{label:'ダンボール',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'カン',unit:'kg',col:'I'},{label:'ペットボトル',unit:'kg',col:'J'}] },
   { name:'近鉄日本鉄道伊賀神戸駅', order:23, days:[], fields:[{label:'可燃ごみ（ダンボール含む）',unit:'袋',col:'C'},{label:'不燃ごみ（カン）',unit:'袋',col:'E'},{label:'不燃ごみ（ビン）',unit:'袋',col:'G'},{label:'その他（ガラス・蛍光灯）',unit:'袋',col:'I'}] },
-  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
+  { name:'イオンタウン伊賀', order:24, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'ごみ',unit:'袋',col:'欄外・計算用'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'びっくりドンキー 伊賀上野店', order:25, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'KFC イオンタウン伊賀上野店', order:26, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'蛍光灯',unit:'kg',col:'I'},{label:'ハンガー',unit:'kg',col:'J'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'}] },
   { name:'コカ・コーラボトラーズ', order:27, days:[], fields:[{label:'袋数',unit:'袋',col:'H'}] },
   { name:'チョーヤ梅酒伊賀上野工場', order:28, days:[], fields:[{label:'可燃物収集',unit:'㎥',col:'B'},{label:'可燃物収集',unit:'kg',col:'C'},{label:'フィルター紙収集',unit:'㎥',col:'D'},{label:'フィルター紙収集',unit:'kg',col:'E'}] },
-  { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
-  { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'Y'},{label:'生ごみ',unit:'袋',col:'Z'}] },
-  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'D'},{label:'生ごみ',unit:'袋',col:'L'}] },
+  { name:'マックスバリュ佐那具店', order:29, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'欄外・計算用'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'}] },
+  { name:'マックスバリュ上野店', order:30, days:[], fields:[{label:'ごみ',unit:'kg',col:'D'},{label:'生ごみ',unit:'kg',col:'E'},{label:'カン',unit:'kg',col:'F'},{label:'ビン',unit:'kg',col:'G'},{label:'われもの',unit:'kg',col:'H'},{label:'アラ',unit:'kg',col:'I'},{label:'段ボール',unit:'kg',col:'N'},{label:'新聞・雑誌・雑古紙',unit:'kg',col:'O'},{label:'アルミ缶',unit:'kg',col:'P'},{label:'ペットボトル',unit:'kg',col:'Q'},{label:'牛乳パック',unit:'kg',col:'R'},{label:'発泡スチロール',unit:'kg',col:'X'},{label:'ごみ',unit:'袋',col:'欄外・計算用'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'}] },
+  { name:'やさいの戸島屋', order:31, days:[], fields:[{label:'可燃ごみ',unit:'袋',col:'D'},{label:'生ごみ',unit:'袋',col:'欄外・計算用'}] },
   { name:'古本市場 上野店', order:32, days:[], fields:[{label:'可燃物',unit:'袋',col:'D'},{label:'可燃物',unit:'kg',col:'F'},{label:'古紙',unit:'kg',col:'H'},{label:'資源物',unit:'袋',col:'J'},{label:'資源物',unit:'kg',col:'L'}] },
-  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'T'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'E'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'G'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'U'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'I'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'K'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'V'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'M'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'O'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'W'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'Q'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'S'}] },
+  { name:'旧上野庁舎 SAKAKURA BASE', order:33, days:[], fields:[{label:'ホテル（白）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'ホテル（白）可燃ごみ',unit:'kg',col:'D'},{label:'ホテル（白）不燃ごみ',unit:'kg',col:'F'},{label:'図書館（青）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'図書館（青）可燃ごみ',unit:'kg',col:'H'},{label:'図書館（青）不燃ごみ',unit:'kg',col:'J'},{label:'物販（透明）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'物販（透明）可燃ごみ',unit:'kg',col:'L'},{label:'物販（透明）不燃ごみ',unit:'kg',col:'N'},{label:'カフェ（黒）可燃ごみ',unit:'袋',col:'欄外・計算用'},{label:'カフェ（黒）可燃ごみ',unit:'kg',col:'P'},{label:'カフェ（黒）不燃ごみ',unit:'kg',col:'R'}] },
   { name:'魚民（㈱モンテローザ）', order:34, days:[], fields:[{label:'生ゴミ',unit:'kg',col:'C'},{label:'紙類',unit:'kg',col:'D'},{label:'他可燃ゴミ',unit:'kg',col:'E'},{label:'不燃(ビニール等)',unit:'kg',col:'F'},{label:'カン',unit:'kg',col:'G'},{label:'ビン',unit:'kg',col:'H'},{label:'ダンボール',unit:'kg',col:'I'},{label:'割れ物',unit:'kg',col:'J'},{label:'発泡',unit:'kg',col:'K'},{label:'食品リサイクル',unit:'kg',col:'L'}] },
   { name:'厚板プレス工業 伊賀工場', order:35, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'F'},{label:'その他',unit:'kg',col:'H'}] },
   { name:'三重県伊賀庁舎', order:36, days:[], fields:[{label:'古紙',unit:'kg',col:'C'},{label:'ダンボール',unit:'kg',col:'E'},{label:'その他',unit:'kg',col:'G'}] },
   { name:'検察庁', order:38, days:[], fields:[{label:'可燃物',unit:'kg',col:'B'},{label:'不燃物',unit:'kg',col:'D'},{label:'古紙',unit:'kg',col:'F'}] },
-  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'D'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
+  { name:'法務局', order:39, days:[], fields:[{label:'可燃',unit:'kg',col:'C'},{label:'不燃ごみ',unit:'kg',col:'J'},{label:'シュレッダー',unit:'kg',col:'E'},{label:'古紙',unit:'kg',col:'G'}] },
   { name:'飯田金属', order:40, days:[], fields:[{label:'収集',unit:'kg',col:'I'}] },
   { name:'あみやき亭 伊賀上野店', order:41, days:[], fields:[{label:'可燃ごみ',unit:'kg',col:'C'},{label:'ペットボトル',unit:'kg',col:'I'},{label:'不燃ごみ',unit:'kg',col:'E'}] },
-  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
-  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ（可燃）',unit:'kg',col:'B'},{label:'生活ゴミ（可燃）',unit:'袋',col:'C'},{label:'生活ゴミ（不燃）',unit:'kg',col:'E'},{label:'生活ゴミ（不燃）',unit:'袋',col:'F'}] },
+  { name:'株式会社クスリのアオキ 伊賀上野店', order:42, days:[], fields:[{label:'生活ゴミ(可燃)',unit:'kg',col:'B'},{label:'生活ゴミ(可燃)',unit:'袋',col:'C'},{label:'生活ゴミ(不燃)',unit:'kg',col:'E'},{label:'生活ゴミ(不燃)',unit:'袋',col:'F'}] },
+  { name:'株式会社クスリのアオキ 平野東店', order:43, days:[], fields:[{label:'生活ゴミ(可燃)',unit:'kg',col:'B'},{label:'生活ゴミ(可燃)',unit:'袋',col:'C'},{label:'生活ゴミ(不燃)',unit:'kg',col:'E'},{label:'生活ゴミ(不燃)',unit:'袋',col:'F'}] },
   { name:'コメリ', order:44, days:[], fields:[{label:'可燃物',unit:'袋',col:'C'},{label:'可燃物',unit:'kg',col:'E'},{label:'不燃物１（ビン・缶・PET）',unit:'袋',col:'G'},{label:'不燃物１（ビン・缶・PET）',unit:'kg',col:'I'},{label:'不燃物２（容器包装系）',unit:'袋',col:'K'},{label:'不燃物２（容器包装系）',unit:'kg',col:'M'},{label:'粗大ごみ／その他',unit:'袋',col:'O'},{label:'粗大ごみ／その他',unit:'kg',col:'Q'}] },
 ];
 const DEFAULT_STAFF = ['担当者A','担当者B'];
@@ -921,8 +1015,8 @@ function getAutoKgRule(prop,sourceKey){
     }
   } else if(['株式会社クスリのアオキ 伊賀上野店','株式会社クスリのアオキ 平野東店'].includes(prop.name)){
     const targets={
-      '生活ゴミ（可燃）__袋':'生活ゴミ（可燃）__kg',
-      '生活ゴミ（不燃）__袋':'生活ゴミ（不燃）__kg'
+      '生活ゴミ(可燃)__袋':'生活ゴミ(可燃)__kg',
+      '生活ゴミ(不燃)__袋':'生活ゴミ(不燃)__kg'
     };
     if(targets[sourceKey]){
       rule = {target:targets[sourceKey],multiplier:getAutoMultiplier(prop,sourceKey,null),selectable:true};
@@ -947,6 +1041,14 @@ function getAutoKgRule(prop,sourceKey){
     const defaults={
       'ごみ__袋':{target:'ごみ__kg',multiplier:2},
       '生ごみ__袋':{target:'生ごみ__kg',multiplier:7}
+    };
+    const d=defaults[sourceKey];
+    if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
+  } else if(prop.name==='チョーヤ梅酒伊賀上野工場'){
+    // 規定値：可燃物収集(㎥)×75、フィルター紙収集(㎥)×175 ＝ kg
+    const defaults={
+      '可燃物収集__㎥':{target:'可燃物収集__kg',multiplier:75},
+      'フィルター紙収集__㎥':{target:'フィルター紙収集__kg',multiplier:175}
     };
     const d=defaults[sourceKey];
     if(d) rule = {...d,multiplier:getAutoMultiplier(prop,sourceKey,d.multiplier),selectable:true};
@@ -984,7 +1086,14 @@ function getAutoMultiplierControl(prop,sourceKey){
   if(!rule||!rule.selectable) return '';
   const multiplier=getAutoMultiplier(prop,sourceKey,rule.multiplier);
   const selected=multiplier===null ? '' : String(multiplier);
-  const options=['',...Array.from({length:10},(_,i)=>String(i+1))]
+  const baseValues=Array.from({length:10},(_,i)=>String(i+1));
+  const extraValues=[rule.multiplier,multiplier];
+  if(prop.name==='チョーヤ梅酒伊賀上野工場') extraValues.push(75,175);
+  extraValues.forEach(v=>{
+    if(v!==null&&v!==undefined&&!baseValues.includes(String(v))) baseValues.push(String(v));
+  });
+  baseValues.sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const options=['',...baseValues]
     .map(value=>`<option value="${value}" ${value===selected?'selected':''}>${value===''?'なし':value}</option>`)
     .join('');
   return `<div class="auto-multiplier-row"><span>倍率</span><select class="auto-multiplier-select" data-source-key="${sourceKey}">${options}</select></div>`;
@@ -1962,12 +2071,16 @@ function findFieldIndexByKey(prop,key){
 function getSakakuraPair(prop,fieldIdx){
   if(prop.name!==SAKAKURA_PROPERTY_NAME) return null;
   const currentKey=fieldKey(prop.fields[fieldIdx]);
-  const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===currentKey||item.kg===currentKey);
+  const pair=SAKAKURA_AUTO_PAIRS.find(item=>item.bag===currentKey||item.kg===currentKey||item.fu===currentKey);
   if(!pair) return null;
   const bagIdx=findFieldIndexByKey(prop,pair.bag);
   const kgIdx=findFieldIndexByKey(prop,pair.kg);
-  if(bagIdx===-1||kgIdx===-1) return null;
-  return {pairKey:`sakakura_${pair.bag}_${pair.kg}`,bagIdx,kgIdx,horizontal:true};
+  const fuIdx=pair.fu ? findFieldIndexByKey(prop,pair.fu) : -1;
+  if(bagIdx===-1||kgIdx===-1){
+    // 袋/kgのどちらかが削除されている場合は、不燃単独では枠をまとめない
+    return null;
+  }
+  return {pairKey:`sakakura_${pair.bag}_${pair.kg}`,group:pair.group,bagIdx,kgIdx,fuIdx,horizontal:true};
 }
 
 function getEntryValue(existing,field,propName=''){
@@ -2010,6 +2123,7 @@ function openEntry(idx,event,returnScreen){
   document.getElementById('clearPropertyButton').style.display=state.entryReturnScreen===9?'none':'block';
   const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
   const lastSaved=getLastData(prop.name);
+  const calcUnitNote=['イオンタウン伊賀','マックスバリュ佐那具店','マックスバリュ上野店','旧上野庁舎 SAKAKURA BASE','伊賀の街'].includes(prop.name)?'（計算用）':'';
   const c=document.getElementById('inputFields'); c.innerHTML='';
   c.classList.toggle('sakakura-entry-grid',prop.name===SAKAKURA_PROPERTY_NAME);
   const renderedPairs=new Set();
@@ -2026,11 +2140,16 @@ function openEntry(idx,event,returnScreen){
       const bagInputId=`ef_${specialPair.bagIdx}`;
       const kgInputId=`ef_${specialPair.kgIdx}`;
       const multiplierHtml=getAutoMultiplierControl(prop,bagKey);
+      const fuField=specialPair.fuIdx!==-1 ? prop.fields[specialPair.fuIdx] : null;
+      const fuKey=fuField ? fieldKey(fuField) : '';
+      const fuInputId=fuField ? `ef_${specialPair.fuIdx}` : '';
       const div=document.createElement('div');
       div.className='field-group card';
-      div.innerHTML=`<div class="combined-field-row horizontal-combined">
+      div.style.border='1.5px solid #9e9e9e';
+      div.innerHTML=`<div class="field-label" style="margin-bottom:6px;">${specialPair.group||''}</div>
+        <div class="combined-field-row horizontal-combined">
           <div class="combined-field-input">
-            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+            <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）${calcUnitNote}</span></div>
             ${getLastValueHint(lastSaved,bagField,prop.name)}
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
               id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
@@ -2042,28 +2161,40 @@ function openEntry(idx,event,returnScreen){
             <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
               id="${kgInputId}" data-field-key="${kgKey}" placeholder="0" value="${getEntryValue(existing,kgField,prop.name)}">
           </div>
-        </div>`;
+        </div>
+        ${fuField ? `<div class="combined-field-input" style="margin-top:10px;">
+            <div class="combined-field-unit">${fuField.label}<span class="field-unit">（${fuField.unit}）</span></div>
+            ${getLastValueHint(lastSaved,fuField,prop.name)}
+            <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
+              id="${fuInputId}" data-field-key="${fuKey}" placeholder="0" value="${getEntryValue(existing,fuField,prop.name)}">
+          </div>` : ''}`;
       c.appendChild(div);
       const bagInput=div.querySelector(`#${bagInputId}`);
       const kgInput=div.querySelector(`#${kgInputId}`);
       bindEntryInput(prop,bagInput,bagKey);
       bindEntryInput(prop,kgInput,kgKey);
+      if(fuField) bindEntryInput(prop,div.querySelector(`#${fuInputId}`),fuKey);
       bindMultiplierControl(prop,div,bagInput,bagKey);
       return;
     }
 
     const cleanLabel=normalizeLabelForPair(field.label);
-    const bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
     const kgIdx=prop.fields.findIndex(f=>f.unit==='kg'&&normalizeLabelForPair(f.label)===cleanLabel);
-    if(bagIdx!==-1&&kgIdx!==-1&&(field.unit==='袋'||field.unit==='kg')){
+    // 倍率連動元：同名で倍率ルールを持つ項目（㎥など）を優先し、なければ従来どおり「袋」
+    let bagIdx=prop.fields.findIndex(f=>f.unit!=='kg'&&normalizeLabelForPair(f.label)===cleanLabel&&(()=>{
+      const r=getAutoKgRule(prop,fieldKey(f));
+      return r&&kgIdx!==-1&&r.target===fieldKey(prop.fields[kgIdx]);
+    })());
+    if(bagIdx===-1) bagIdx=prop.fields.findIndex(f=>f.unit==='袋'&&normalizeLabelForPair(f.label)===cleanLabel);
+    if(bagIdx!==-1&&kgIdx!==-1&&(fieldIdx===bagIdx||field.unit==='kg')){
       const bagField=prop.fields[bagIdx];
       const kgField=prop.fields[kgIdx];
       const bagKey=fieldKey(bagField);
       const rule=getAutoKgRule(prop,bagKey);
 
-      // 倍率が有効な場合のみ、袋数×倍率＝kg の横並び連動枠として表示
+      // 倍率が有効な場合のみ、数量×倍率＝kg の連動枠（同じ項目名を1つの枠）として表示
       if(rule && bagField.hasMultiplier!==false && kgField.hasMultiplier!==false){
-        const pairKey=`${cleanLabel}__袋kg`;
+        const pairKey=`${cleanLabel}__${bagField.unit}kg`;
         if(renderedPairs.has(pairKey)) return;
         renderedPairs.add(pairKey);
 
@@ -2077,7 +2208,7 @@ function openEntry(idx,event,returnScreen){
         div.className='field-group card';
         div.innerHTML=`<div class="combined-field-row">
             <div class="combined-field-input">
-              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（袋）</span></div>
+              <div class="combined-field-unit">${bagField.label}<span class="field-unit">（${bagField.unit}）${bagField.unit==='袋'?calcUnitNote:''}</span></div>
               ${getLastValueHint(lastSaved,bagField,prop.name)}
               <input type="number" class="num-input" inputmode="decimal" min="0" step="any"
                 id="${bagInputId}" data-field-key="${bagKey}" placeholder="0" value="${getEntryValue(existing,bagField,prop.name)}">
@@ -2116,6 +2247,29 @@ function openEntry(idx,event,returnScreen){
     const input = div.querySelector('input.num-input');
     bindEntryInput(prop,input,key);
     bindMultiplierControl(prop,div,input,key);
+    if(prop.name==='マックスバリュ上野店'&&field.label==='段ボール'&&field.unit==='kg'){
+      const target=allProperties.find(p=>p.name==='イオンタウン伊賀');
+      const targetField=target?.fields.find(f=>f.label==='段ボール'&&f.unit==='kg');
+      if(targetField){
+        const targetKey=fieldKey(targetField);
+        const targetData={...(state.entryData[target.name]||{}),...(state.entryDraft[target.name]||{})};
+        const linked=document.createElement('div');linked.className='combined-field-input';
+        linked.style.marginTop='16px';
+        linked.innerHTML='<div class="field-label">段ボール<span class="field-unit">（kg）</span> <span style="color:#000">イオンタウン伊賀</span></div><input type="number" class="num-input" inputmode="decimal" min="0" step="any" id="linkedAeonCardboard" placeholder="0">';
+        const linkedInput=linked.querySelector('input');
+        linkedInput.value=getEntryValue(targetData,targetField,target.name);
+        bindEntryInput(target,linkedInput,targetKey);
+        div.appendChild(linked);
+      }
+    }
+  });
+  renderEntryScreenshot(prop);
+  c.querySelectorAll('.field-unit').forEach(span=>{
+    const text=span.textContent;
+    const match=text.match(/^（(kg|袋|㎥|個|本|枚|L|リットル)）/);
+    if(!match)return;
+    const unit=document.createElement('span');unit.className='field-unit entry-unit';unit.style.marginLeft='0';unit.textContent=match[0];
+    span.replaceChildren(unit,document.createTextNode(text.slice(match[0].length)));
   });
   showScreen(4);
 }
@@ -2128,7 +2282,25 @@ function savePropertyData(){
     data[fieldKey(f)]=v!==''?parseFloat(v):'';
     if(v!=='')hasVal=true;
   });
+  const linkedInput=document.getElementById('linkedAeonCardboard');
+  if(linkedInput&&linkedInput.value!=='')hasVal=true;
   if(!hasVal&&!confirm('値が入力されていません。空のまま保存しますか？'))return;
+  if(linkedInput){
+    const target=allProperties.find(p=>p.name==='イオンタウン伊賀');
+    const targetField=target.fields.find(f=>f.label==='段ボール'&&f.unit==='kg');
+    const targetKey=fieldKey(targetField);
+    const targetData={...(state.entryData[target.name]||{})};
+    if(linkedInput.value!==''||Object.prototype.hasOwnProperty.call(targetData,targetKey)){
+      targetData[targetKey]=linkedInput.value!==''?parseFloat(linkedInput.value):'';
+      state.entryData[target.name]=targetData;
+      setLastData(target.name,targetData,state.selectedStaff,state.date);
+      if(!state.entryOrder.includes(target.name))state.entryOrder.push(target.name);
+    }
+    if(state.entryDraft[target.name]){
+      delete state.entryDraft[target.name][targetKey];
+      if(!Object.keys(state.entryDraft[target.name]).length)delete state.entryDraft[target.name];
+    }
+  }
   state.entryData[prop.name]=data;
   if(state.entryDraft) delete state.entryDraft[prop.name];
   setLastData(prop.name,data,state.selectedStaff,state.date);
@@ -3081,13 +3253,27 @@ function shareHistoryAsExcel(ri, event){
 }
 
 // ===== SEND HISTORY BY MAIL =====
-function sendHistoryByMail(ri, event){
-  event.stopPropagation();
+function sendHistoryByMail(ri, event, resendMode){
+  event?.stopPropagation();
   let hist = getAllHistory();
   const filterDate = state._histFilterDate || null;
   if(filterDate) hist = hist.filter(h => h.date === filterDate);
   const record = hist[ri];
   if(!record){ alert('データが見つかりません'); return; }
+  if(isHistoryMailSent(record)&&!resendMode){
+    let dialog=document.getElementById('historyResendDialog');
+    if(!dialog){
+      dialog=document.createElement('dialog');dialog.id='historyResendDialog';
+      dialog.setAttribute('aria-label','タップして選択');
+      dialog.innerHTML='<div class="resend-title">タップして選択</div><button type="button" data-mode="同じ内容です">同じ内容です</button><button type="button" data-mode="訂正メールです">訂正メールです</button><button type="button" data-cancel>キャンセル</button>';
+      document.body.appendChild(dialog);
+    }
+    dialog.querySelectorAll('[data-mode]').forEach(button=>{
+      button.onclick=()=>{dialog.close();sendHistoryByMail(ri,null,button.dataset.mode);};
+    });
+    dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
+    dialog.showModal();return;
+  }
 
   const d = new Date(record.date + 'T00:00:00');
   const dayName = DAYS_JP[d.getDay()];
@@ -3123,7 +3309,7 @@ function sendHistoryByMail(ri, event){
 
   const to = getMailTo();
   if(!to){ alert('送信先が設定されていません。\nメール設定タブでアドレスを登録してください。'); return; }
-  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）`);
+  const subject = encodeURIComponent(`計量データ ${record.date}（${record.staffName}）${resendMode?`【${resendMode}】`:''}`);
   const bodyEncoded = encodeURIComponent(body);
   openMailComposer(`mailto:${to}?subject=${subject}&body=${bodyEncoded}`);
   markHistoryMailSent(record);
@@ -4449,7 +4635,8 @@ function sendColSettingMailForProp() {
   const data = (state.entryData && state.entryData[prop.name]) ? state.entryData[prop.name] : {};
   (colSettingState.draftFields || prop.fields || []).forEach(f => {
     const val = (data && data[fieldKey(f)] !== undefined && data[fieldKey(f)] !== '') ? data[fieldKey(f)] : '－';
-    const colHint = f.col ? ` [${f.col}列]` : '';
+    // 列番号（英字）は「[D列]」、それ以外の注記は「[欄外・計算用]」のようにそのまま出す
+    const colHint = f.col ? (/^[A-Za-z]{1,3}$/.test(f.col) ? ` [${f.col}列]` : ` [${f.col}]`) : '';
     const mailLabel = getFieldMailLabel(prop, f);
     lines.push(`${mailLabel}：${val} ${f.unit}${colHint}`);
   });
