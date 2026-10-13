@@ -324,6 +324,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" id="propEntryTitle" style="margin-bottom:0"></div>
+      <button class="btn btn-secondary btn-sm" id="entryGeoBtn" onclick="registerPropertyGeo()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">地点登録</button>
       <button class="btn btn-secondary btn-sm" onclick="closePropertyEntry()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub">各項目に数値を入力してください</div>
@@ -2114,12 +2115,71 @@ function bindMultiplierControl(prop,container,input,key){
   }
 }
 
+/* ===== 地点登録（物件ごとの緯度経度） ===== */
+const GEO_STORAGE_KEY='uenoseisou_property_coords_v1';
+
+function loadGeoStore(){
+  try{ return JSON.parse(localStorage.getItem(GEO_STORAGE_KEY)||'{}'); }catch(e){ return {}; }
+}
+function saveGeoStore(store){
+  try{ localStorage.setItem(GEO_STORAGE_KEY,JSON.stringify(store)); }catch(e){}
+}
+function getGeo(name){ return loadGeoStore()[name]||null; }
+
+function updateGeoButton(name){
+  const btn=document.getElementById('entryGeoBtn');
+  if(!btn) return;
+  const g=getGeo(name);
+  btn.disabled=false;
+  if(g){
+    btn.textContent='登録済み';
+    btn.title=`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at||''}）押すと取り直します`;
+    btn.style.background='#d9edd9';
+  }else{
+    btn.textContent='地点登録';
+    btn.title='ここで押すと現在地をこの物件の座標として登録します';
+    btn.style.background='';
+  }
+}
+
+function registerPropertyGeo(){
+  const prop=allProperties[state.currentPropertyIndex];
+  if(!prop) return;
+  const btn=document.getElementById('entryGeoBtn');
+  if(!navigator.geolocation){
+    alert('この端末では位置情報を取得できません');
+    return;
+  }
+  const existing=getGeo(prop.name);
+  if(existing && !confirm(`${prop.name} は登録済みです。\n現在地で取り直しますか？`)) return;
+  if(btn){ btn.disabled=true; btn.textContent='取得中…'; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const store=loadGeoStore();
+    const d=new Date();
+    const p=n=>String(n).padStart(2,'0');
+    store[prop.name]={
+      lat:pos.coords.latitude,
+      lng:pos.coords.longitude,
+      acc:Math.round(pos.coords.accuracy),
+      at:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+    };
+    saveGeoStore(store);
+    updateGeoButton(prop.name);
+    if(typeof showToast==='function') showToast(`地点を登録しました（誤差約${store[prop.name].acc}m）`);
+  },err=>{
+    updateGeoButton(prop.name);
+    const msg={1:'位置情報の利用が許可されていません。設定で許可してください。',2:'現在地を取得できませんでした。',3:'時間内に取得できませんでした。'}[err.code]||'現在地を取得できませんでした。';
+    alert(msg);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+
 function openEntry(idx,event,returnScreen){
   if(event) event.stopPropagation();
   state.entryReturnScreen=returnScreen!==undefined?returnScreen:(state.currentScreen===9?9:3);
   state.currentPropertyIndex=idx;
   const prop=allProperties[idx];
   document.getElementById('propEntryTitle').textContent=prop.name;
+  updateGeoButton(prop.name);
   document.getElementById('clearPropertyButton').style.display=state.entryReturnScreen===9?'none':'block';
   const existing=state.entryData[prop.name] || state.entryDraft[prop.name] || {};
   const lastSaved=getLastData(prop.name);
