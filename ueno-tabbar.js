@@ -6,7 +6,7 @@
   const APPS = [
     { label: 'Home', href: 'index.html' },
     { label: '計量', href: 'index_3-20.html' },
-    { label: '列選択', href: 'index_2-4_colview.html' },
+    { label: '物件表', href: 'index_2-4_colview.html' },
     { label: 'メモ', href: 'index_5-1.html' }
   ];
   const EXTRA_KEY = 'ueno_seisou_tabbar_extra_v1';
