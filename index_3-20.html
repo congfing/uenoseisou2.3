@@ -134,6 +134,10 @@
   .field-group { margin-bottom: 14px; }
   .field-label { font-size: 13px; color: #666; margin-bottom: 6px; font-weight: 600; }
   .field-unit { font-size: 12px; color: #999; margin-left: 4px; }
+  #inputFields .field-label,
+  #inputFields .combined-field-unit { font-size:16px; }
+  #inputFields .field-label > span:not(.field-unit) { font-size:13px; }
+  #inputFields .field-unit.entry-unit { font-size:16px; }
   .auto-multiplier-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 600; color: #555; }
   .auto-multiplier-row select { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; color: #000; }
   .combined-field-row { display: flex; flex-direction: column; gap: 10px; }
@@ -2260,6 +2264,13 @@ function openEntry(idx,event,returnScreen){
     }
   });
   renderEntryScreenshot(prop);
+  c.querySelectorAll('.field-unit').forEach(span=>{
+    const text=span.textContent;
+    const match=text.match(/^（(kg|袋|㎥|個|本|枚|L|リットル)）/);
+    if(!match)return;
+    const unit=document.createElement('span');unit.className='field-unit entry-unit';unit.style.marginLeft='0';unit.textContent=match[0];
+    span.replaceChildren(unit,document.createTextNode(text.slice(match[0].length)));
+  });
   showScreen(4);
 }
 
