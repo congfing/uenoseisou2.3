@@ -2351,14 +2351,33 @@ function clearPropertyData(){
 /* ===== 物件表（colview）から「計量」で呼ばれたときの処理 ===== */
 let colviewReturnUrl = '';
 let colviewCloseTab = false;
+const KEIRYO_RETURN_APP_KEY = 'ueno_keiryo_return_app';
+function embeddedReturnApp(){
+  if(window.parent === window) return '';
+  try { return sessionStorage.getItem(KEIRYO_RETURN_APP_KEY) || ''; } catch(e){ return ''; }
+}
+function hasColviewReturn(){
+  return !!(embeddedReturnApp() || colviewCloseTab || colviewReturnUrl);
+}
 function returnToColviewIfRequested(){
-  if(!colviewCloseTab && !colviewReturnUrl) return false;
+  const panelApp = embeddedReturnApp();
+  if(!panelApp && !colviewCloseTab && !colviewReturnUrl) return false;
   // 入力画面から直接戻るので、次に開いたときは物件リスト２列から始まるようにしておく。
   if(state.currentScreen === 4){
     state.currentScreen = 9;
     state.currentPropertyIndex = -1;
     state.entryReturnScreen = 9;
     saveSession();
+    renderPropertyListA();
+    showScreen(9);
+  }
+  if(panelApp){
+    // index.html のパネルの中で動いている場合は、パネルに物件表を開いてもらう。
+    try { sessionStorage.removeItem(KEIRYO_RETURN_APP_KEY); } catch(e){}
+    try {
+      window.parent.postMessage({ type:'ueno-open-app', file: panelApp }, location.origin);
+      return true;
+    } catch(e){}
   }
   if(colviewCloseTab){
     // 物件表から別タブで開かれた場合は、このタブを閉じて物件表に戻る。
@@ -2422,7 +2441,7 @@ function closeCurrentTabScreen(){
   }
   // 物件表の「計量」から開いた場合、物件リスト２列で戻る／閉じるを押したら物件表へ戻る。
   // （担当者→日付→別ページ、とさかのぼらない）
-  if(cur === 9 && (colviewCloseTab || colviewReturnUrl)){
+  if(cur === 9 && hasColviewReturn()){
     if(returnToColviewIfRequested()) return;
   }
   if(cur === 10){

@@ -1353,6 +1353,17 @@
     activeApp = null;
   }
 
+  // パネル内のソフトから「このソフトを開いて」と頼まれたときの受け口。
+  // 物件表の「計量」ボタン → 計量データ入力、入力後は物件表へ戻る、に使う。
+  // 開いていたソフトは最小化されるだけで中身は残るので、戻ると元の画面のまま。
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== "ueno-open-app" || typeof data.file !== "string") return;
+    const app = software.find((item) => item.file === data.file);
+    if (app) openSoftware(app);
+  });
+
   function openSoftware(app) {
     if (app.direct) {
       location.href = softwareRoot + encodeURI(app.file);
@@ -1381,6 +1392,10 @@
     launcher.hidden = true;
     closeZoomMenu();
     closeCalendarPicker();
+    // 表示に戻ったことをソフト側に知らせる（物件表の「計量済み」表示の更新などに使う）
+    try {
+      frame.contentWindow.postMessage({ type: "ueno-app-activated", file: app.file }, location.origin);
+    } catch (error) {}
   }
 
   function applyZoom(frame) {

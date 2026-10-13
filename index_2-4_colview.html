@@ -2433,6 +2433,9 @@ function updateKeiryouButtonState(btn, name) {
   }
 }
 
+/* パネル内で計量データ入力を開いたとき、戻り先を覚えておくキー（3-20と共通） */
+const KEIRYO_RETURN_APP_KEY = 'ueno_keiryo_return_app';
+
 /* 計量データ入力は別タブで開く。
    同じタブで開くと物件表が読み込み直しになり、ツールバー（担当者・曜日の枠）が閉じ、
    スクロール位置も先頭に戻ってしまうため。物件は3-20の「物件リスト２列」から選ぶ。 */
@@ -2442,6 +2445,15 @@ function openKeiryouEntry() {
     if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われることがあります。開きますか？')) return;
   }
   saveState();
+  // index.html のパネルの中で動いているときは、パネルに計量データ入力を開いてもらう。
+  // パネルは開いていたソフトを最小化するだけなので、物件表の画面はそのまま残る。
+  if (window.parent !== window) {
+    try {
+      sessionStorage.setItem(KEIRYO_RETURN_APP_KEY, 'index_2-4_colview.html');
+      window.parent.postMessage({ type: 'ueno-open-app', file: 'index_3-20.html' }, location.origin);
+      return;
+    } catch (e) {}
+  }
   let win = null;
   // 同じ名前のタブを使い回すので、2回目以降は同じタブが前面に出る。
   try { win = window.open('index_3-20.html?from=colview&popup=1', 'keiryo320'); } catch (e) { win = null; }
@@ -2465,6 +2477,11 @@ function refreshKeiryoDisplay() {
 }
 window.addEventListener('focus', refreshKeiryoDisplay);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshKeiryoDisplay(); });
+// パネル（index.html）に表示を戻されたときの通知
+window.addEventListener('message', event => {
+  if (event.origin !== location.origin) return;
+  if (event.data && event.data.type === 'ueno-app-activated') refreshKeiryoDisplay();
+});
 
 /* ステータス行は表を作り直さずに更新できるよう、別関数にしてある。 */
 let lastStatusInfo = null;
