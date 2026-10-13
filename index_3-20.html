@@ -2347,7 +2347,18 @@ function clearPropertyData(){
 
 /* ===== 物件表（colview）から「計量」で呼ばれたときの処理 ===== */
 let colviewReturnUrl = '';
+let colviewCloseTab = false;
 function returnToColviewIfRequested(){
+  if(colviewCloseTab){
+    // 物件表から別タブで開かれた場合は、このタブを閉じて物件表に戻る。
+    colviewCloseTab = false;
+    const url = colviewReturnUrl || 'index_2-4_colview.html';
+    colviewReturnUrl = '';
+    try { window.close(); } catch(e){}
+    // 閉じられない環境では物件表へ移動する。
+    setTimeout(()=>{ if(!window.closed) location.href = url; }, 400);
+    return true;
+  }
   if(!colviewReturnUrl) return false;
   const url = colviewReturnUrl;
   colviewReturnUrl = '';
@@ -2361,6 +2372,8 @@ function handleColviewDeepLink(){
   let params;
   try { params = new URLSearchParams(location.search); } catch(e){ return; }
   if(params.get('from') === 'colview') colviewReturnUrl = 'index_2-4_colview.html';
+  // popup=1 は物件表が別タブで開いた印。戻るときはこのタブを閉じる。
+  if(params.get('popup') === '1') colviewCloseTab = true;
 }
 
 function closePropertyEntry(){

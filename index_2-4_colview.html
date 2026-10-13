@@ -2433,16 +2433,52 @@ function updateKeiryouButtonState(btn, name) {
   }
 }
 
+/* 計量データ入力は別タブで開く。
+   同じタブで開くと物件表が読み込み直しになり、ツールバー（担当者・曜日の枠）が閉じ、
+   スクロール位置も先頭に戻ってしまうため。物件は3-20の「物件リスト２列」から選ぶ。 */
 function openKeiryouEntry() {
-  // 「計量済み」は3-20で保存した時点で自動的に付くので、ここでは印を付けない。
-  // 収集順の下書きはページを離れると消えるので、先に確認する。
+  saveState();
+  let win = null;
+  // 同じ名前のタブを使い回すので、2回目以降は同じタブが前面に出る。
+  try { win = window.open('index_3-20.html?from=colview&popup=1', 'keiryo320'); } catch (e) { win = null; }
+  if (win) {
+    try { win.focus(); } catch (e) {}
+    showToast('計量データ入力を別タブで開きました');
+    return;
+  }
+  // 別タブが開けなかった場合は同じタブで開く（戻るときに読み込み直しになる）。
   if (hasUncommittedCollectionOrders()) {
     if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われます。開きますか？')) return;
   }
-  saveState();
-  // 物件はこのあと3-20の「物件リスト２列」から選ぶ。
-  // 初回は日付選択、以降は２列のリストが開く。
   location.href = 'index_3-20.html?from=colview';
+}
+
+/* 別タブの計量データ入力で保存された内容を、物件表に戻ったときに反映する。
+   表は作り直さないので、スクロール位置も開いている枠もそのまま。 */
+let keiryouButtonRefs = [];
+function refreshKeiryoDisplay() {
+  _keiryoSavedCache = null;
+  keiryouButtonRefs = keiryouButtonRefs.filter(entry => entry.btn.isConnected);
+  keiryouButtonRefs.forEach(entry => updateKeiryouButtonState(entry.btn, entry.name));
+  refreshStatusLine();
+}
+window.addEventListener('focus', refreshKeiryoDisplay);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshKeiryoDisplay(); });
+
+/* ステータス行は表を作り直さずに更新できるよう、別関数にしてある。 */
+let lastStatusInfo = null;
+function refreshStatusLine() {
+  if (!lastStatusInfo) return;
+  const filterInfo = (filterState.colIdx !== null && filterState.selectedValues.size > 0)
+    ? ` 🔽${headers[filterState.colIdx] || ''}フィルター中` : '';
+  let assignmentInfo = assignmentFilter.active ? `　担当者・曜日選択:${lastStatusInfo.rowCount}件` : '';
+  if (assignmentFilter.active) {
+    const g = geoRegisteredCount();
+    assignmentInfo += `　📍${g.done}/${g.total}`;
+    const k = keiryoDoneCount();
+    if (k.total) assignmentInfo += `　計量${k.done}/${k.total}`;
+  }
+  updateStatus(`${lastStatusInfo.rowCount}件 ／ 全${dataArray.length}件　列:${lastStatusInfo.visCount}/${headers.length}${filterInfo}${assignmentInfo}`);
 }
 
 /* 表示中の計量物件のうち、本日3-20で保存済みの件数 */
@@ -2693,6 +2729,7 @@ function renderTable() {
   // ボディ描画
   // 「計量」列はHome側のTabで切り替えるため、ページ移動リンクは出さない。
   tableBody.innerHTML='';
+  keiryouButtonRefs = [];
   let currentAssignmentGroup = '';
   rows.forEach((row,ri) => {
     if (assignmentFilter.active) {
@@ -2787,6 +2824,7 @@ function renderTable() {
         updateKeiryouButtonState(keiryouBtn, keiryouName);
         keiryouBtn.addEventListener('click', () => openKeiryouEntry());
         orderEditor.appendChild(keiryouBtn);
+        keiryouButtonRefs.push({ btn: keiryouBtn, name: keiryouName });
       }
 
       tdOrder.appendChild(orderEditor);
@@ -2834,17 +2872,9 @@ function renderTable() {
       emptyMsg.appendChild(clearBtn);
     }
   }
-  const filterInfo = (filterState.colIdx !== null && filterState.selectedValues.size > 0)
-    ? ` 🔽${headers[filterState.colIdx]||''}フィルター中` : '';
-  let assignmentInfo = assignmentFilter.active ? `　担当者・曜日選択:${rows.length}件` : '';
-  if (assignmentFilter.active) {
-    const g = geoRegisteredCount();
-    assignmentInfo += `　📍${g.done}/${g.total}`;
-    const k = keiryoDoneCount();
-    if (k.total) assignmentInfo += `　計量${k.done}/${k.total}`;
-  }
   updateAssignmentButton(rows.length);
-  updateStatus(`${rows.length}件 ／ 全${dataArray.length}件　列:${visArr.length}/${headers.length}${filterInfo}${assignmentInfo}`);
+  lastStatusInfo = { rowCount: rows.length, visCount: visArr.length };
+  refreshStatusLine();
   adjustWrapperHeight();
 }
 
