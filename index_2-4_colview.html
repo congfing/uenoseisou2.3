@@ -301,10 +301,21 @@
       white-space:normal; overflow:visible; text-overflow:clip;
     }
     /* 収集順の操作列はボタンを優先して確保する */
-    .collection-order-editor { gap:3px; flex-wrap:nowrap; }
-    .collection-order-input { width:48px; min-width:48px; }
+    #dataTable tbody td.collection-order-cell,
+    #dataTable thead th.collection-order-cell {
+      width:132px; min-width:132px; max-width:132px;
+      padding-left:3px; padding-right:3px;
+    }
+    .collection-order-editor { gap:3px; flex-wrap:wrap; justify-content:flex-start; }
+    .collection-order-input { width:44px; min-width:44px; }
     .collection-order-change,
-    .geo-register-btn { padding:5px 5px; font-size:12px; }
+    .geo-register-btn { padding:5px 6px; font-size:12px; }
+    /* 担当者情報は狭めてよい */
+    #dataTable tbody td.assignment-info-cell,
+    #dataTable thead th.assignment-info-cell {
+      width:72px; min-width:72px; max-width:72px;
+      white-space:normal; overflow-wrap:anywhere; font-size:11px;
+    }
     #dataTable th.weekday-col,
     #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
   }
@@ -2476,6 +2487,9 @@ function renderTable() {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
+      if (label === '物件名') th.className = 'property-name-cell';
+      if (label === '収集順') th.className = 'collection-order-cell';
+      if (label === '担当者情報') th.className = 'assignment-info-cell';
       htr.appendChild(th);
     });
   } else {
@@ -2536,6 +2550,7 @@ function renderTable() {
       tdProperty.className = 'property-name-cell';
       tdProperty.textContent = propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '';
       const tdOrder = document.createElement('td');
+      tdOrder.className = 'collection-order-cell';
       const orderEditor = document.createElement('div');
       orderEditor.className = 'collection-order-editor';
       orderEditor.style.setProperty('background-color', districtBg, 'important');
@@ -2582,6 +2597,7 @@ function renderTable() {
       orderEditor.append(orderInput, orderChange, geoBtn);
       tdOrder.appendChild(orderEditor);
       const tdAssignment = document.createElement('td');
+      tdAssignment.className = 'assignment-info-cell';
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
       tr.append(tdDistrict, tdProperty, tdOrder, tdAssignment);
     } else {
