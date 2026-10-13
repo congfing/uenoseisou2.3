@@ -297,9 +297,14 @@
     #dataTable thead th { padding:5px 4px; font-size:12px; }
     #dataTable tbody td { padding:3px 4px; font-size:12px; max-width:150px; }
     #dataTable tbody td.property-name-cell {
-      width:170px; min-width:140px; max-width:190px;
+      width:110px; min-width:90px; max-width:120px;
       white-space:normal; overflow:visible; text-overflow:clip;
     }
+    /* 収集順の操作列はボタンを優先して確保する */
+    .collection-order-editor { gap:3px; flex-wrap:nowrap; }
+    .collection-order-input { width:48px; min-width:48px; }
+    .collection-order-change,
+    .geo-register-btn { padding:5px 5px; font-size:12px; }
     #dataTable th.weekday-col,
     #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
   }
