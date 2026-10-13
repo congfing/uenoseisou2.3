@@ -2271,7 +2271,7 @@ function updateGeoButtonState(btn, name) {
   if (g) {
     btn.textContent = '登録済み';
     btn.classList.add('registered');
-    btn.title = `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと取り直します`;
+    btn.title = `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
   } else {
     btn.textContent = '地点登録';
     btn.classList.remove('registered');
@@ -2293,8 +2293,18 @@ function geoRegisteredCount() {
 
 function registerGeoPoint(btn, name) {
   if (!name) { showToast('物件名が取得できません'); return; }
+  // 登録済みをもう一度押したら解除（間違えて押したときのやり直し用）
+  if (getGeo(name)) {
+    if (!confirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`)) return;
+    const store = loadGeoStore();
+    delete store[name];
+    saveGeoStore(store);
+    updateGeoButtonState(btn, name);
+    const c = geoRegisteredCount();
+    showToast(`${name} の地点登録を解除しました　${c.done}/${c.total}件`);
+    return;
+  }
   if (!navigator.geolocation) { showToast('この端末では位置情報を取得できません'); return; }
-  if (getGeo(name) && !confirm(`${name} は登録済みです。\n現在地で取り直しますか？`)) return;
   btn.disabled = true;
   btn.textContent = '取得中…';
   navigator.geolocation.getCurrentPosition(pos => {
