@@ -402,7 +402,6 @@
 
 <script>
 const DEFAULT_APPS = [
-  { key: 'bukken', title: '物件表', href: 'index_2-3_bukken.html' },
   { key: 'colview', title: '列選択', href: 'index_2-4_colview.html' },
   { key: 'keiryou', title: '計量', href: 'index_3-20.html' },
   { key: 'memo', title: 'メモ', href: 'index_5-1.html' },
@@ -411,7 +410,6 @@ const DEFAULT_APPS = [
 ];
 const GITHUB_FILES = [
   { title: '計量', href: 'index_3-20.html' },
-  { title: '物件表', href: 'index_2-3_bukken.html' },
   { title: '列選択', href: 'index_2-4_colview.html' },
   { title: 'メモ', href: 'index_5-1.html' },
   { title: 'Excelビューア', href: 'index_2-3_excel.html' },
@@ -1003,7 +1001,7 @@ toolToggle.addEventListener('click', () => {
   setPanelOpen(toolPanel.classList.contains('collapsed'));
 });
 addEditorBtn.addEventListener('click', () => {
-  addCustomWindow('Editor', 'index_2-3_bukken.html');
+  addCustomWindow('Editor', 'index_2-4_colview.html');
   githubFileSelect.value = '';
 });
 githubFileSelect.addEventListener('change', () => {
