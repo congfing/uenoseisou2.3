@@ -1314,7 +1314,9 @@ window.onload = function(){
     (Object.keys(state.entryData).length>0||Object.keys(state.entryDraft).length>0);
   const historyRestored=hasSessionWork?false:restoreLatestHistory(todayStr);
 
-  if((hasSessionWork||historyRestored)&&state.selectedStaff){
+  // 当日のセッションがあり担当者も選んであれば、入力がまだでも物件リスト２列を出す。
+  // （物件表の「計量」から何度も開くので、日付画面に戻さない）
+  if((hasSessionWork||historyRestored||sessionRestored)&&state.selectedStaff){
     document.getElementById('screen3sub').textContent=`担当：${state.selectedStaff}`;
     document.getElementById('screen9sub').textContent=`担当：${state.selectedStaff}`;
     if(hasSessionWork&&state.currentScreen===4&&state.currentPropertyIndex>=0&&state.currentPropertyIndex<allProperties.length){
