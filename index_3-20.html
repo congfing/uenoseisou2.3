@@ -2314,7 +2314,6 @@ function savePropertyData(){
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
   const savedName = prop.name;
-  if(returnToColviewIfRequested()) return;
   if(returnScreen===9){
     renderPropertyListA();showScreen(9);
   } else {
@@ -2379,7 +2378,7 @@ function handleColviewDeepLink(){
 }
 
 function closePropertyEntry(){
-  if(returnToColviewIfRequested()) return;
+  // 入力画面の「閉じる」は物件リスト２列へ戻る。物件表へ戻るのは２列画面の戻る／閉じる。
   const returnScreen = state.entryReturnScreen !== undefined ? state.entryReturnScreen : 3;
   const currentPropName = allProperties[state.currentPropertyIndex]?.name;
   if(returnScreen === 9){
@@ -2408,6 +2407,11 @@ function closeCurrentTabScreen(){
   if(cur === 4){
     closePropertyEntry();
     return;
+  }
+  // 物件表の「計量」から開いた場合、物件リスト２列で戻る／閉じるを押したら物件表へ戻る。
+  // （担当者→日付→別ページ、とさかのぼらない）
+  if(cur === 9 && (colviewCloseTab || colviewReturnUrl)){
+    if(returnToColviewIfRequested()) return;
   }
   if(cur === 10){
     closeColSettingScreen();
