@@ -1402,6 +1402,9 @@
     const documentInFrame = frame.contentDocument;
     if (!documentInFrame) return;
     documentInFrame.documentElement.style.zoom = String(currentZoom / 100);
+    frame.contentWindow.requestAnimationFrame(() => {
+      frame.contentWindow.dispatchEvent(new frame.contentWindow.Event('resize'));
+    });
   }
 
   function applySoftwareTheme(frame) {
