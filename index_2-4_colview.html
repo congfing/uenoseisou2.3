@@ -2066,11 +2066,12 @@ function adjustWrapperHeight() {
   const wrapper = document.getElementById('tableWrapper');
   if (!wrapper) return;
   const orderActions = document.getElementById('collectionOrderActions');
-  const actionsH = orderActions && orderActions.classList.contains('active') ? orderActions.offsetHeight : 0;
+  const actionsH = orderActions && orderActions.classList.contains('active') ? orderActions.getBoundingClientRect().height : 0;
+  const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   // 表の上にあるもの（ヘッダー・ツールバー・列パネル・上部タブバー）を
   // 1つずつ足すと数え漏れが出るので、表の実際の位置から高さを決める。
   const top = wrapper.getBoundingClientRect().top;
-  const height = Math.round(window.innerHeight - top - actionsH);
+  const height = Math.round((window.innerHeight - top - actionsH) / zoom);
   if (Number.isFinite(height) && height > 120) {
     wrapper.style.height = height + 'px';
     return;
@@ -2462,7 +2463,7 @@ function openKeiryouEntry() {
   if (window.parent !== window) {
     try {
       sessionStorage.setItem(KEIRYO_RETURN_APP_KEY, 'index_2-4_colview.html');
-      window.parent.postMessage({ type: 'ueno-open-app', file: 'index_3-20.html' }, location.origin);
+      window.parent.postMessage({ type: 'ueno-open-app', file: 'index_3-20.html', dir: 'forward' }, location.origin);
       return;
     } catch (e) {}
   }

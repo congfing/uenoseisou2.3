@@ -2375,7 +2375,7 @@ function returnToColviewIfRequested(){
     // index.html のパネルの中で動いている場合は、パネルに物件表を開いてもらう。
     try { sessionStorage.removeItem(KEIRYO_RETURN_APP_KEY); } catch(e){}
     try {
-      window.parent.postMessage({ type:'ueno-open-app', file: panelApp }, location.origin);
+      window.parent.postMessage({ type:'ueno-open-app', file: panelApp, dir:'back' }, location.origin);
       return true;
     } catch(e){}
   }
