@@ -2076,8 +2076,11 @@ function adjustWrapperHeight() {
   const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   // 表の上にあるもの（ヘッダー・ツールバー・列パネル・上部タブバー）を
   // 1つずつ足すと数え漏れが出るので、表の実際の位置から高さを決める。
+  // iPhone の Safari は下のツールバーの出入りで表示領域の高さが変わる。
+  // window.innerHeight だと実際より小さく（または大きく）なるので visualViewport を優先する。
+  const viewH = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
   const top = wrapper.getBoundingClientRect().top;
-  const height = Math.round((window.innerHeight - top - actionsH) / zoom);
+  const height = Math.round((viewH - top - actionsH) / zoom);
   if (Number.isFinite(height) && height > 120) {
     // height ではなく max-height。件数が少ないときは中身の高さで止まり、
     // 表の下に白い余白が残らない。
@@ -2094,6 +2097,30 @@ function adjustWrapperHeight() {
   wrapper.style.height = 'auto';
   wrapper.style.maxHeight = `calc(100vh - ${headerH + toolbarH + panelH + actionsH + tabbarH}px)`;
 }
+
+/* 画面まわりが変わったら高さを測り直す。
+   ・iPhone の Safari のツールバーが出入りしたとき（visualViewport）
+   ・ツールバーや列パネルを開閉したとき（アニメーション終了まで待つ）
+   ・上部タブバーが後から差し込まれたとき */
+(function watchLayoutChanges() {
+  const recalc = () => adjustWrapperHeight();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', recalc);
+    window.visualViewport.addEventListener('scroll', recalc);
+  }
+  document.addEventListener('transitionend', event => {
+    const id = event.target && event.target.id;
+    if (id === 'toolbar' || id === 'colPanel' || id === 'collectionOrderActions') recalc();
+  });
+  window.addEventListener('orientationchange', () => setTimeout(recalc, 300));
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(recalc);
+    const observeById = id => { const el = document.getElementById(id); if (el) observer.observe(el); };
+    const attach = () => ['app-header', 'toolbar', 'colPanel', 'collectionOrderActions', 'uenoGlobalTabbar'].forEach(observeById);
+    attach();
+    window.addEventListener('load', () => { attach(); recalc(); });
+  }
+})();
 
 // 検索
 searchInput.addEventListener('input', () => { renderTable(); saveState(); });
