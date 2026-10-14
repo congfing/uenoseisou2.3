@@ -140,10 +140,13 @@
   .keiryou-open-btn.registered {
     background:#d9d9d9 !important; color:#111 !important; border-color:#222;
   }
+  /* 表の直後に置く（画面に固定しない）。表が短いときは表のすぐ下、
+     長いときは表が上限いっぱいになるので結果的に画面の一番下に来る。 */
   #collectionOrderActions {
-    display:none; position:fixed; z-index:170; left:0; right:0; bottom:0;
+    display:none; position:relative; z-index:170;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
     box-shadow:0 -3px 12px rgba(0,0,0,.16); gap:8px; justify-content:flex-end;
+    flex-wrap:wrap;
   }
   #collectionOrderActions.active { display:flex; }
   #collectionOrderActions button {
@@ -261,7 +264,10 @@
   /* テーブルラッパー：残り全高を占有、縦横両方スクロール */
   #tableWrapper {
     overflow: auto;
-    height: calc(100vh - 88px); /* JS で動的更新 */
+    /* 件数が少ないときは中身の高さに合わせ、多いときだけ上限まで伸ばしてスクロールする。
+       上限は JS（adjustWrapperHeight）で画面の高さから計算して設定する。 */
+    height: auto;
+    max-height: calc(100vh - 88px);
     padding: 0;
   }
   #emptyMsg { text-align:center; padding:40px; color:#888; font-size:14px; }
@@ -2073,7 +2079,10 @@ function adjustWrapperHeight() {
   const top = wrapper.getBoundingClientRect().top;
   const height = Math.round((window.innerHeight - top - actionsH) / zoom);
   if (Number.isFinite(height) && height > 120) {
-    wrapper.style.height = height + 'px';
+    // height ではなく max-height。件数が少ないときは中身の高さで止まり、
+    // 表の下に白い余白が残らない。
+    wrapper.style.height = 'auto';
+    wrapper.style.maxHeight = height + 'px';
     return;
   }
   // 位置が測れない場合の保険（従来の計算）
@@ -2082,7 +2091,8 @@ function adjustWrapperHeight() {
   const panelH   = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
   const tabbar   = document.getElementById('uenoGlobalTabbar');
   const tabbarH  = tabbar ? tabbar.offsetHeight : 0;
-  wrapper.style.height = `calc(100vh - ${headerH + toolbarH + panelH + actionsH + tabbarH}px)`;
+  wrapper.style.height = 'auto';
+  wrapper.style.maxHeight = `calc(100vh - ${headerH + toolbarH + panelH + actionsH + tabbarH}px)`;
 }
 
 // 検索
