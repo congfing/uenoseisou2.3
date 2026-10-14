@@ -1258,11 +1258,12 @@
       if (app.calendarPicker) showCalendarPicker();
       else openSoftware(app);
     });
-    card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app));
+    // カードから全画面へ広がる動きを付ける
+    card.querySelector(".running-preview").addEventListener("click", () => openSoftware(app, { fromCard: true }));
     card.querySelector(".running-preview").addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      openSoftware(app);
+      openSoftware(app, { fromCard: true });
     });
     card.querySelector(".running-close").addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1306,7 +1307,8 @@
       const appToClose = activeApp;
       closeSoftwareApp(appToClose);
     } else if (activeApp) {
-      if (cards.has(activeApp.file)) minimizeSoftware(activeApp);
+      // カードへ縮んでいく動きを見せてから縮小する
+      if (cards.has(activeApp.file)) minimizeWithZoom(activeApp);
       else closeSoftwareApp(activeApp);
     }
     currentFile.textContent = "index.html";
@@ -1356,6 +1358,61 @@
     return frame;
   }
 
+  // ===== 縮小／拡大のアニメーション（iPhone のアプリ切替に近い動き） =====
+  const ZOOM_MS = 420;
+  const ZOOM_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+
+  function previewRectOf(app) {
+    const card = cards.get(app.file);
+    if (!card) return null;
+    const preview = card.querySelector(".running-preview");
+    if (!preview || preview.hidden) return null;
+    const rect = preview.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? rect : null;
+  }
+
+  function clearZoomStyle(frame) {
+    frame.style.transition = "";
+    frame.style.transform = "";
+    frame.style.transformOrigin = "";
+    frame.style.willChange = "";
+  }
+
+  // 全画面 → カードへ縮む。終わったら実際の縮小処理を行う（見た目は同じ位置なので繋がる）
+  function minimizeWithZoom(app) {
+    const frame = frames.get(app.file);
+    const card = cards.get(app.file);
+    if (!frame || !card) { minimizeSoftware(app); return; }
+    setCardRunning(app, true);          // カードの枠を出してから位置を測る
+    const to = previewRectOf(app);
+    const from = frame.getBoundingClientRect();
+    if (!to || from.width <= 0) { minimizeSoftware(app); return; }
+    const scale = Math.min(to.width / from.width, to.height / from.height);
+    frame.style.transformOrigin = "top left";
+    frame.style.willChange = "transform";
+    frame.style.transition = `transform ${ZOOM_MS}ms ${ZOOM_EASE}`;
+    frame.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${scale})`;
+    window.setTimeout(() => {
+      clearZoomStyle(frame);
+      minimizeSoftware(app);
+    }, ZOOM_MS + 20);
+  }
+
+  // カード → 全画面へ広がる（openSoftware で全画面にした直後に呼ぶ）
+  function expandFromCard(frame, fromRect) {
+    const to = frame.getBoundingClientRect();
+    if (!fromRect || to.width <= 0) return;
+    const scale = Math.min(fromRect.width / to.width, fromRect.height / to.height);
+    frame.style.transformOrigin = "top left";
+    frame.style.willChange = "transform";
+    frame.style.transition = "none";
+    frame.style.transform = `translate(${fromRect.left - to.left}px, ${fromRect.top - to.top}px) scale(${scale})`;
+    void frame.offsetWidth;   // ここで一度反映させないとアニメーションにならない
+    frame.style.transition = `transform ${ZOOM_MS}ms ${ZOOM_EASE}`;
+    frame.style.transform = "translate(0px, 0px) scale(1)";
+    window.setTimeout(() => clearZoomStyle(frame), ZOOM_MS + 20);
+  }
+
   function minimizeSoftware(app) {
     const frame = frames.get(app.file);
     const card = cards.get(app.file);
@@ -1397,6 +1454,8 @@
       return;
     }
     const slide = options && options.slide;
+    // カードから開く場合は、広がる動きの開始位置を先に測っておく
+    const zoomFrom = options && options.fromCard ? previewRectOf(app) : null;
     const previous = activeApp && activeApp.file !== app.file ? activeApp : null;
     // スライドするときは、前のソフトを animation が終わってから片付ける。
     // （先に消すと背景が見えてしまうため）
@@ -1441,6 +1500,7 @@
         movingFrame.classList.remove("ueno-slide-forward", "ueno-slide-out-right");
       }, SLIDE_MS + 20);
     }
+    if (zoomFrom && !slide) expandFromCard(frame, zoomFrom);
     // 表示に戻ったことをソフト側に知らせる（物件表の「計量済み」表示の更新などに使う）
     try {
       frame.contentWindow.postMessage({ type: "ueno-app-activated", file: app.file }, location.origin);
