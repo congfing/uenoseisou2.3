@@ -632,12 +632,12 @@
   }
   /* 進むとき：新しい画面が右から入ってくる */
   .software-frame.active.ueno-slide-forward {
-    animation: uenoSlideFromRight 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    animation: uenoSlideFromRight 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
     will-change: transform;
   }
   /* 戻るとき：上にある画面が右へ出ていき、下の画面が現れる */
   .software-frame.active.ueno-slide-out-right {
-    animation: uenoSlideOutRight 260ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+    animation: uenoSlideOutRight 520ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
     will-change: transform;
     box-shadow: -8px 0 18px rgba(0, 0, 0, 0.18);
   }
@@ -1389,7 +1389,7 @@
     if (app) openSoftware(app, { slide: data.dir === "back" ? "back" : "forward" });
   });
 
-  const SLIDE_MS = 260;
+  const SLIDE_MS = 520;
 
   function openSoftware(app, options) {
     if (app.direct) {
