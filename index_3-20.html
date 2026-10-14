@@ -24,6 +24,28 @@
   /* ===== SCREENS ===== */
   .screen { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
   .screen.active { display: block; }
+  /* 画面移動のスライド（進むときは右から、戻るときは左から） */
+  body { overflow-x: hidden; }
+  @keyframes keiryoSlideFromRight {
+    from { transform: translate3d(100%, 0, 0); }
+    to   { transform: translate3d(0, 0, 0); }
+  }
+  @keyframes keiryoSlideFromLeft {
+    from { transform: translate3d(-100%, 0, 0); }
+    to   { transform: translate3d(0, 0, 0); }
+  }
+  .screen.active.screen-slide-forward {
+    animation: keiryoSlideFromRight 1000ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+  }
+  .screen.active.screen-slide-back {
+    animation: keiryoSlideFromLeft 1000ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .screen.active.screen-slide-forward,
+    .screen.active.screen-slide-back { animation: none; }
+  }
   .card { border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 
   /* ===== BUTTONS ===== */
@@ -1365,9 +1387,26 @@ function updateNav(n){
   document.getElementById('navPropsA').className='nav-tab'+(isPropsAActive?' active':'')+(state.selectedStaff?'':' disabled');
 }
 
+/* 画面の並び順。この順で「進む／戻る」を判断してスライドの向きを決める */
+const SCREEN_ORDER = { 1:1, 2:2, 3:3, 9:3, 5:4, 4:5, 10:6, 0:7, 6:7, 7:7, 8:7 };
 function showScreen(n){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(`screen${n}`).classList.add('active');
+  const fromOrder = SCREEN_ORDER[state.currentScreen];
+  const toOrder = SCREEN_ORDER[n];
+  const slideClass = (fromOrder !== undefined && toOrder !== undefined && toOrder < fromOrder)
+    ? 'screen-slide-back' : 'screen-slide-forward';
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active','screen-slide-forward','screen-slide-back');
+  });
+  const target = document.getElementById(`screen${n}`);
+  target.classList.add('active');
+  if (state.currentScreen !== n) {
+    void target.offsetWidth;            // ここで一度反映させないとアニメーションにならない
+    target.classList.add(slideClass);
+    target.addEventListener('animationend', function off(){
+      target.classList.remove('screen-slide-forward','screen-slide-back');
+      target.removeEventListener('animationend', off);
+    });
+  }
   updateNav(n);
   saveSession();
   window.scrollTo(0,0);
