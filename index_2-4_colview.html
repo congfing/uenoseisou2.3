@@ -146,12 +146,16 @@
     display:none; position:relative; z-index:170;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
     box-shadow:0 -3px 12px rgba(0,0,0,.16); gap:8px; justify-content:flex-end;
-    flex-wrap:wrap;
+    /* 2段にはせず1行のまま。入りきらない分は横スクロールで見る */
+    flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  #collectionOrderActions::-webkit-scrollbar { display:none; }
   #collectionOrderActions.active { display:flex; }
   #collectionOrderActions button {
     padding:8px 12px; border:1px solid #222; border-radius:4px;
     background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer;
+    flex:0 0 auto; white-space:nowrap;
   }
   #collectionOrderActions button:active { font-weight:900; }
 
@@ -333,6 +337,9 @@
     .collection-order-change,
     .geo-register-btn,
     .keiryou-open-btn { padding:5px 7px; font-size:12px; }
+    /* 下のボタン列は1行に収めたいので、狭い画面では小さめにする */
+    #collectionOrderActions { padding:8px 10px; gap:6px; justify-content:flex-start; }
+    #collectionOrderActions button { padding:8px 9px; font-size:13px; }
     #dataTable tbody td.assignment-info-cell,
     #dataTable thead th.assignment-info-cell {
       white-space:nowrap; font-size:11px;
