@@ -1442,7 +1442,10 @@
     if (event.origin !== location.origin) return;
     const data = event.data;
     if (!data || data.type !== "ueno-open-app" || typeof data.file !== "string") return;
-    const app = software.find((item) => item.file === data.file);
+    const isKeiryoRequest = data.file === "index_3-20.html" || data.file === "index_3-21.html";
+    const app = isKeiryoRequest
+      ? software.find((item) => item.name === "計量データ入力")
+      : software.find((item) => item.file === data.file);
     if (app) openSoftware(app, { slide: data.dir === "back" ? "back" : "forward" });
   });
 
