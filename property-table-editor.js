@@ -1,7 +1,7 @@
 (() => {
   const style=document.createElement('style');
   style.textContent=`
-    #propertyTableEditor {position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#fff;color:#000;}
+    #propertyTableEditor {position:fixed;inset:0;width:100%;height:var(--pte-height,100dvh);max-width:none;max-height:none;margin:0;padding:0;border:0;background:#fff;color:#000;}
     #propertyTableEditor[open] {display:flex;flex-direction:column;}
     #propertyTableEditor .pte-toolbar {display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #000;flex-shrink:0;background:#fff;}
     #propertyTableEditor h2 {margin:0;flex:1;min-width:0;font-size:18px;font-weight:400;white-space:nowrap;}
@@ -14,7 +14,7 @@
     #pteSearch {width:180px;max-width:100%;padding:8px;border:1px solid #000;font:inherit;}
     #propertyTableEditor .pte-filter {max-width:180px;min-height:42px;padding:6px;border:1px solid #000;background:#fff;color:#000;font:inherit;}
     #pteGrid th button {border:0 !important;border-radius:0 !important;box-shadow:none !important;outline:0;background:transparent;width:100%;min-height:44px;padding:8px;text-align:left;white-space:nowrap;}
-    #pteGrid {flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;}
+    #pteGrid {flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom;}
     #pteGrid table {border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:14px;}
     #pteGrid table {border:1px solid #999;}
     #pteGrid th,#pteGrid td {border:0 !important;border-right:1px solid #999 !important;border-bottom:1px solid #999 !important;padding:0;min-width:110px;background:#fff;}
@@ -34,6 +34,12 @@
   const editor=document.createElement('dialog');editor.id='propertyTableEditor';editor.setAttribute('aria-label','編集用物件表');
   editor.innerHTML='<div class="pte-toolbar"><h2>編集用物件表</h2><input id="pteSearch" aria-label="物件検索" placeholder="物件検索"><select class="pte-filter" id="pteFilterColumn" aria-label="絞り込む列"></select><select class="pte-filter" id="pteFilterValue" aria-label="絞り込む値"></select><button type="button" id="pteFilterClear">絞り込み解除</button><span id="pteCount"></span><button id="pteSave" type="button">保存して適用</button><button id="pteExcel" type="button">エクセル保存</button><button id="pteClose" type="button">閉じる</button></div><div id="pteGrid"></div>';
   document.body.append(editor);
+  function fitEditorToViewport(){
+    const zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
+    editor.style.setProperty('--pte-height',`${window.innerHeight/zoom}px`);
+  }
+  window.addEventListener('resize',fitEditorToViewport);
+  window.visualViewport?.addEventListener('resize',fitEditorToViewport);
   const cellDialog=document.createElement('dialog');cellDialog.id='propertyCellEditor';
   cellDialog.innerHTML='<label id="pteCellLabel" for="pteChoices"></label><select id="pteChoices"></select><input id="pteCustom" aria-label="直接入力"><div class="pte-cell-actions"><button type="button" id="pteCellCancel">キャンセル</button><button type="button" id="pteCellApply">変更</button></div>';
   document.body.append(cellDialog);
@@ -193,6 +199,6 @@
     source=currentFilename;sheet=currentSheetName;original=dataArray.map(row=>[...row]);rows=dataArray.map(row=>[...row]);search.value='';sortColumn=-1;sortDirection=1;
     filterColumn.replaceChildren(new Option('絞り込む列',''));
     headers.forEach((h,c)=>filterColumn.append(new Option(text(h),text(c))));
-    districtFilter.value='';industryFilter.value='';refreshMainFilters();refreshFilterValues();render();editor.showModal();
+    districtFilter.value='';industryFilter.value='';refreshMainFilters();refreshFilterValues();render();fitEditorToViewport();editor.showModal();
   };
 })();
