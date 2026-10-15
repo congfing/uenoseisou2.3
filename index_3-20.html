@@ -246,6 +246,13 @@
   #historyResendDialog button:hover, #historyResendDialog button:active,
   #historyResendDialog button:focus-visible { background:transparent; outline:none; box-shadow:none; border:0; font-weight:400; }
   #historyResendDialog button[data-cancel] { margin-bottom:0; }
+  #nav-tabs-bar { padding:0 10px; }
+  #nav-tabs-bar .nav-tabs { display:flex; flex-wrap:wrap; gap:6px; overflow:visible; }
+  #nav-tabs-bar .nav-tab {
+    flex:1 1 calc(20% - 6px); min-width:0; padding:6px 3px;
+    white-space:normal; overflow-wrap:anywhere; line-height:1.3; min-height:36px;
+  }
+  #nav-tabs-bar .nav-tab:nth-child(-n+4) { flex-basis:calc(25% - 6px); }
 </style>
 
 </head>
