@@ -529,6 +529,15 @@
   .property-history-actions button { flex:1 1 46%; min-height:38px; padding:6px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
 
 
+  #collectionOrderActions { overflow:hidden; touch-action:pan-y; gap:20px; }
+  #collectionOrderActionItems {
+    display:flex; gap:8px; flex:1; min-width:0;
+    overflow:hidden; touch-action:pan-y;
+  }
+  #collectionOrderActions .action-scroll-arrow {
+    flex:0 0 44px; width:44px; min-height:48px; padding:0;
+    font-size:24px; font-weight:400;
+  }
 </style>
 
 </head>
@@ -650,12 +659,16 @@
 </div>
 
 <div id="collectionOrderActions" aria-label="収集順の変更操作">
+  <button type="button" class="action-scroll-arrow" title="左へ移動" aria-label="左へ移動" onclick="moveCollectionActions(-1)">‹</button>
+  <div id="collectionOrderActionItems">
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
   <button type="button" id="collectionOrderInitialize">初期設定に戻す</button>
   <button type="button" id="collectionOrderSave">保存して反映</button>
   <button type="button" id="collectionOrderCommit">メール送信</button>
   <button type="button" id="collectionOrderSaveExit">閉じる</button>
+  </div>
+  <button type="button" class="action-scroll-arrow" title="右へ移動" aria-label="右へ移動" onclick="moveCollectionActions(1)">›</button>
 </div>
 
 <!-- フィルター＋ソートポップアップ -->
@@ -680,6 +693,10 @@
 <div id="toast"></div>
 
 <script>
+function moveCollectionActions(direction) {
+  const items=document.getElementById('collectionOrderActionItems');
+  items.scrollBy({left:direction*Math.max(80,items.clientWidth*.7),behavior:'smooth'});
+}
 const GITHUB_REPO_LABEL = 'github.com/congfing/uenoseisou2.3';
 const DEFAULT_GITHUB_XLSX = '2026年度物件表_KMN置換.xlsx';
 const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
