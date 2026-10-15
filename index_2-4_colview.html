@@ -170,9 +170,10 @@
   #collectionOrderActions {
     display:none; position:relative; z-index:170;
     padding:9px 14px; border-top:1px solid #222; background:#fff;
-    box-shadow:0 -3px 12px rgba(0,0,0,.16); gap:8px; justify-content:flex-end;
+    box-shadow:0 -3px 12px rgba(0,0,0,.16); gap:8px; justify-content:flex-start;
     /* 2段にはせず1行のまま。入りきらない分は横スクロールで見る */
     flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    min-width:0; max-width:100%; box-sizing:border-box; touch-action:pan-x pan-y;
     scrollbar-width:none;
   }
   #collectionOrderActions::-webkit-scrollbar { display:none; }
@@ -1992,6 +1993,8 @@ function sendPropertyChangeMail(changes) {
   });
   const link = document.createElement('a');
   link.href = `mailto:${getCollectionOrderMailTo()}?subject=${encodeURIComponent('物件表 登録・変更')}&body=${encodeURIComponent(lines.join('\r\n'))}`;
+  link.target = '_top';
+  link.rel = 'noopener';
   link.style.display = 'none'; document.body.appendChild(link); link.click();
   setTimeout(() => link.remove(), 1000);
   return true;
