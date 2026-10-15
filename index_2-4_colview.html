@@ -3484,11 +3484,22 @@ window._colviewCtx = {
     const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
     const orderCol = findHeaderIndex(['整理番号']);
     const registrationCol = findHeaderIndex(['登録番号']);
-    items.forEach(item => {
+    const displayItems=[],orderGroups=new Map();
+    items.forEach(item=>{
+      const orderOnly=item.type==='update'&&item.changes?.length&&item.changes.every(field=>String(field.header).trim()==='整理番号');
+      if(!orderOnly){displayItems.push(item);return;}
+      const key=JSON.stringify([item.filename,item.sheetName,item.sentAt?'sent':'unsent']);
+      let group=orderGroups.get(key);
+      if(!group){group={...item,summary:{property:'整理番号の変更',district:'',registration:'',order:0},groupIds:[],changes:[],groupedOrders:true};orderGroups.set(key,group);displayItems.push(group);}
+      group.groupIds.push(item.id);
+      item.changes.forEach(field=>group.changes.push({...field,header:`${item.summary?.property||'物件'}：整理番号`}));
+    });
+    displayItems.forEach(item => {
       const label = document.createElement('label');
       label.className = `property-change-item${item.sentAt ? ' sent' : ''}`;
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox'; checkbox.className = 'property-change-check'; checkbox.value = item.id;
+      if(item.groupIds)checkbox.dataset.historyIds=JSON.stringify(item.groupIds);
       const body = document.createElement('div');
       const name = document.createElement('div'); name.className = 'property-change-name';
       const savedSummary = item.summary || {};
@@ -3498,6 +3509,7 @@ window._colviewCtx = {
       const order = savedSummary.order || (orderCol >= 0 ? String(item.row[orderCol] || '') : '') || '-';
       const registration = savedSummary.registration || (registrationCol >= 0 ? String(item.row[registrationCol] || '') : '') || '-';
       meta.textContent = `整理番号 ${order}／登録番号 ${registration}／${fmtTime(item.timestamp)}／${item.sentAt ? `送信済み ${fmtTime(item.sentAt)}` : '未送信'}`;
+      if(item.groupedOrders)meta.textContent=`${item.groupIds.length}件／${item.sentAt?'送信済み':'未送信'}`;
       body.append(name, meta);
       if (Array.isArray(item.changes) && item.changes.length) {
         const detail = document.createElement('div');
@@ -3509,7 +3521,7 @@ window._colviewCtx = {
         changeTexts.forEach((text,index)=>{
           const line=document.createElement('div');line.style.cssText='display:flex;align-items:center;gap:12px;margin:8px 0;';
           const description=document.createElement('span');description.textContent=text;line.append(description);
-          if(item.type==='update'||item.type==='collection_order'){
+          if(!item.groupedOrders&&(item.type==='update'||item.type==='collection_order')){
             const button=document.createElement('button');button.type='button';button.textContent=item.changes[index].revertedAt?'戻しました':'戻す';button.disabled=!!item.changes[index].revertedAt;
             button.dataset.ownConfirmation='true';
             button.style.cssText='flex-shrink:0;padding:6px 12px;background:white;color:black;border:1px solid #999;border-radius:4px;';
@@ -3517,14 +3529,14 @@ window._colviewCtx = {
           }
           detail.append(line);
         });
-        body.appendChild(detail);
+        if(item.groupedOrders){const folded=document.createElement('details'),summary=document.createElement('summary');summary.textContent=`変更内容を確認（${item.changes.length}件）`;folded.append(summary,detail);body.append(folded);}else body.appendChild(detail);
       }
       label.append(checkbox, body); host.appendChild(label);
     });
   };
 
   function selectedPropertyHistoryIds() {
-    return [...document.querySelectorAll('.property-change-check:checked')].map(input => input.value);
+    return [...document.querySelectorAll('.property-change-check:checked')].flatMap(input => input.dataset.historyIds?JSON.parse(input.dataset.historyIds):[input.value]);
   }
 
   window.sendSelectedPropertyHistory = function() {
