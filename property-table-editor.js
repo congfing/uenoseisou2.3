@@ -171,7 +171,7 @@
   filterColumn.onchange=()=>{filterValue.value='__all__';refreshFilterValues();render();};
   filterValue.onchange=render;
   districtFilter.onchange=industryFilter.onchange=render;
-  editor.querySelector('#pteFilterClear').onclick=()=>{search.value='';filterColumn.value='';districtFilter.value='';industryFilter.value='';refreshFilterValues();render();};
+  editor.querySelector('#pteFilterClear').onclick=()=>{search.value='';filterColumn.value='';districtFilter.value='';industryFilter.value='';sortColumn=findHeaderIndex(['整理番号']);sortDirection=1;refreshFilterValues();render();};
   function applyEditor(closeAfter=true){
     if(source!==currentFilename||sheet!==currentSheetName){alert('読込み中の物件表が変わりました。開き直してください。');return false;}
     if(JSON.stringify(dataArray)!==JSON.stringify(original)){alert('編集中に元の表が更新されました。変更を破棄して開き直してください。');return false;}
