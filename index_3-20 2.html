@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>計量データ入力_3-20</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -78,7 +78,7 @@
   .prop-seq-num { width: 30px; min-width: 30px; text-align: center; font-size: 15px; font-weight: bold;
     color: #000; flex-shrink: 0; }
   .drag-handle { color: #bbb; font-size: 20px; cursor: grab; padding: 0 6px; user-select: none;
-    touch-action: none; flex-shrink: 0; line-height: 1; border: none; background: none; }
+    touch-action: pinch-zoom; flex-shrink: 0; line-height: 1; border: none; background: none; }
   .drag-handle:active { cursor: grabbing; color: #888; }
   .prop-card.drag-dragging { opacity: 0.35; }
   .prop-card.drag-over-top { border-top: 3px solid #000; }
@@ -2836,6 +2836,7 @@ const _drag = {
 };
 
 function dragStart(e, propName, handle){
+  if(e.touches && e.touches.length>1) return;
   e.stopPropagation();
   e.preventDefault();
   const card = handle.closest('.prop-card');
@@ -2871,6 +2872,7 @@ function dragStart(e, propName, handle){
 }
 
 function dragMove(e){
+  if(e.touches && e.touches.length>1) return;
   if(!_drag.active) return;
   e.preventDefault();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;

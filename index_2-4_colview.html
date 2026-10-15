@@ -173,7 +173,7 @@
     box-shadow:0 -3px 12px rgba(0,0,0,.16); gap:8px; justify-content:flex-start;
     /* 2段にはせず1行のまま。入りきらない分は横スクロールで見る */
     flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch;
-    min-width:0; max-width:100%; box-sizing:border-box; touch-action:pan-x pan-y;
+    min-width:0; max-width:100%; box-sizing:border-box; touch-action:pan-x pan-y pinch-zoom;
     scrollbar-width:none;
   }
   #collectionOrderActions::-webkit-scrollbar { display:none; }
@@ -529,10 +529,10 @@
   .property-history-actions button { flex:1 1 46%; min-height:38px; padding:6px; border:1px solid #222; background:#fff; font:inherit; font-weight:700; }
 
 
-  #collectionOrderActions { overflow:hidden; touch-action:pan-y; gap:12px; padding-left:6px; padding-right:6px; }
+  #collectionOrderActions { overflow:hidden; touch-action:pan-y pinch-zoom; gap:12px; padding-left:6px; padding-right:6px; }
   #collectionOrderActionItems {
     display:flex; gap:8px; flex:1; min-width:0;
-    overflow:hidden; touch-action:pan-y;
+    overflow:hidden; touch-action:pan-y pinch-zoom;
   }
   #collectionOrderActions .action-scroll-arrow {
     flex:0 0 28px; width:28px; min-height:44px; padding:0;
