@@ -3427,6 +3427,7 @@ window._colviewCtx = {
     <button onclick="closeHistPanel()">✕</button>
   </div>
   <div class="property-history-section">
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;"><input type="checkbox" id="propertyHistoryShowSent" checked>送信済みも表示</label>
     <div id="property-change-list"></div>
     <div class="property-history-actions">
       <button type="button" onclick="sendSelectedPropertyHistory()">選択してメール送信</button>
@@ -3445,6 +3446,9 @@ window._colviewCtx = {
   }
 
   const propertyTypeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す', collection_order:'収集順の保存・変更', excel_save:'エクセル保存' };
+  const showSent=document.getElementById('propertyHistoryShowSent');
+  try{showSent.checked=localStorage.getItem('property_history_show_sent')!=='0';}catch(e){}
+  showSent.onchange=()=>{try{localStorage.setItem('property_history_show_sent',showSent.checked?'1':'0');}catch(e){}window.renderPropertyChangeHistory();};
 
   function undoHistoryField(id,position){
     const history=getPropertyChangeHistory(),item=history.find(entry=>entry.id===id),field=item?.changes?.[position];
@@ -3472,12 +3476,12 @@ window._colviewCtx = {
   window.renderPropertyChangeHistory = function() {
     const host = document.getElementById('property-change-list');
     if (!host) return;
-    const items = getPropertyChangeHistory();
+    const items = getPropertyChangeHistory().filter(item=>showSent.checked||!item.sentAt);
     host.innerHTML = '';
     if (!items.length) {
       const empty = document.createElement('div');
       empty.id = 'hist-empty';
-      empty.textContent = '物件の変更履歴はありません';
+      empty.textContent = showSent.checked?'物件の変更履歴はありません':'未送信の変更履歴はありません';
       host.appendChild(empty);
       return;
     }
