@@ -560,6 +560,7 @@
     <select id="sheetSelector" title="シートを選択" disabled><option value="">― シート ―</option></select>
     <button class="tb-btn" id="btnReload">🔄 GITの最新を取得</button>
     <button class="tb-btn" id="btnNewRecord">新規登録</button>
+    <button class="tb-btn" id="btnPropertyTableEditor">編集用物件表</button>
     <button class="tb-btn" id="btnAssignment">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
@@ -871,6 +872,7 @@ function makeStorageId(filename, sheetName) {
   return String(filename || '') + '::' + String(sheetName || '');
 }
 
+let propertyEditorApplied=false;
 function buildStateSnapshot() {
   return {
     filename:    currentFilename,
@@ -889,7 +891,8 @@ function buildStateSnapshot() {
       days: [...assignmentFilter.days]
     },
     collectionOrders: { ...committedCollectionOrders },
-    hiddenPropertyRecords: hiddenPropertyRecords.map(record => ({...record,row:[...record.row]}))
+    hiddenPropertyRecords: hiddenPropertyRecords.map(record => ({...record,row:[...record.row]})),
+    editedPropertyTable: propertyEditorApplied ? {headers:[...headers],rows:dataArray.map(row=>[...row])} : null
   };
 }
 
@@ -990,6 +993,10 @@ function collectionOrdersFromWeekdayCells(staffSet, daySet) {
 // 保存済み状態をデータ読込後に適用
 function applyRestoredState(saved) {
   if (!saved) return;
+  if(saved.editedPropertyTable && JSON.stringify(saved.editedPropertyTable.headers)===JSON.stringify(headers) && Array.isArray(saved.editedPropertyTable.rows)){
+    dataArray=saved.editedPropertyTable.rows.map(row=>[...row]);
+    propertyEditorApplied=true;
+  }
   if (Array.isArray(saved.hiddenPropertyRecords) && hasPropertyTableHeaders()) {
     const registrationCol = findHeaderIndex(['登録番号']);
     const propertyCol = findHeaderIndex(['契約物件', '物件名', '名前']);
@@ -1175,6 +1182,7 @@ function loadHiddenPropertyRecordsFromWorkbook() {
 
 // 指定シートのデータをロードして表示（シート切替にも使用）
 function loadSheet(sheetName) {
+  propertyEditorApplied=false;
   if (!workbook) return;
   const ws  = workbook.Sheets[sheetName];
   if (!ws) return;
@@ -1206,6 +1214,7 @@ function loadSheet(sheetName) {
 
 // Excel読み込み
 function loadWorkbookData(buf, filename, sourcePath) {
+  propertyEditorApplied=false;
   try {
     const wb = XLSX.read(new Uint8Array(buf), { type:'array', cellStyles:true, cellDates:true });
     workbook = wb;
@@ -1540,7 +1549,7 @@ function getPropertyChangeHistory() {
 }
 
 function setPropertyChangeHistory(items) {
-  try { localStorage.setItem(PROPERTY_CHANGE_HISTORY_KEY, JSON.stringify(items.slice(0, 200))); } catch (e) {}
+  try { localStorage.setItem(PROPERTY_CHANGE_HISTORY_KEY, JSON.stringify(items)); } catch (e) {}
 }
 
 function recordPropertyChange(type, row, fieldChange = null) {
@@ -3514,5 +3523,6 @@ window._colviewCtx = {
 })();
 </script>
 
+<script src="property-table-editor.js?v=20261015_2_thin"></script>
 </body>
 </html>
