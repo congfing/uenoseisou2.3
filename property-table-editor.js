@@ -177,6 +177,13 @@
       rows.forEach((row,i)=>{if(i===r)return;const n=Number(row[c]);if(!hasOldOrder&&n>=order)row[c]=text(n+1);else if(hasOldOrder&&order<old&&n>=order&&n<old)row[c]=text(n+1);else if(hasOldOrder&&order>old&&n>old&&n<=order)row[c]=text(n-1);});
     }
     else if(valueAt(rows[r],c)!==next)undoStack.push(rows.map(row=>[...row]));
+    const districtCol=findHeaderIndex(['地区','地区名']);
+    if(r>=original.length&&c===districtCol&&next&&orderCol>=0&&!valueAt(rows[r],orderCol)){
+      const districtOrders=rows.filter((row,i)=>i!==r&&valueAt(row,districtCol)===next).map(row=>Number(row[orderCol])).filter(n=>Number.isInteger(n)&&n>0);
+      const order=districtOrders.length?Math.max(...districtOrders)+1:Math.max(0,...rows.map(row=>Number(row[orderCol])||0))+1;
+      rows.forEach((row,i)=>{if(i!==r&&Number(row[orderCol])>=order)row[orderCol]=text(Number(row[orderCol])+1);});
+      rows[r][orderCol]=text(order);
+    }
     rows[r][c]=next;cellDialog.close();const top=grid.scrollTop,left=grid.scrollLeft;refreshMainFilters();refreshFilterValues();render();grid.scrollTop=top;grid.scrollLeft=left;
   };
   function closeEditor(){if(changeCount()&&!confirm('未保存の変更を破棄しますか？'))return;editor.close();}
