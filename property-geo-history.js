@@ -9,6 +9,8 @@
  #geoHistoryList {flex:1;min-height:0;overflow:auto;touch-action:pan-x pan-y pinch-zoom;-webkit-overflow-scrolling:touch;}
  #geoHistoryList label {display:flex;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid #ccc;}
  #geoHistoryList input {width:22px;height:22px;flex-shrink:0;}
+ #geoHistoryList summary {padding:10px 14px;cursor:pointer;font-size:14px;}
+ #geoHistoryList details {border-bottom:1px solid #aaa;}
  #geoHistoryList .geo-history-detail {font-size:13px;line-height:1.6;overflow-wrap:anywhere;}
  `;document.head.append(style);
  const dialog=document.createElement('dialog');dialog.id='geoPointHistory';dialog.setAttribute('aria-label','地点履歴');
@@ -25,14 +27,26 @@
  }
  function render(){
    list.replaceChildren();
-   for(const item of shown()){
+   const visible=shown();
+   for(const date of Array.from(new Set(visible.map(dateOf))).sort().reverse()){
+     const group=visible.filter(item=>dateOf(item)===date);
+     const section=document.createElement('section'),heading=document.createElement('label'),dayCheck=document.createElement('input'),text=document.createElement('span');
+     dayCheck.type='checkbox';dayCheck.checked=group.every(item=>selected.has(item.name));
+     dayCheck.indeterminate=!dayCheck.checked&&group.some(item=>selected.has(item.name));
+     text.textContent=`${date}　${group.length}件`;
+     dayCheck.onchange=()=>{group.forEach(item=>{if(dayCheck.checked)selected.add(item.name);else selected.delete(item.name);});render();};
+     heading.append(dayCheck,text);section.append(heading);
+     const detailsGroup=document.createElement('details'),summary=document.createElement('summary');summary.textContent='物件を確認・個別選択';detailsGroup.append(summary);
+   for(const item of group){
      const label=document.createElement('label'),check=document.createElement('input'),body=document.createElement('div');check.type='checkbox';check.checked=selected.has(item.name);check.value=item.name;
-     check.onchange=()=>{if(check.checked)selected.add(item.name);else selected.delete(item.name);updateCount();};
+     check.onchange=()=>{if(check.checked)selected.add(item.name);else selected.delete(item.name);dayCheck.checked=group.every(entry=>selected.has(entry.name));dayCheck.indeterminate=!dayCheck.checked&&group.some(entry=>selected.has(entry.name));updateCount();};
      const title=document.createElement('div');title.textContent=item.name;
      const details=document.createElement('div');details.className='geo-history-detail';
      const route=item.staff?`${item.staff}${item.order??''} / ${item.day}　`:'';
      details.textContent=`登録日時：${item.geo.at||'不明'}\n${route}${item.geo.lat}, ${item.geo.lng}　誤差約${item.geo.acc??'不明'}m`;details.style.whiteSpace='pre-line';
-     body.append(title,details);label.append(check,body);list.append(label);
+     body.append(title,details);label.append(check,body);detailsGroup.append(label);
+   }
+     section.append(detailsGroup);list.append(section);
    }
    if(!shown().length)list.textContent='登録済みの地点はありません。';updateCount();
  }
