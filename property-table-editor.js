@@ -52,6 +52,13 @@
   districtFilter.setAttribute('aria-label','地区で絞り込み');industryFilter.setAttribute('aria-label','業種で絞り込み');
   filterColumn.before(districtFilter,industryFilter);
   const toolbar=editor.querySelector('.pte-toolbar'),title=toolbar.querySelector('h2');
+  const undo=document.createElement('button');undo.type='button';undo.id='pteUndo';undo.textContent='一つ戻す';undo.disabled=true;
+  editor.querySelector('#pteSave').before(undo);
+  let undoStack=[];
+  undo.onclick=()=>{
+    if(!undoStack.length)return;
+    rows=undoStack.pop();refreshMainFilters();refreshFilterValues();render();
+  };
   const controls=document.createElement('div');controls.id='pteControls';
   Array.from(toolbar.children).filter(element=>element!==title).forEach(element=>controls.append(element));
   const heading=document.createElement('div');heading.className='pte-heading';
@@ -90,6 +97,7 @@
   const valueAt=(row,c)=>text(row[c]);
   function changeCount(){return rows.reduce((sum,row,r)=>sum+headers.reduce((n,_,c)=>n+(valueAt(row,c)!==valueAt(original[r],c)),0),0);}
   function render(){
+    undo.disabled=!undoStack.length;
     const table=document.createElement('table'),head=document.createElement('thead'),hr=document.createElement('tr');
     headers.forEach((h,c)=>{
       const th=document.createElement('th'),button=document.createElement('button');button.type='button';
@@ -150,8 +158,10 @@
     if(c===orderCol){
       const old=Number(rows[r][c]),order=Number(next);
       if(!Number.isInteger(order)||order<1||order>rows.filter(row=>Number(row[c])>0).length){alert('現在の整理番号の範囲内で指定してください。');return;}
+      if(valueAt(rows[r],c)!==next)undoStack.push(rows.map(row=>[...row]));
       rows.forEach((row,i)=>{if(i===r)return;const n=Number(row[c]);if(order<old&&n>=order&&n<old)row[c]=text(n+1);else if(order>old&&n>old&&n<=order)row[c]=text(n-1);});
     }
+    else if(valueAt(rows[r],c)!==next)undoStack.push(rows.map(row=>[...row]));
     rows[r][c]=next;cellDialog.close();const top=grid.scrollTop,left=grid.scrollLeft;refreshMainFilters();refreshFilterValues();render();grid.scrollTop=top;grid.scrollLeft=left;
   };
   function closeEditor(){if(changeCount()&&!confirm('未保存の変更を破棄しますか？'))return;editor.close();}
@@ -182,6 +192,7 @@
       if(closeAfter)return false;
     }
     original=dataArray.map(row=>[...row]);rows=dataArray.map(row=>[...row]);
+    undoStack=[];
     if(closeAfter)editor.close();else render();
     showToast(`${count}セルを保存して適用しました`);
     return true;
@@ -197,6 +208,7 @@
   document.getElementById('btnPropertyTableEditor').onclick=()=>{
     if(!workbook||!hasPropertyTableHeaders()){showToast('物件表を読み込んでください');return;}
     source=currentFilename;sheet=currentSheetName;original=dataArray.map(row=>[...row]);rows=dataArray.map(row=>[...row]);search.value='';sortColumn=-1;sortDirection=1;
+    undoStack=[];
     filterColumn.replaceChildren(new Option('絞り込む列',''));
     headers.forEach((h,c)=>filterColumn.append(new Option(text(h),text(c))));
     districtFilter.value='';industryFilter.value='';refreshMainFilters();refreshFilterValues();render();fitEditorToViewport();editor.showModal();

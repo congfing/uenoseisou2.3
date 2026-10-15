@@ -1246,6 +1246,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
 // シートセレクタ変更イベント
 sheetSel.addEventListener('change', function() {
   if (!workbook || !this.value) return;
+  if(!confirm('シートを切り替えますか？未保存の収集順がある場合は先に保存してください。')){this.value=currentSheetName;return;}
   syncCurrentSheetToWorkbook();
   syncHiddenPropertySheetToWorkbook();
   loadSheet(this.value);
@@ -1351,6 +1352,7 @@ function loadFromGitHub(filename) {
 }
 
 gitFileSel.addEventListener('change', function() {
+  if(this.value&&this.value!=='__local__'&&!confirm('別のファイルを読み込みますか？未保存の変更は失われる場合があります。')){for(const option of this.options){if(decodeURIComponent(option.value)===currentFilename){this.value=option.value;return;}}this.value='';return;}
   if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
 });
 gitFileSel.addEventListener('pointerdown', function() {
@@ -1364,6 +1366,7 @@ gitFileSel.addEventListener('focus', function() {
 document.getElementById('localFileInput').addEventListener('change', function() {
   const file = this.files[0];
   if (!file) return;
+  if(!confirm('選択したファイルを読み込みますか？未保存の変更は失われる場合があります。')){this.value='';return;}
   showLocalFileOption(file.name);
   const reader = new FileReader();
   reader.onload = e => {
@@ -1577,6 +1580,8 @@ function recordCollectionOrderChanges(changes) {
       property:`${first.staff}／${first.day}（${changes.length}件）`
     },
     changes:changes.map(change => ({
+      registration:propertyRowInfo(change.row).registration,
+      property:change.property,
       index:change.dayCol,
       header:`${change.day}（${change.property || '名称未入力'}）`,
       before:change.before,
@@ -3441,6 +3446,29 @@ window._colviewCtx = {
 
   const propertyTypeLabels = { register:'新規登録', update:'既存情報の変更', hide:'非表示', restore:'非表示から戻す', collection_order:'収集順の保存・変更', excel_save:'エクセル保存' };
 
+  function undoHistoryField(id,position){
+    const history=getPropertyChangeHistory(),item=history.find(entry=>entry.id===id),field=item?.changes?.[position];
+    if(!field||field.revertedAt)return;
+    if(item.filename!==currentFilename||item.sheetName!==currentSheetName){alert('履歴と同じファイル・シートを開いてください。');return;}
+    const registrationCol=findHeaderIndex(['登録番号']),propertyCol=findHeaderIndex(['契約物件','物件名','名前']);
+    let candidates=[];
+    if(item.type==='update'&&registrationCol>=0)candidates=dataArray.filter(row=>String(row[registrationCol]??'')===String(item.row[registrationCol]??''));
+    if(item.type==='collection_order'){
+      if(field.registration&&registrationCol>=0)candidates=dataArray.filter(row=>String(row[registrationCol]??'')===String(field.registration));
+      else {const name=field.property||String(field.header).match(/（(.*)）$/)?.[1];if(name&&propertyCol>=0)candidates=dataArray.filter(row=>String(row[propertyCol])===name);}
+    }
+    const c=Number(field.index);
+    if(candidates.length!==1||!Number.isInteger(c)||c<0||c>=headers.length){alert('変更場所を確実に特定できないため戻せません。');return;}
+    const row=candidates[0];
+    if(String(row[c]??'')!==String(field.after??'')){alert('この項目はその後変更されています。上書きを防ぐため戻しません。');return;}
+    if(String(headers[c]).trim()==='整理番号'){alert('整理番号は他の物件と連動しています。編集用物件表で番号を変更してください。');return;}
+    if(!confirm(`${field.header}\n${field.after||'未選択'} → ${field.before||'未選択'}\nこの変更を戻しますか？`))return;
+    const before=row[c];row[c]=field.before??'';
+    const correction={id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,timestamp:Date.now(),type:'update',row:[...row],summary:propertyRowInfo(row),changes:[{index:c,header:String(headers[c]),before,after:row[c]}],filename:currentFilename,sheetName:currentSheetName,sentAt:null};
+    field.revertedAt=Date.now();history.unshift(correction);setPropertyChangeHistory(history);
+    propertyEditorApplied=true;syncCurrentSheetToWorkbook();saveState();renderTable();window.renderPropertyChangeHistory();showToast('変更を戻して保存しました');
+  }
+
   window.renderPropertyChangeHistory = function() {
     const host = document.getElementById('property-change-list');
     if (!host) return;
@@ -3478,8 +3506,17 @@ window._colviewCtx = {
           ? `保存したファイル名：${field.after || item.filename}`
           : `${field.header || `列${Number(field.index) + 1}`}：${field.before || '未選択'} → ${field.after || '未選択'}`
         );
-        detail.textContent = changeTexts.slice(0, 3).join('／') +
-          (changeTexts.length > 3 ? `／ほか${changeTexts.length - 3}件` : '');
+        changeTexts.forEach((text,index)=>{
+          const line=document.createElement('div');line.style.cssText='display:flex;align-items:center;gap:12px;margin:8px 0;';
+          const description=document.createElement('span');description.textContent=text;line.append(description);
+          if(item.type==='update'||item.type==='collection_order'){
+            const button=document.createElement('button');button.type='button';button.textContent=item.changes[index].revertedAt?'戻しました':'戻す';button.disabled=!!item.changes[index].revertedAt;
+            button.dataset.ownConfirmation='true';
+            button.style.cssText='flex-shrink:0;padding:6px 12px;background:white;color:black;border:1px solid #999;border-radius:4px;';
+            button.onclick=event=>{event.preventDefault();event.stopPropagation();undoHistoryField(item.id,index);};line.append(button);
+          }
+          detail.append(line);
+        });
         body.appendChild(detail);
       }
       label.append(checkbox, body); host.appendChild(label);
@@ -3509,6 +3546,7 @@ window._colviewCtx = {
     const history = getPropertyChangeHistory();
     const removable = history.filter(item => ids.has(item.id));
     if (!removable.length) { showToast('削除する履歴を選択してください'); return; }
+    if (!confirm(`選択した${removable.length}件の履歴を削除しますか？\n削除した履歴は元に戻せません。物件表のデータは変更されません。`)) return;
     setPropertyChangeHistory(history.filter(item => !ids.has(item.id)));
     window.renderPropertyChangeHistory();
     showToast(`${removable.length}件の履歴を削除しました`);
@@ -3535,7 +3573,8 @@ window._colviewCtx = {
 })();
 </script>
 
-<script src="property-table-editor.js?v=20261015_2_thin"></script>
+<script src="property-action-confirm.js?v=20261016_2"></script>
+<script src="property-table-editor.js?v=20261016_1"></script>
 <script src="property-geo-history.js?v=20261015_2"></script>
 </body>
 </html>
