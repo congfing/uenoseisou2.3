@@ -4,7 +4,10 @@
     #propertyTableEditor {position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#fff;color:#000;}
     #propertyTableEditor[open] {display:flex;flex-direction:column;}
     #propertyTableEditor .pte-toolbar {display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #000;flex-shrink:0;background:#fff;}
-    #propertyTableEditor h2 {margin:0;flex:1 0 100%;font-size:18px;font-weight:400;white-space:nowrap;}
+    #propertyTableEditor h2 {margin:0;flex:1;min-width:0;font-size:18px;font-weight:400;white-space:nowrap;}
+    #propertyTableEditor .pte-heading {display:flex;align-items:center;gap:12px;width:100%;}
+    #pteControls {display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%;}
+    #pteControls[hidden] {display:none;}
     #btnPropertyTableEditor {font-weight:700;}
     #propertyTableEditor,#propertyTableEditor *,#propertyCellEditor,#propertyCellEditor * {font-weight:400 !important;}
     #propertyTableEditor button,#propertyCellEditor button {background:#fff;color:#000;border:1px solid #000;border-radius:4px;padding:8px 12px;min-height:42px;font:inherit;}
@@ -42,6 +45,21 @@
   districtFilter.id='pteDistrictFilter';industryFilter.id='pteIndustryFilter';
   districtFilter.setAttribute('aria-label','地区で絞り込み');industryFilter.setAttribute('aria-label','業種で絞り込み');
   filterColumn.before(districtFilter,industryFilter);
+  const toolbar=editor.querySelector('.pte-toolbar'),title=toolbar.querySelector('h2');
+  const controls=document.createElement('div');controls.id='pteControls';
+  Array.from(toolbar.children).filter(element=>element!==title).forEach(element=>controls.append(element));
+  const heading=document.createElement('div');heading.className='pte-heading';
+  const toggle=document.createElement('button');toggle.type='button';toggle.setAttribute('aria-controls',controls.id);
+  heading.append(title,toggle);toolbar.replaceChildren(heading,controls);
+  function setControlsCollapsed(collapsed){
+    controls.hidden=collapsed;toggle.textContent=collapsed?'▼ 操作パネルを表示':'▲ 操作パネルを隠す';
+    toggle.setAttribute('aria-expanded',String(!collapsed));
+    try{localStorage.setItem('colview_editor_controls_collapsed',collapsed?'1':'0');}catch(e){}
+  }
+  let initiallyCollapsed=false;
+  try{initiallyCollapsed=localStorage.getItem('colview_editor_controls_collapsed')==='1';}catch(e){}
+  setControlsCollapsed(initiallyCollapsed);
+  toggle.onclick=()=>setControlsCollapsed(!controls.hidden);
   function refreshMainFilters(){
     [[districtFilter,['地区','地区名'],'すべての地区'],[industryFilter,['業種'],'すべての業種']].forEach(([select,names,label])=>{
       const previous=select.value,c=findHeaderIndex(names);
