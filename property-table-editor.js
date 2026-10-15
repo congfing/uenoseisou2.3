@@ -54,6 +54,23 @@
   const toolbar=editor.querySelector('.pte-toolbar'),title=toolbar.querySelector('h2');
   const undo=document.createElement('button');undo.type='button';undo.id='pteUndo';undo.textContent='一つ戻す';undo.disabled=true;
   editor.querySelector('#pteSave').before(undo);
+  const add=document.createElement('button');add.type='button';add.id='pteNewRecord';add.textContent='新規登録';undo.before(add);
+  add.onclick=()=>{
+    const registrationCol=findHeaderIndex(['登録番号']),orderCol=findHeaderIndex(['整理番号']);
+    if(registrationCol<0){alert('登録番号の列がありません。');return;}
+    const input=prompt('新しい物件の登録番号を入力してください。');if(input===null)return;
+    const registration=input.trim();
+    if(!/^\d+$/.test(registration)||Number(registration)<1){alert('登録番号は正の整数で入力してください。');return;}
+    const duplicate=row=>Number(row[registrationCol])===Number(registration);
+    if(rows.some(duplicate)||hiddenPropertyRecords.some(record=>record.sourceSheet===sheet&&duplicate(record.row))){alert('この登録番号は登録済みです（非表示の物件を含みます）。');return;}
+    if(!confirm(`登録番号 ${registration} の空の物件行を用意しますか？`))return;
+    undoStack.push(rows.map(row=>[...row]));
+    const row=headers.map(()=>'');row[registrationCol]=String(Number(registration));
+    if(orderCol>=0)row[orderCol]=String(Math.max(0,...rows.map(row=>Number(row[orderCol])||0))+1);
+    rows.push(row);search.value='';filterColumn.value='';districtFilter.value='';industryFilter.value='';
+    sortColumn=orderCol;sortDirection=1;refreshMainFilters();refreshFilterValues();render();
+    grid.scrollTop=grid.scrollHeight;
+  };
   let undoStack=[];
   undo.onclick=()=>{
     if(!undoStack.length)return;
@@ -94,7 +111,7 @@
   }
   let rows=[],original=[],source='',sheet='',activeCell=null;
   const text=v=>String(v??'');
-  const valueAt=(row,c)=>text(row[c]);
+  const valueAt=(row,c)=>text(row?.[c]);
   function changeCount(){return rows.reduce((sum,row,r)=>sum+headers.reduce((n,_,c)=>n+(valueAt(row,c)!==valueAt(original[r],c)),0),0);}
   function render(){
     undo.disabled=!undoStack.length;
@@ -178,6 +195,7 @@
     const count=changeCount();
     const orderCol=findHeaderIndex(['整理番号']);
     rows.forEach((row,r)=>{
+      if(r>=original.length){recordPropertyChange('register',row);return;}
       headers.forEach((h,c)=>{
         if(valueAt(row,c)!==valueAt(original[r],c))rememberExistingPropertyChange(row,{index:c,header:text(h),before:valueAt(original[r],c),after:valueAt(row,c)});
       });
