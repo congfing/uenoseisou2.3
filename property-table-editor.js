@@ -58,11 +58,8 @@
   add.onclick=()=>{
     const registrationCol=findHeaderIndex(['登録番号']),orderCol=findHeaderIndex(['整理番号']);
     if(registrationCol<0){alert('登録番号の列がありません。');return;}
-    const input=prompt('新しい物件の登録番号を入力してください。');if(input===null)return;
-    const registration=input.trim();
-    if(!/^\d+$/.test(registration)||Number(registration)<1){alert('登録番号は正の整数で入力してください。');return;}
-    const duplicate=row=>Number(row[registrationCol])===Number(registration);
-    if(rows.some(duplicate)||hiddenPropertyRecords.some(record=>record.sourceSheet===sheet&&duplicate(record.row))){alert('この登録番号は登録済みです（非表示の物件を含みます）。');return;}
+    const registeredRows=[...rows,...hiddenPropertyRecords.filter(record=>record.sourceSheet===sheet).map(record=>record.row)];
+    const registration=String(Math.max(0,...registeredRows.map(row=>Number(row[registrationCol])||0))+1);
     if(!confirm(`登録番号 ${registration} の空の物件行を用意しますか？`))return;
     undoStack.push(rows.map(row=>[...row]));
     const row=headers.map(()=>'');row[registrationCol]=String(Number(registration));
