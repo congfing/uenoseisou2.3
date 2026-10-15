@@ -3477,6 +3477,9 @@ window._colviewCtx = {
     const host = document.getElementById('property-change-list');
     if (!host) return;
     const items = getPropertyChangeHistory().filter(item=>showSent.checked||!item.sentAt);
+    const dateKey=item=>new Date(item.timestamp).toLocaleDateString('sv-SE',{timeZone:'Asia/Tokyo'});
+    const expanded=new Set([...host.querySelectorAll('details[open][data-tree-key]')].map(node=>node.dataset.treeKey));
+    const checkedIds=new Set(selectedPropertyHistoryIds());
     host.innerHTML = '';
     if (!items.length) {
       const empty = document.createElement('div');
@@ -3492,18 +3495,37 @@ window._colviewCtx = {
     items.forEach(item=>{
       const orderOnly=item.type==='update'&&item.changes?.length&&item.changes.every(field=>String(field.header).trim()==='整理番号');
       if(!orderOnly){displayItems.push(item);return;}
-      const key=JSON.stringify([item.filename,item.sheetName,item.sentAt?'sent':'unsent']);
+      const key=JSON.stringify([dateKey(item),item.filename,item.sheetName,item.sentAt?'sent':'unsent']);
       let group=orderGroups.get(key);
       if(!group){group={...item,summary:{property:'整理番号の変更',district:'',registration:'',order:0},groupIds:[],changes:[],groupedOrders:true};orderGroups.set(key,group);displayItems.push(group);}
       group.groupIds.push(item.id);
       item.changes.forEach(field=>group.changes.push({...field,header:`${item.summary?.property||'物件'}：整理番号`}));
     });
+    const dates=new Map();
+    [...new Set(displayItems.map(dateKey))].sort().reverse().forEach(date=>{
+      const section=document.createElement('details'),summary=document.createElement('summary'),check=document.createElement('input'),title=document.createElement('span'),children=document.createElement('div');
+      section.dataset.treeKey=date;section.open=expanded.has(date);section.style.cssText='border-bottom:1px solid #aaa;padding:10px 0;';
+      summary.style.cssText='display:flex;align-items:center;gap:12px;cursor:pointer;padding:8px;';
+      check.type='checkbox';check.className='property-history-date-check';check.setAttribute('aria-label',`${date}を全選択`);check.style.cssText='width:22px;height:22px;';
+      check.onclick=event=>event.stopPropagation();
+      const groups=displayItems.filter(item=>dateKey(item)===date);
+      title.textContent=`${date}（${groups.length}件）`;
+      const opener=document.createElement('span');opener.textContent=section.open?'閉じる':'開く';opener.style.marginLeft='auto';section.addEventListener('toggle',()=>opener.textContent=section.open?'閉じる':'開く');
+      children.style.cssText='margin-left:16px;border-left:1px solid #ccc;padding-left:8px;';
+      summary.append(check,title,opener);section.append(summary,children);host.append(section);
+      check.onchange=()=>{children.querySelectorAll('.property-change-check').forEach(input=>input.checked=check.checked);check.indeterminate=false;};
+      dates.set(date,{children,check});
+    });
+    function syncDate(date){const group=dates.get(date),checks=[...group.children.querySelectorAll('.property-change-check')];group.check.checked=checks.length>0&&checks.every(input=>input.checked);group.check.indeterminate=!group.check.checked&&checks.some(input=>input.checked);}
     displayItems.forEach(item => {
-      const label = document.createElement('label');
+      const label = document.createElement('div');
       label.className = `property-change-item${item.sentAt ? ' sent' : ''}`;
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox'; checkbox.className = 'property-change-check'; checkbox.value = item.id;
       if(item.groupIds)checkbox.dataset.historyIds=JSON.stringify(item.groupIds);
+      checkbox.checked=(item.groupIds||[item.id]).every(id=>checkedIds.has(id));
+      checkbox.setAttribute('aria-label',`${item.summary?.property||'変更'}を選択`);
+      checkbox.onchange=()=>syncDate(dateKey(item));
       const body = document.createElement('div');
       const name = document.createElement('div'); name.className = 'property-change-name';
       const savedSummary = item.summary || {};
@@ -3533,10 +3555,11 @@ window._colviewCtx = {
           }
           detail.append(line);
         });
-        if(item.groupedOrders){const folded=document.createElement('details'),summary=document.createElement('summary');summary.textContent=`変更内容を確認（${item.changes.length}件）`;folded.append(summary,detail);body.append(folded);}else body.appendChild(detail);
+        const folded=document.createElement('details'),summary=document.createElement('summary');folded.dataset.treeKey=item.id;folded.open=expanded.has(item.id);summary.textContent=`変更内容を開く（${item.changes.length}件）`;folded.append(summary,detail);body.append(folded);
       }
-      label.append(checkbox, body); host.appendChild(label);
+      label.append(checkbox, body); dates.get(dateKey(item)).children.appendChild(label);
     });
+    dates.forEach((_,date)=>syncDate(date));
   };
 
   function selectedPropertyHistoryIds() {
