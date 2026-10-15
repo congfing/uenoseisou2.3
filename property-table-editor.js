@@ -175,7 +175,7 @@
   function applyEditor(closeAfter=true){
     if(source!==currentFilename||sheet!==currentSheetName){alert('読込み中の物件表が変わりました。開き直してください。');return false;}
     if(JSON.stringify(dataArray)!==JSON.stringify(original)){alert('編集中に元の表が更新されました。変更を破棄して開き直してください。');return false;}
-    const count=changeCount();if(!count){if(closeAfter)editor.close();return true;}
+    const count=changeCount();
     const orderCol=findHeaderIndex(['整理番号']);
     rows.forEach((row,r)=>{
       headers.forEach((h,c)=>{
@@ -183,8 +183,8 @@
       });
     });
     dataArray=rows.map(row=>[...row]);
-    const orderChanged=orderCol>=0&&rows.some((row,r)=>valueAt(row,orderCol)!==valueAt(original[r],orderCol));
-    if(orderChanged)dataArray.sort((a,b)=>(Number(a[orderCol])||Number.MAX_SAFE_INTEGER)-(Number(b[orderCol])||Number.MAX_SAFE_INTEGER));
+    if(orderCol>=0)dataArray.sort((a,b)=>(Number(a[orderCol])||Number.MAX_SAFE_INTEGER)-(Number(b[orderCol])||Number.MAX_SAFE_INTEGER));
+    sortColumn=orderCol;sortDirection=1;
     propertyEditorApplied=true;syncCurrentSheetToWorkbook();saveState();renderTable();
     const saved=loadSavedState();
     if(!saved?.editedPropertyTable||JSON.stringify(saved.editedPropertyTable.rows)!==JSON.stringify(dataArray)){
