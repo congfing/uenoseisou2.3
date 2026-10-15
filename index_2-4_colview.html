@@ -32,21 +32,19 @@
   #toolbar-inner {
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
     padding:7px 14px;
-    overflow:hidden; max-height:300px;
+    overflow-y:auto; max-height:60vh;
     transition: max-height 0.22s ease, padding 0.22s ease;
   }
   #toolbar.collapsed #toolbar-inner {
-    max-height:0; padding-top:0; padding-bottom:0;
+    display:none;
   }
   #toolbar-toggle {
-    display:flex; align-items:center; justify-content:center;
-    width:100%; padding:2px 0;
-    border:none; border-top:1px solid #b5cef5;
-    cursor:pointer; font-size:10px; color:#4a6fa5;
+    flex:0 0 auto; padding:5px 10px;
+    border:1px solid #222; border-radius:4px;
+    cursor:pointer; font-size:12px; color:#000; background:#fff;
     font-family:inherit; transition:background 0.15s;
   }
   #toolbar-toggle:active { background:#bdd6f5; }
-  #toolbar.collapsed #toolbar-toggle { border-top:none; padding:4px 0; }
   .tb-btn {
     padding:4px 10px; border:1px solid #a0b8d8; border-radius:4px;
     cursor:pointer; font-size:11px; font-family:inherit; white-space:nowrap;
@@ -531,17 +529,14 @@
 
   #collectionOrderActions { overflow:hidden; touch-action:pan-y pinch-zoom; gap:12px; padding-left:6px; padding-right:6px; }
   #collectionOrderActionItems {
-    display:flex; gap:8px; flex:1; min-width:0;
-    overflow:hidden; touch-action:pan-y pinch-zoom;
+    display:flex; flex-wrap:wrap; gap:8px; flex:1; min-width:0;
+    overflow:visible; touch-action:pan-y pinch-zoom;
   }
-  #collectionOrderActions .action-scroll-arrow {
-    flex:0 0 28px; width:28px; min-height:44px; padding:0;
-    font-size:22px; font-weight:400;
+  #collectionOrderActionItems button {
+    flex:0 0 auto; min-height:0; padding:4px 10px;
+    font-size:11px; font-weight:400;
   }
-  #collectionOrderActionItems button.action-selected {
-    box-shadow:inset 0 0 0 2px #000;
-    border-color:#000;
-  }
+  #toolbar-inner #collectionOrderActions {flex:0 0 100%;width:100%;box-shadow:none;border-top:1px solid #999;border-bottom:0;margin-top:4px;padding-top:10px;}
 </style>
 
 </head>
@@ -550,6 +545,7 @@
 <div id="app-header">
   <h1>📋 列選択ビューアv2-4</h1>
   <button type="button" id="backBtn" onclick="closeApp()">✕ 閉じる</button>
+  <button type="button" id="toolbar-toggle" onclick="toggleToolbar()" aria-controls="toolbar-inner" aria-expanded="true">▲ 操作パネルを隠す</button>
 </div>
 
 <div id="toolbar">
@@ -561,6 +557,7 @@
     <button class="tb-btn" id="btnReload">🔄 GITの最新を取得</button>
     <button class="tb-btn" id="btnNewRecord">新規登録</button>
     <button class="tb-btn" id="btnPropertyTableEditor">編集用物件表</button>
+    <button type="button" class="tb-btn" id="btnGeoMail" onclick="sendGeoPointsMail()">地点データをメール送信</button>
     <button class="tb-btn" id="btnAssignment">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
@@ -573,7 +570,6 @@
     <button class="tb-btn" onclick="toggleHistPanel()" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:700;">📌 履歴</button>
     <span id="statusBar">— 読み込み中 —</span>
   </div>
-  <button id="toolbar-toggle" onclick="toggleToolbar()">▲ 閉じる</button>
 </div>
 
 <div id="assignmentDialog" role="dialog" aria-modal="true" aria-labelledby="assignmentDialogTitle">
@@ -664,7 +660,6 @@
 </div>
 
 <div id="collectionOrderActions" aria-label="収集順の変更操作">
-  <button type="button" class="action-scroll-arrow" title="左へ移動" aria-label="左へ移動" onclick="moveCollectionActions(-1)">‹</button>
   <div id="collectionOrderActionItems">
   <button type="button" id="collectionOrderUndo">一つ戻る</button>
   <button type="button" id="collectionOrderReset">全て戻す</button>
@@ -673,7 +668,6 @@
   <button type="button" id="collectionOrderCommit">メール送信</button>
   <button type="button" id="collectionOrderSaveExit">閉じる</button>
   </div>
-  <button type="button" class="action-scroll-arrow" title="右へ移動" aria-label="右へ移動" onclick="moveCollectionActions(1)">›</button>
 </div>
 
 <!-- フィルター＋ソートポップアップ -->
@@ -698,28 +692,8 @@
 <div id="toast"></div>
 
 <script>
-let selectedCollectionAction=0;
-function selectCollectionAction(index,behavior='smooth') {
-  const items=document.getElementById('collectionOrderActionItems');
-  const buttons=Array.from(items.children);
-  selectedCollectionAction=Math.max(0,Math.min(buttons.length-1,index));
-  buttons.forEach((button,i)=>{
-    button.classList.toggle('action-selected',i===selectedCollectionAction);
-    if(i===selectedCollectionAction)button.setAttribute('aria-current','true');
-    else button.removeAttribute('aria-current');
-  });
-  const button=buttons[selectedCollectionAction];
-  const viewport=items.getBoundingClientRect();
-  const rect=button.getBoundingClientRect();
-  const scale=viewport.width/items.clientWidth||1;
-  const left=items.scrollLeft+(rect.left-viewport.left)/scale;
-  if(left<items.scrollLeft)items.scrollTo({left,behavior});
-  else if(left+button.offsetWidth>items.scrollLeft+items.clientWidth)items.scrollTo({left:left+button.offsetWidth-items.clientWidth,behavior});
-}
-function moveCollectionActions(direction) {
-  selectCollectionAction(selectedCollectionAction+direction);
-}
 const GITHUB_REPO_LABEL = 'github.com/congfing/uenoseisou2.3';
+document.getElementById('toolbar-inner').append(document.getElementById('collectionOrderActions'));
 const DEFAULT_GITHUB_XLSX = '2026年度物件表_KMN置換.xlsx';
 const GITHUB_API_URL  = 'https://api.github.com/repos/congfing/uenoseisou2.3/contents/';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/congfing/uenoseisou2.3/main/';
@@ -2159,7 +2133,7 @@ function adjustWrapperHeight() {
   const wrapper = document.getElementById('tableWrapper');
   if (!wrapper) return;
   const orderActions = document.getElementById('collectionOrderActions');
-  const actionsH = orderActions && orderActions.classList.contains('active') ? orderActions.getBoundingClientRect().height : 0;
+  const actionsH = 0; // 操作列は上部パネル内。表のtopに高さが含まれる。
   const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   // 表の上にあるもの（ヘッダー・ツールバー・列パネル・上部タブバー）を
   // 1つずつ足すと数え漏れが出るので、表の実際の位置から高さを決める。
@@ -2432,6 +2406,36 @@ function saveGeoStore(store) {
   try { localStorage.setItem(GEO_STORAGE_KEY, JSON.stringify(store)); } catch (e) {}
 }
 function getGeo(name) { return loadGeoStore()[name] || null; }
+function sendGeoPointsMail() {
+  let recipients=[];
+  try{
+    const settings=JSON.parse(localStorage.getItem('keiryo_mail_list')||'[]');
+    recipients=Array.isArray(settings)?settings.filter(item=>item?.enabled&&typeof item.addr==='string').map(item=>item.addr.trim()).filter(Boolean):[];
+  }catch(e){}
+  recipients=[...new Set(recipients)];
+  if(!recipients.length){showToast('メール設定で送信先を有効にしてください');return;}
+  const store=loadGeoStore();
+  const propertyCol=findHeaderIndex(['契約物件','物件名','名前']);
+  const districtCol=findHeaderIndex(['地区','地区名']);
+  const registrationCol=findHeaderIndex(['登録番号']);
+  const entries=assignmentFilter.active
+    ? displayedAssignmentRows.map(item=>({name:String(item.row[propertyCol]||'').trim(),row:item.row,staff:item.staff,day:item.day,order:normalizedCollectionOrder(committedCollectionOrders[item.key])}))
+    : Object.keys(store).map(name=>({name,row:dataArray.find(row=>String(row[propertyCol]||'').trim()===name)||[],staff:'',day:'',order:null}));
+  const registered=entries.filter(item=>Number.isFinite(store[item.name]?.lat)&&Number.isFinite(store[item.name]?.lng));
+  if(!registered.length){showToast('登録済みの地点データがありません');return;}
+  if(!confirm(`地点データ${registered.length}件（緯度・経度）を含むメールを開きます。\n送信先：\n${recipients.join('\n')}\n\nこの宛先でよいですか？`))return;
+  const scope=assignmentFilter.active?`${[...assignmentFilter.staff].join('・')} ${[...assignmentFilter.days].join('・')}`:'全登録地点';
+  const lines=['【物件表 地点データ】',`ファイル：${currentFilename}`,`シート：${currentSheetName}`,`対象：${scope}`,`登録済み：${registered.length}件 / 対象：${entries.length}件`,''];
+  registered.forEach(item=>{
+    const geo=store[item.name];
+    lines.push(`【${item.name}】`,... (item.staff?[`担当者：${item.staff}`,`曜日：${item.day}`,`収集順：${item.order??'未設定'}`]:[]),`登録番号：${item.row[registrationCol]??''}`,`地区：${item.row[districtCol]??''}`,`緯度：${geo.lat}`,`経度：${geo.lng}`,`精度：${geo.acc??'不明'} m`,`登録日時：${geo.at||''}`,`地図：https://www.google.com/maps?q=${geo.lat},${geo.lng}`,'');
+  });
+  const missing=entries.filter(item=>!Number.isFinite(store[item.name]?.lat)||!Number.isFinite(store[item.name]?.lng));
+  if(missing.length)lines.push('【地点未登録】',...missing.map(item=>`${item.order??'-'}：${item.name}`));
+  const link=document.createElement('a');
+  link.href=`mailto:${recipients.join(',')}?subject=${encodeURIComponent(`物件表 地点データ ${scope}`)}&body=${encodeURIComponent(lines.join('\r\n'))}`;
+  link.target='_top';link.rel='noopener';link.style.display='none';document.body.append(link);link.click();setTimeout(()=>link.remove(),1000);
+}
 
 function updateGeoButtonState(btn, name) {
   const g = getGeo(name);
@@ -3008,9 +3012,7 @@ function renderTable() {
   });
 
   const actions=document.getElementById('collectionOrderActions');
-  const wasActive=actions.classList.contains('active');
   actions.classList.toggle('active', assignmentFilter.active);
-  if(assignmentFilter.active)selectCollectionAction(wasActive?selectedCollectionAction:0,'auto');
 
   dataTable.style.display = rows.length ? '' : 'none';
   emptyMsg.style.display  = rows.length ? 'none' : 'block';
@@ -3312,6 +3314,7 @@ window.addEventListener('resize', adjustWrapperHeight);
 
   function adjustHeights() {
     const hdH = header ? header.offsetHeight : 44;
+    toolbar.style.top = hdH + 'px';
     const tbH = toolbar.offsetHeight;
     const cpH = colPanel.classList.contains('active') ? colPanel.offsetHeight : 0;
     colPanel.style.top = (hdH + tbH) + 'px';
@@ -3322,7 +3325,8 @@ window.addEventListener('resize', adjustWrapperHeight);
 
   window.toggleToolbar = function() {
     const collapsed = toolbar.classList.toggle('collapsed');
-    toggleBtn.textContent = collapsed ? '▼ 開く' : '▲ 閉じる';
+    toggleBtn.textContent = collapsed ? '▼ 操作パネルを表示' : '▲ 操作パネルを隠す';
+    toggleBtn.setAttribute('aria-expanded',String(!collapsed));
     setTimeout(adjustHeights, 230);
     try { localStorage.setItem('colview_toolbar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
   };
@@ -3331,7 +3335,8 @@ window.addEventListener('resize', adjustWrapperHeight);
   try {
     if (localStorage.getItem('colview_toolbar_collapsed') === '1') {
       toolbar.classList.add('collapsed');
-      toggleBtn.textContent = '▼ 開く';
+      toggleBtn.textContent = '▼ 操作パネルを表示';
+      toggleBtn.setAttribute('aria-expanded','false');
     }
   } catch(e) {}
 
