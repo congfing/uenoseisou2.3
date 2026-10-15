@@ -63,7 +63,6 @@
     if(!confirm(`登録番号 ${registration} の空の物件行を用意しますか？`))return;
     undoStack.push(rows.map(row=>[...row]));
     const row=headers.map(()=>'');row[registrationCol]=String(Number(registration));
-    if(orderCol>=0)row[orderCol]=String(Math.max(0,...rows.map(row=>Number(row[orderCol])||0))+1);
     rows.push(row);search.value='';filterColumn.value='';districtFilter.value='';industryFilter.value='';
     sortColumn=orderCol;sortDirection=1;refreshMainFilters();refreshFilterValues();render();
     grid.scrollTop=grid.scrollHeight;
@@ -171,9 +170,11 @@
     if(c===registrationCol&&(!next||rows.some((row,i)=>i!==r&&valueAt(row,c)===next))){alert('登録番号は空欄・重複にできません。');return;}
     if(c===orderCol){
       const old=Number(rows[r][c]),order=Number(next);
-      if(!Number.isInteger(order)||order<1||order>rows.filter(row=>Number(row[c])>0).length){alert('現在の整理番号の範囲内で指定してください。');return;}
+      const hasOldOrder=Number.isInteger(old)&&old>0;
+      const maxOrder=Math.max(0,...rows.map(row=>Number(row[c])||0))+(hasOldOrder?0:1);
+      if(!Number.isInteger(order)||order<1||order>maxOrder){alert('現在の整理番号の範囲内で指定してください。');return;}
       if(valueAt(rows[r],c)!==next)undoStack.push(rows.map(row=>[...row]));
-      rows.forEach((row,i)=>{if(i===r)return;const n=Number(row[c]);if(order<old&&n>=order&&n<old)row[c]=text(n+1);else if(order>old&&n>old&&n<=order)row[c]=text(n-1);});
+      rows.forEach((row,i)=>{if(i===r)return;const n=Number(row[c]);if(!hasOldOrder&&n>=order)row[c]=text(n+1);else if(hasOldOrder&&order<old&&n>=order&&n<old)row[c]=text(n+1);else if(hasOldOrder&&order>old&&n>old&&n<=order)row[c]=text(n-1);});
     }
     else if(valueAt(rows[r],c)!==next)undoStack.push(rows.map(row=>[...row]));
     rows[r][c]=next;cellDialog.close();const top=grid.scrollTop,left=grid.scrollLeft;refreshMainFilters();refreshFilterValues();render();grid.scrollTop=top;grid.scrollLeft=left;
