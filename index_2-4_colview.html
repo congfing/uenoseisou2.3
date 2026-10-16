@@ -1244,9 +1244,8 @@ function loadWorkbookData(buf, filename, sourcePath) {
 }
 
 // シートセレクタ変更イベント
-sheetSel.addEventListener('change', function() {
+sheetSel.addEventListener('change', async function() {
   if (!workbook || !this.value) return;
-  if(!confirm('シートを切り替えますか？未保存の収集順がある場合は先に保存してください。')){this.value=currentSheetName;return;}
   syncCurrentSheetToWorkbook();
   syncHiddenPropertySheetToWorkbook();
   loadSheet(this.value);
@@ -1351,8 +1350,7 @@ function loadFromGitHub(filename) {
     .finally(() => { btn.textContent='🔄 GITの最新を取得'; btn.disabled=false; });
 }
 
-gitFileSel.addEventListener('change', function() {
-  if(this.value&&this.value!=='__local__'&&!confirm('別のファイルを読み込みますか？未保存の変更は失われる場合があります。')){for(const option of this.options){if(decodeURIComponent(option.value)===currentFilename){this.value=option.value;return;}}this.value='';return;}
+gitFileSel.addEventListener('change', async function() {
   if (this.value && this.value !== '__local__') loadFromGitHub(decodeURIComponent(this.value));
 });
 gitFileSel.addEventListener('pointerdown', function() {
@@ -1363,10 +1361,9 @@ gitFileSel.addEventListener('focus', function() {
 });
 
 // ローカルファイルを開く
-document.getElementById('localFileInput').addEventListener('change', function() {
+document.getElementById('localFileInput').addEventListener('change', async function() {
   const file = this.files[0];
   if (!file) return;
-  if(!confirm('選択したファイルを読み込みますか？未保存の変更は失われる場合があります。')){this.value='';return;}
   showLocalFileOption(file.name);
   const reader = new FileReader();
   reader.onload = e => {
@@ -2418,7 +2415,7 @@ function getGeoHistoryEntries(){
     return {name,row:route?.row||dataArray.find(row=>String(row[propertyCol]||'').trim()===name)||[],staff:route?.staff||'',day:route?.day||'',order:route?normalizedCollectionOrder(committedCollectionOrders[route.key]):null,geo:store[name]};
   }).sort((a,b)=>String(b.geo.at||'').localeCompare(String(a.geo.at||''))||a.name.localeCompare(b.name,'ja'));
 }
-function sendGeoPointsMail(selectedNames) {
+async function sendGeoPointsMail(selectedNames) {
   let recipients=[];
   try{
     const settings=JSON.parse(localStorage.getItem('keiryo_mail_list')||'[]');
@@ -2435,7 +2432,7 @@ function sendGeoPointsMail(selectedNames) {
     : Object.keys(store).map(name=>({name,row:dataArray.find(row=>String(row[propertyCol]||'').trim()===name)||[],staff:'',day:'',order:null}));
   const registered=entries.filter(item=>Number.isFinite(store[item.name]?.lat)&&Number.isFinite(store[item.name]?.lng));
   if(!registered.length){showToast('登録済みの地点データがありません');return;}
-  if(!confirm(`地点データ${registered.length}件（緯度・経度）を含むメールを開きます。\n送信先：\n${recipients.join('\n')}\n\nこの宛先でよいですか？`))return;
+  if(!await propertyConfirm(`地点データ${registered.length}件（緯度・経度）を含むメールを開きます。\n送信先：\n${recipients.join('\n')}\n\nこの宛先でよいですか？`))return;
   const scope=Array.isArray(selectedNames)?'地点履歴から選択':assignmentFilter.active?`${[...assignmentFilter.staff].join('・')} ${[...assignmentFilter.days].join('・')}`:'全登録地点';
   const lines=['【物件表 地点データ】',`ファイル：${currentFilename}`,`シート：${currentSheetName}`,`対象：${scope}`,`登録済み：${registered.length}件 / 対象：${entries.length}件`,''];
   registered.forEach(item=>{
@@ -2594,10 +2591,10 @@ const KEIRYO_RETURN_APP_KEY = 'ueno_keiryo_return_app';
 /* 計量データ入力は別タブで開く。
    同じタブで開くと物件表が読み込み直しになり、ツールバー（担当者・曜日の枠）が閉じ、
    スクロール位置も先頭に戻ってしまうため。物件は3-20の「物件リスト２列」から選ぶ。 */
-function openKeiryouEntry() {
+async function openKeiryouEntry() {
   // 別タブが開けない環境では同じタブに切り替わるので、下書きの確認は先に出す。
   if (hasUncommittedCollectionOrders()) {
-    if (!confirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われることがあります。開きますか？')) return;
+    if (!await propertyConfirm('未保存の収集順があります。\n先に「保存して反映」を押してください。\n\nこのまま計量を開くと、未保存の収集順は失われることがあります。開きますか？')) return;
   }
   saveState();
   // index.html のパネルの中で動いているときは、パネルに計量データ入力を開いてもらう。
@@ -2690,13 +2687,13 @@ function geoRegisteredCount() {
   return { done, total };
 }
 
-function registerGeoPoint(btn, name) {
+async function registerGeoPoint(btn, name) {
   if (!name) { showToast('物件名が取得できません'); return; }
   const shared=sharedGeoStatus(btn.dataset.registration);
   if(shared){alert(`この物件は登録済みです（${shared.at}）。\n重複登録を防ぐため、新たな地点登録は行いません。修正が必要な場合はお知らせください。`);return;}
   // 登録済みをもう一度押したら解除（間違えて押したときのやり直し用）
   if (getGeo(name)) {
-    if (!confirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`)) return;
+    if (!await propertyConfirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`)) return;
     const store = loadGeoStore();
     delete store[name];
     saveGeoStore(store);
@@ -3456,7 +3453,7 @@ window._colviewCtx = {
   try{showSent.checked=localStorage.getItem('property_history_show_sent')!=='0';}catch(e){}
   showSent.onchange=()=>{try{localStorage.setItem('property_history_show_sent',showSent.checked?'1':'0');}catch(e){}window.renderPropertyChangeHistory();};
 
-  function undoHistoryField(id,position){
+  async function undoHistoryField(id,position){
     const history=getPropertyChangeHistory(),item=history.find(entry=>entry.id===id),field=item?.changes?.[position];
     if(!field||field.revertedAt)return;
     if(item.filename!==currentFilename||item.sheetName!==currentSheetName){alert('履歴と同じファイル・シートを開いてください。');return;}
@@ -3472,7 +3469,7 @@ window._colviewCtx = {
     const row=candidates[0];
     if(String(row[c]??'')!==String(field.after??'')){alert('この項目はその後変更されています。上書きを防ぐため戻しません。');return;}
     if(String(headers[c]).trim()==='整理番号'){alert('整理番号は他の物件と連動しています。編集用物件表で番号を変更してください。');return;}
-    if(!confirm(`${field.header}\n${field.after||'未選択'} → ${field.before||'未選択'}\nこの変更を戻しますか？`))return;
+    if(!await propertyConfirm(`${field.header}\n${field.after||'未選択'} → ${field.before||'未選択'}\nこの変更を戻しますか？`))return;
     const before=row[c];row[c]=field.before??'';
     const correction={id:`pc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,timestamp:Date.now(),type:'update',row:[...row],summary:propertyRowInfo(row),changes:[{index:c,header:String(headers[c]),before,after:row[c]}],filename:currentFilename,sheetName:currentSheetName,sentAt:null};
     field.revertedAt=Date.now();history.unshift(correction);setPropertyChangeHistory(history);
@@ -3586,12 +3583,12 @@ window._colviewCtx = {
     showToast(`${selected.length}件を送信済みにしました`);
   };
 
-  window.removeSelectedPropertyHistory = function() {
+  window.removeSelectedPropertyHistory = async function() {
     const ids = new Set(selectedPropertyHistoryIds());
     const history = getPropertyChangeHistory();
     const removable = history.filter(item => ids.has(item.id));
     if (!removable.length) { showToast('削除する履歴を選択してください'); return; }
-    if (!confirm(`選択した${removable.length}件の履歴を削除しますか？\n削除した履歴は元に戻せません。物件表のデータは変更されません。`)) return;
+    if (!await propertyConfirm(`選択した${removable.length}件の履歴を削除しますか？\n削除した履歴は元に戻せません。物件表のデータは変更されません。`)) return;
     setPropertyChangeHistory(history.filter(item => !ids.has(item.id)));
     window.renderPropertyChangeHistory();
     showToast(`${removable.length}件の履歴を削除しました`);
@@ -3619,8 +3616,8 @@ window._colviewCtx = {
 </script>
 
 <script src="property-geo-status.js?v=20261016_1"></script>
-<script src="property-action-confirm.js?v=20261016_2"></script>
-<script src="property-table-editor.js?v=20261016_9"></script>
+<script src="property-confirm-panel.js?v=20261016_2"></script>
+<script src="property-table-editor.js?v=20261016_10"></script>
 <script src="property-geo-history.js?v=20261015_2"></script>
 </body>
 </html>

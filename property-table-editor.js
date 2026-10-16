@@ -56,12 +56,12 @@
   const undo=document.createElement('button');undo.type='button';undo.id='pteUndo';undo.textContent='一つ戻す';undo.disabled=true;
   editor.querySelector('#pteSave').before(undo);
   const add=document.createElement('button');add.type='button';add.id='pteNewRecord';add.textContent='新規登録';undo.before(add);
-  add.onclick=()=>{
+  add.onclick=async()=>{
     const registrationCol=findHeaderIndex(['登録番号']),orderCol=findHeaderIndex(['整理番号']);
     if(registrationCol<0){alert('登録番号の列がありません。');return;}
     const registeredRows=[...rows,...hiddenPropertyRecords.filter(record=>record.sourceSheet===sheet).map(record=>record.row)];
     const registration=String(Math.max(0,...registeredRows.map(row=>Number(row[registrationCol])||0))+1);
-    if(!confirm(`登録番号 ${registration} の空の物件行を用意しますか？`))return;
+    if(!await propertyConfirm(`登録番号 ${registration} の空の物件行を用意しますか？`))return;
     undoStack.push(rows.map(row=>[...row]));
     const row=headers.map(()=>'');row[registrationCol]=String(Number(registration));
     rows.push(row);search.value='';filterColumn.value='';districtFilter.value='';industryFilter.value='';
@@ -198,7 +198,7 @@
     }
     rows[r][c]=next;cellDialog.close();const top=grid.scrollTop,left=grid.scrollLeft;refreshMainFilters();refreshFilterValues();render();grid.scrollTop=top;grid.scrollLeft=left;
   };
-  function closeEditor(){if(changeCount()&&!confirm('未保存の変更を破棄しますか？'))return;editor.close();}
+  async function closeEditor(){if(changeCount()&&!await propertyConfirm('未保存の変更を破棄しますか？'))return;editor.close();}
   editor.querySelector('#pteClose').onclick=closeEditor;
   editor.addEventListener('cancel',event=>{event.preventDefault();closeEditor();});
   search.oninput=render;
