@@ -2453,12 +2453,14 @@ function updateGeoButtonState(btn, name) {
   btn.disabled = false;
   if (g||shared) {
     btn.textContent = '登録済み';
+    btn.style.setProperty('color', '#c62828', 'important');
     btn.classList.add('registered');
     // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
-    btn.style.setProperty('background-color', '#d9d9d9', 'important');
+    btn.style.setProperty('background-color', '#ffffff', 'important');
     btn.title = shared?`共有の登録済み地点（${shared.at}）`: `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
   } else {
     btn.textContent = '地点登録';
+    btn.style.removeProperty('color');
     btn.classList.remove('registered');
     btn.style.removeProperty('background-color');
     btn.title = 'ここで押すと現在地をこの物件の座標として登録します';
@@ -2946,18 +2948,16 @@ function renderTable() {
       orderInput.setAttribute('aria-label', `${tdProperty.textContent}の収集順`);
       const registeredOrder = normalizedCollectionOrder(draftCollectionOrders[item.key]);
       orderInput.dataset.registered = registeredOrder === null ? 'false' : 'true';
-      if (registeredOrder !== null) {
-        orderInput.style.setProperty('background-color', '#d9d9d9', 'important');
-      }
+      orderInput.style.setProperty('background-color', '#ffffff', 'important');
       orderInput.value = registeredOrder ?? nextCollectionOrder(item.staff, item.day);
       const orderChange = document.createElement('button');
       orderChange.type = 'button';
       orderChange.className = 'collection-order-change';
       orderChange.textContent = registeredOrder === null ? '変更' : '変更済み';
+      orderChange.style.setProperty('color', registeredOrder === null ? '#000000' : '#c62828', 'important');
+      orderChange.style.setProperty('background-color', '#ffffff', 'important');
       if (registeredOrder !== null) {
         orderChange.classList.add('registered');
-        // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
-        orderChange.style.setProperty('background-color', '#d9d9d9', 'important');
       }
       orderChange.setAttribute('aria-label', `${tdProperty.textContent}の収集順を変更`);
       orderChange.addEventListener('click', () => {
