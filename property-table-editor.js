@@ -45,6 +45,7 @@
   document.body.append(cellDialog);
   const grid=editor.querySelector('#pteGrid'),search=editor.querySelector('#pteSearch');
   const choices=cellDialog.querySelector('select'),custom=cellDialog.querySelector('input');
+  choices.before(custom);
   const filterColumn=editor.querySelector('#pteFilterColumn'),filterValue=editor.querySelector('#pteFilterValue');
   const districtFilter=document.createElement('select'),industryFilter=document.createElement('select');
   districtFilter.className=industryFilter.className='pte-filter';
@@ -157,17 +158,23 @@
     const values=new Set(['',valueAt(rows[r],c),...rows.map(row=>valueAt(row,c))]);
     if(/^[月火水木金土日]曜日$/.test(text(headers[c])))ASSIGNMENT_STAFF.forEach(v=>values.add(v));
     for(const value of values){const option=document.createElement('option');option.value=value;option.textContent=value||'未選択';choices.append(option);}
-    const other=document.createElement('option');other.value='__pte_custom__';other.textContent='直接入力';choices.append(other);
+    const other=document.createElement('option');other.value='__pte_custom__';other.textContent='直接入力';choices.prepend(other);
     const directInput=!/^[月火水木金土日]曜日$/.test(text(headers[c]).trim());
-    choices.hidden=directInput;
-    choices.style.display=directInput?'none':'';
+    choices.hidden=false;
+    choices.style.display='';
     choices.value=directInput?'__pte_custom__':valueAt(rows[r],c);
     custom.value=valueAt(rows[r],c);custom.hidden=!directInput;
     cellDialog.querySelector('label').textContent=`${headers[c]}：${valueAt(rows[r],findHeaderIndex(['契約物件','物件名','名前']))}`;
     cellDialog.showModal();
     if(directInput){custom.focus();custom.setSelectionRange(custom.value.length,custom.value.length);}
   }
-  choices.onchange=()=>{custom.hidden=choices.value!=='__pte_custom__';if(!custom.hidden){custom.value='';custom.focus();}};
+  choices.onchange=()=>{
+    const directInput=activeCell&&!/^[月火水木金土日]曜日$/.test(text(headers[activeCell.c]).trim());
+    custom.hidden=!directInput&&choices.value!=='__pte_custom__';
+    if(choices.value==='__pte_custom__'){custom.focus();}
+    else if(directInput){custom.value=choices.value;choices.value='__pte_custom__';}
+  };
+  custom.oninput=()=>{choices.value='__pte_custom__';};
   cellDialog.querySelector('#pteCellCancel').onclick=()=>cellDialog.close();
   cellDialog.querySelector('#pteCellApply').onclick=()=>{
     const {r,c}=activeCell;const next=choices.value==='__pte_custom__'?custom.value.trim():choices.value;
