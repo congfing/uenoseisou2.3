@@ -2449,15 +2449,17 @@ function sendGeoPointsMail(selectedNames) {
   link.target='_top';link.rel='noopener';link.style.display='none';document.body.append(link);link.click();setTimeout(()=>link.remove(),1000);
 }
 
+function sharedGeoStatus(registration){return window.sharedPropertyGeoStatus?.[String(registration)]||null;}
 function updateGeoButtonState(btn, name) {
   const g = getGeo(name);
+  const shared=sharedGeoStatus(btn.dataset.registration);
   btn.disabled = false;
-  if (g) {
+  if (g||shared) {
     btn.textContent = '登録済み';
     btn.classList.add('registered');
     // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
     btn.style.setProperty('background-color', '#d9d9d9', 'important');
-    btn.title = `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
+    btn.title = shared?`共有の登録済み地点（${shared.at}）`: `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
   } else {
     btn.textContent = '地点登録';
     btn.classList.remove('registered');
@@ -2683,13 +2685,15 @@ function geoRegisteredCount() {
   let done = 0;
   displayedAssignmentRows.forEach(item => {
     const nm = propertyCol >= 0 ? String(item.row[propertyCol] || '').trim() : '';
-    if (nm && store[nm]) done++;
+    if (nm && (store[nm]||sharedGeoStatus(item.row[findHeaderIndex(['登録番号'])]))) done++;
   });
   return { done, total };
 }
 
 function registerGeoPoint(btn, name) {
   if (!name) { showToast('物件名が取得できません'); return; }
+  const shared=sharedGeoStatus(btn.dataset.registration);
+  if(shared){alert(`この物件は登録済みです（${shared.at}）。\n重複登録を防ぐため、新たな地点登録は行いません。修正が必要な場合はお知らせください。`);return;}
   // 登録済みをもう一度押したら解除（間違えて押したときのやり直し用）
   if (getGeo(name)) {
     if (!confirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`)) return;
@@ -2979,6 +2983,8 @@ function renderTable() {
       const geoBtn = document.createElement('button');
       geoBtn.type = 'button';
       geoBtn.className = 'geo-register-btn';
+      const geoRegistrationCol=findHeaderIndex(['登録番号']);
+      if(geoRegistrationCol>=0)geoBtn.dataset.registration=String(row[geoRegistrationCol]??'');
       geoBtn.setAttribute('aria-label', `${tdProperty.textContent}の地点を登録`);
       updateGeoButtonState(geoBtn, tdProperty.textContent);
       geoBtn.addEventListener('click', () => registerGeoPoint(geoBtn, tdProperty.textContent));
@@ -3612,6 +3618,7 @@ window._colviewCtx = {
 })();
 </script>
 
+<script src="property-geo-status.js?v=20261016_1"></script>
 <script src="property-action-confirm.js?v=20261016_2"></script>
 <script src="property-table-editor.js?v=20261016_9"></script>
 <script src="property-geo-history.js?v=20261015_2"></script>
