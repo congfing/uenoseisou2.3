@@ -158,9 +158,14 @@
     if(/^[月火水木金土日]曜日$/.test(text(headers[c])))ASSIGNMENT_STAFF.forEach(v=>values.add(v));
     for(const value of values){const option=document.createElement('option');option.value=value;option.textContent=value||'未選択';choices.append(option);}
     const other=document.createElement('option');other.value='__pte_custom__';other.textContent='直接入力';choices.append(other);
-    choices.value=valueAt(rows[r],c);custom.value=choices.value;custom.hidden=true;
+    const directInput=!/^[月火水木金土日]曜日$/.test(text(headers[c]).trim());
+    choices.hidden=directInput;
+    choices.style.display=directInput?'none':'';
+    choices.value=directInput?'__pte_custom__':valueAt(rows[r],c);
+    custom.value=valueAt(rows[r],c);custom.hidden=!directInput;
     cellDialog.querySelector('label').textContent=`${headers[c]}：${valueAt(rows[r],findHeaderIndex(['契約物件','物件名','名前']))}`;
     cellDialog.showModal();
+    if(directInput){custom.focus();custom.setSelectionRange(custom.value.length,custom.value.length);}
   }
   choices.onchange=()=>{custom.hidden=choices.value!=='__pte_custom__';if(!custom.hidden){custom.value='';custom.focus();}};
   cellDialog.querySelector('#pteCellCancel').onclick=()=>cellDialog.close();
