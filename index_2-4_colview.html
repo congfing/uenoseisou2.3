@@ -3526,7 +3526,7 @@ window._colviewCtx = {
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox'; checkbox.className = 'property-change-check'; checkbox.value = item.id;
       if(item.groupIds)checkbox.dataset.historyIds=JSON.stringify(item.groupIds);
-      checkbox.checked=(item.groupIds||[item.id]).every(id=>checkedIds.has(id));
+      checkbox.checked=!item.sentAt&&(item.groupIds||[item.id]).every(id=>checkedIds.has(id));
       checkbox.setAttribute('aria-label',`${item.summary?.property||'変更'}を選択`);
       checkbox.onchange=()=>syncDate(dateKey(item));
       const body = document.createElement('div');
