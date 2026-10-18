@@ -10,6 +10,7 @@
     #pteControls[hidden] {display:none;}
     #btnPropertyTableEditor {font-weight:700;}
     #propertyTableEditor,#propertyTableEditor *,#propertyCellEditor,#propertyCellEditor * {font-weight:400 !important;}
+    #propertyTableEditor #pteBackToAssignment {font-weight:700 !important;}
     #propertyTableEditor button,#propertyCellEditor button {background:#fff;color:#000;border:1px solid #000;border-radius:4px;padding:8px 12px;min-height:42px;font:inherit;}
     #pteSearch {width:180px;max-width:100%;padding:8px;border:1px solid #000;font:inherit;}
     #propertyTableEditor .pte-filter {max-width:180px;min-height:42px;padding:6px;border:1px solid #000;background:#fff;color:#000;font:inherit;}
@@ -32,7 +33,7 @@
   `;
   document.head.append(style);
   const editor=document.createElement('dialog');editor.id='propertyTableEditor';editor.setAttribute('aria-label','編集用物件表');
-  editor.innerHTML='<div class="pte-toolbar"><h2>編集用物件表</h2><input id="pteSearch" aria-label="物件検索" placeholder="物件検索"><select class="pte-filter" id="pteFilterColumn" aria-label="絞り込む列"></select><select class="pte-filter" id="pteFilterValue" aria-label="絞り込む値"></select><button type="button" id="pteFilterClear">絞り込み解除</button><span id="pteCount"></span><button id="pteSave" type="button">保存して適用</button><button id="pteExcel" type="button">エクセル保存</button><button id="pteClose" type="button">閉じる</button></div><div id="pteGrid"></div>';
+  editor.innerHTML='<div class="pte-toolbar"><h2>編集用物件表</h2><input id="pteSearch" aria-label="物件検索" placeholder="物件検索"><select class="pte-filter" id="pteFilterColumn" aria-label="絞り込む列"></select><select class="pte-filter" id="pteFilterValue" aria-label="絞り込む値"></select><button type="button" id="pteFilterClear">絞り込み解除</button><span id="pteCount"></span><button id="pteSave" type="button">保存して適用</button><button id="pteExcel" type="button">エクセル保存</button><button id="pteClose" type="button">閉じる</button><button id="pteBackToAssignment" type="button">担当者・曜日選択へ戻る</button></div><div id="pteGrid"></div>';
   document.body.append(editor);
   function fitEditorToViewport(){
     const zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
@@ -106,7 +107,7 @@
     }
     if(Array.from(filterValue.options).some(o=>o.value===previous))filterValue.value=previous;
   }
-  let rows=[],original=[],source='',sheet='',activeCell=null;
+  let rows=[],original=[],source='',sheet='',activeCell=null,pausedForAssignment=false;
   const text=v=>String(v??'');
   const valueAt=(row,c)=>text(row?.[c]);
   function changeCount(){return rows.reduce((sum,row,r)=>sum+headers.reduce((n,_,c)=>n+(valueAt(row,c)!==valueAt(original[r],c)),0),0);}
@@ -198,8 +199,14 @@
     }
     rows[r][c]=next;cellDialog.close();const top=grid.scrollTop,left=grid.scrollLeft;refreshMainFilters();refreshFilterValues();render();grid.scrollTop=top;grid.scrollLeft=left;
   };
-  async function closeEditor(){if(changeCount()&&!await propertyConfirm('未保存の変更を破棄しますか？'))return;editor.close();}
+  async function closeEditor(){if(changeCount()&&!await propertyConfirm('未保存の変更を破棄しますか？'))return;pausedForAssignment=false;editor.close();}
   editor.querySelector('#pteClose').onclick=closeEditor;
+  editor.querySelector('#pteBackToAssignment').onclick=()=>{
+    if(!applyEditor(false))return;
+    pausedForAssignment=true;
+    editor.close();
+    document.getElementById('btnAssignment').click();
+  };
   editor.addEventListener('cancel',event=>{event.preventDefault();closeEditor();});
   search.oninput=render;
   filterColumn.onchange=()=>{filterValue.value='__all__';refreshFilterValues();render();};
@@ -228,7 +235,7 @@
     }
     original=dataArray.map(row=>[...row]);rows=dataArray.map(row=>[...row]);
     undoStack=[];
-    if(closeAfter)editor.close();else render();
+    if(closeAfter){pausedForAssignment=false;editor.close();}else render();
     showToast(`${count}セルを保存して適用しました`);
     return true;
   }
@@ -242,6 +249,10 @@
   };
   document.getElementById('btnPropertyTableEditor').onclick=()=>{
     if(!workbook||!hasPropertyTableHeaders()){showToast('物件表を読み込んでください');return;}
+    if(pausedForAssignment&&source===currentFilename&&sheet===currentSheetName){
+      render();fitEditorToViewport();editor.showModal();return;
+    }
+    pausedForAssignment=false;
     source=currentFilename;sheet=currentSheetName;original=dataArray.map(row=>[...row]);rows=dataArray.map(row=>[...row]);search.value='';sortColumn=-1;sortDirection=1;
     undoStack=[];
     filterColumn.replaceChildren(new Option('絞り込む列',''));
