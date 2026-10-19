@@ -600,6 +600,8 @@
           <label class="assignment-option"><input type="checkbox" value="木曜日">木曜日</label>
           <label class="assignment-option"><input type="checkbox" value="金曜日">金曜日</label>
           <label class="assignment-option"><input type="checkbox" value="土曜日">土曜日</label>
+          <label class="assignment-option"><input type="checkbox" value="金属">金属</label>
+          <label class="assignment-option"><input type="checkbox" value="段紙">段紙</label>
         </div>
       </div>
     </div>
@@ -754,7 +756,7 @@ const ASSIGNMENT_STAFF = (() => {
     return [...DEFAULT_ASSIGNMENT_STAFF];
   }
 })();
-const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '金属', '段紙'];
 const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', '段紙-', 'PETアルミ', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
