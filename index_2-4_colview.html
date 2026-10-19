@@ -3572,15 +3572,15 @@ window._colviewCtx = {
   window.sendSelectedPropertyHistory = function() {
     const ids = new Set(selectedPropertyHistoryIds());
     const history = getPropertyChangeHistory();
-    const selected = history.filter(item => ids.has(item.id) && !item.sentAt);
-    if (!selected.length) { showToast('未送信の変更履歴を選択してください'); return; }
+    const selected = history.filter(item => ids.has(item.id));
+    if (!selected.length) { showToast('送信する変更履歴を選択してください（送信済みも再送できます）'); return; }
     if (!sendPropertyChangeMail(selected)) return;
     const sentAt = Date.now();
     history.forEach(item => { if (ids.has(item.id) && !item.sentAt) item.sentAt = sentAt; });
     setPropertyChangeHistory(history);
     pendingPropertyChanges = pendingPropertyChanges.filter(change => !selected.some(item => item.type === change.type && JSON.stringify(item.row) === JSON.stringify(change.row)));
     window.renderPropertyChangeHistory();
-    showToast(`${selected.length}件を送信済みにしました`);
+    showToast(`${selected.length}件のメール画面を開きました。閉じた場合も再度開けます`);
   };
 
   window.removeSelectedPropertyHistory = async function() {
