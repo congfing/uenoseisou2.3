@@ -585,6 +585,7 @@
           <label class="assignment-option"><input type="checkbox" value="H-">H-</label>
           <label class="assignment-option"><input type="checkbox" value="金属-">金属-</label>
           <label class="assignment-option"><input type="checkbox" value="段紙-">段紙-</label>
+          <label class="assignment-option"><input type="checkbox" value="おしめ-">おしめ-</label>
         </div>
         <div class="assignment-add-row">
           <input type="text" id="assignmentStaffAddInput" placeholder="担当者記号" maxlength="10" aria-label="追加する担当者記号">
@@ -592,7 +593,7 @@
         </div>
       </div>
       <div>
-        <div class="assignment-group-title">曜日選択</div>
+        <div class="assignment-group-title">列選択</div>
         <div class="assignment-options" id="weekdayOptions">
           <label class="assignment-option"><input type="checkbox" value="月曜日">月曜日</label>
           <label class="assignment-option"><input type="checkbox" value="火曜日">火曜日</label>
@@ -602,6 +603,7 @@
           <label class="assignment-option"><input type="checkbox" value="土曜日">土曜日</label>
           <label class="assignment-option"><input type="checkbox" value="金属">金属</label>
           <label class="assignment-option"><input type="checkbox" value="段紙">段紙</label>
+          <label class="assignment-option"><input type="checkbox" value="おしめ">おしめ</label>
         </div>
       </div>
     </div>
@@ -746,7 +748,7 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-', '段紙-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-', '段紙-', 'おしめ-'];
 const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
 const ASSIGNMENT_STAFF = (() => {
   try {
@@ -756,8 +758,8 @@ const ASSIGNMENT_STAFF = (() => {
     return [...DEFAULT_ASSIGNMENT_STAFF];
   }
 })();
-const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '金属', '段紙'];
-const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', '段紙-', 'PETアルミ', '発泡'];
+const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '金属', '段紙', 'おしめ'];
+const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', '段紙-', 'おしめ-', 'PETアルミ', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
 let draftCollectionOrders = {};
