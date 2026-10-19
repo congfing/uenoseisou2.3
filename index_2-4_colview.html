@@ -583,6 +583,7 @@
           <label class="assignment-option"><input type="checkbox" value="K-">K-</label>
           <label class="assignment-option"><input type="checkbox" value="M-">M-</label>
           <label class="assignment-option"><input type="checkbox" value="H-">H-</label>
+          <label class="assignment-option"><input type="checkbox" value="金属-">金属-</label>
         </div>
         <div class="assignment-add-row">
           <input type="text" id="assignmentStaffAddInput" placeholder="担当者記号" maxlength="10" aria-label="追加する担当者記号">
@@ -742,7 +743,7 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-'];
 const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
 const ASSIGNMENT_STAFF = (() => {
   try {
@@ -753,7 +754,7 @@ const ASSIGNMENT_STAFF = (() => {
   }
 })();
 const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
-const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', 'PETアルミ', '段紙', '発泡'];
+const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', 'PETアルミ', '段紙', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
 let draftCollectionOrders = {};
