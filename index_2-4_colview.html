@@ -585,6 +585,7 @@
           <label class="assignment-option"><input type="checkbox" value="H-">H-</label>
           <label class="assignment-option"><input type="checkbox" value="金属-">金属-</label>
           <label class="assignment-option"><input type="checkbox" value="段紙-">段紙-</label>
+          <label class="assignment-option"><input type="checkbox" value="ガラ-">ガラ-</label>
           <label class="assignment-option"><input type="checkbox" value="おしめ-">おしめ-</label>
           <label class="assignment-option"><input type="checkbox" value="A-">A-</label>
           <label class="assignment-option"><input type="checkbox" value="B-">B-</label>
@@ -605,6 +606,7 @@
           <label class="assignment-option"><input type="checkbox" value="土曜日">土曜日</label>
           <label class="assignment-option"><input type="checkbox" value="金属">金属</label>
           <label class="assignment-option"><input type="checkbox" value="段紙">段紙</label>
+          <label class="assignment-option"><input type="checkbox" value="ガラ">ガラ</label>
           <label class="assignment-option"><input type="checkbox" value="おしめ">おしめ</label>
         </div>
       </div>
@@ -750,7 +752,7 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-', '段紙-', 'おしめ-', 'A-', 'B-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-', '段紙-', 'ガラ-', 'おしめ-', 'A-', 'B-'];
 const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
 const ASSIGNMENT_STAFF = (() => {
   try {
@@ -760,8 +762,8 @@ const ASSIGNMENT_STAFF = (() => {
     return [...DEFAULT_ASSIGNMENT_STAFF];
   }
 })();
-const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '金属', '段紙', 'おしめ'];
-const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', '段紙-', 'おしめ-', 'A-', 'B-', 'PETアルミ', '発泡'];
+const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '金属', '段紙', 'ガラ', 'おしめ'];
+const WEEKDAY_FIXED_CHOICES = ['N-', 'M-', 'K-', 'H-', '金属-', '段紙-', 'ガラ-', 'おしめ-', 'A-', 'B-', 'PETアルミ', '発泡'];
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
 let draftCollectionOrders = {};
@@ -1151,7 +1153,10 @@ function loadHiddenPropertyRecordsFromWorkbook() {
   const originalOrderCol = hiddenHeaders.indexOf('元の整理番号');
   const originalIndexCol = hiddenHeaders.indexOf('元の位置');
   raw.slice(1).forEach((savedRow, index) => {
-    const row = headers.map((_, columnIndex) => savedRow[columnIndex] ?? '');
+    const row = headers.map(header => {
+      const savedColumn = hiddenHeaders.indexOf(String(header || '').trim());
+      return savedColumn >= 0 ? (savedRow[savedColumn] ?? '') : '';
+    });
     if (!row.some(value => String(value || '').trim())) return;
     hiddenPropertyRecords.push({
       row,
@@ -1159,6 +1164,19 @@ function loadHiddenPropertyRecordsFromWorkbook() {
       originalOrder:originalOrderCol >= 0 ? Number(savedRow[originalOrderCol]) || 0 : 0,
       originalIndex:originalIndexCol >= 0 ? Number(savedRow[originalIndexCol]) || index : index
     });
+  });
+}
+
+function ensureGaraColumn() {
+  const cardboardIndex = headers.findIndex(header => String(header || '').trim() === '段紙');
+  const garaIndex = headers.findIndex(header => String(header || '').trim() === 'ガラ');
+  if (cardboardIndex < 0 || garaIndex >= 0) return;
+  const insertIndex = cardboardIndex + 1;
+  headers.splice(insertIndex, 0, 'ガラ');
+  dataArray = dataArray.map(row => {
+    const next = [...row];
+    next.splice(insertIndex, 0, '');
+    return next;
   });
 }
 
@@ -1175,6 +1193,7 @@ function loadSheet(sheetName) {
   currentHeaderRowIndex = hIdx;
   headers   = raw[hIdx] ? [...raw[hIdx]] : [];
   dataArray = raw.slice(hIdx+1);
+  ensureGaraColumn();
   sheetDataRowCounts[sheetName] = dataArray.length;
   loadHiddenPropertyRecordsFromWorkbook();
   visibleCols  = new Set(headers.map((_,i) => i));
@@ -1223,6 +1242,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
     currentHeaderRowIndex = hIdx;
     headers   = raw[hIdx] ? [...raw[hIdx]] : [];
     dataArray = raw.slice(hIdx+1);
+    ensureGaraColumn();
     sheetDataRowCounts[currentSheetName] = dataArray.length;
     loadHiddenPropertyRecordsFromWorkbook();
     currentFilename = filename;
