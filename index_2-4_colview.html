@@ -1234,6 +1234,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
   try {
     const wb = XLSX.read(new Uint8Array(buf), { type:'array', cellStyles:true, cellDates:true });
     workbook = wb;
+    currentFilename = filename;
 
     // シートセレクタを更新
     sheetSel.innerHTML = '';
@@ -1245,9 +1246,16 @@ function loadWorkbookData(buf, filename, sourcePath) {
       opt.textContent = name;
       sheetSel.appendChild(opt);
     });
-    sheetSel.value = selectableSheets[0];
+    let initialSheet = selectableSheets[0];
+    try {
+      const lastState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (lastState && lastState.filename === filename && selectableSheets.includes(lastState.sheetName)) {
+        initialSheet = lastState.sheetName;
+      }
+    } catch (e) {}
+    sheetSel.value = initialSheet;
     sheetSel.disabled = false;
-    currentSheetName = selectableSheets[0];
+    currentSheetName = initialSheet;
 
     // 最初のシートのデータを展開
     const ws  = wb.Sheets[currentSheetName];
@@ -1260,7 +1268,6 @@ function loadWorkbookData(buf, filename, sourcePath) {
     ensureGaraColumn();
     sheetDataRowCounts[currentSheetName] = dataArray.length;
     loadHiddenPropertyRecordsFromWorkbook();
-    currentFilename = filename;
     visibleCols  = new Set(headers.map((_,i) => i));
     sortState    = { col:-1, dir:0 };
     filterState  = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
@@ -2557,7 +2564,6 @@ const KEIRYO_NAME_MAP = {
   'セブンイレブン緑ヶ丘本町店': '7.11 伊賀緑ヶ丘本町店',
   'セブンイレブン緑ヶ丘東町': '7.11 伊賀緑ヶ丘東町店',
   'セブンイレブン緑ヶ丘東町店': '7.11 伊賀緑ヶ丘東町店',
-  'サンピア': 'サンピア',
   'チョーヤ梅酒': 'チョーヤ梅酒伊賀上野工場',
   'ナフコ': 'ナフコ伊賀店（㈱アレックス）',
   'ナフコ伊賀店': 'ナフコ伊賀店（㈱アレックス）',
