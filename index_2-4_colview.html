@@ -322,8 +322,9 @@
   #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
   #dataTable thead tr.saturday-group-row th {
     background:#fff; color:#111; text-align:center; font-weight:800;
-    cursor:default; border:1px solid #111; height:32px; padding:5px 6px;
+    cursor:default; border:1px solid transparent !important; height:32px; padding:5px 6px;
     font-size:14px; white-space:nowrap; box-sizing:border-box;
+    box-shadow:inset 1px 0 #111, inset -1px 0 #111, inset 0 1px #111, inset 0 -1px #111;
   }
   #dataTable thead tr.saturday-group-row th:hover { background:#fff; }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
