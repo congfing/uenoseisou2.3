@@ -2542,6 +2542,7 @@ const KEIRYO_NAME_MAP = {
   'コカ・コーラ': 'コカ・コーラボトラーズ',
   'コメリ': 'コメリ',
   'セブンイレブン伊賀平野東町店': '7.11 伊賀平野東町店',
+  'セブンイレブン伊賀忍者南店': '7.11 伊賀忍者市駅南店',
   'セブンイレブン伊賀忍者駅南店': '7.11 伊賀忍者市駅南店',
   'セブンイレブン伊賀東条店': '7.11 伊賀東条店',
   'セブンイレブン四十九店': '7.11 伊賀四十九町北店',
@@ -2549,11 +2550,13 @@ const KEIRYO_NAME_MAP = {
   'セブンイレブン緑ヶ丘本町店': '7.11 伊賀緑ヶ丘本町店',
   'セブンイレブン緑ヶ丘東町店': '7.11 伊賀緑ヶ丘東町店',
   'チョーヤ梅酒': 'チョーヤ梅酒伊賀上野工場',
+  'ナフコ': 'ナフコ伊賀店（㈱アレックス）',
   'ナフコ伊賀店': 'ナフコ伊賀店（㈱アレックス）',
   'マックスPETアルミ紙P': 'マックスバリュ上野店',
   'マックスバリュ可燃': 'マックスバリュ上野店',
   'マックス段紙': 'マックスバリュ上野店',
   'マックス発泡': 'マックスバリュ上野店',
+  'マックスバリュ佐那具店': 'マックスバリュ佐那具店',
   'マックスバリュー佐那具': 'マックスバリュ佐那具店',
   'ライフテクノサービス': 'ライフテクノサービス',
   'ラム―': 'LA・MU',
@@ -2718,6 +2721,15 @@ function isKeiryouProperty(row, keiryouCol, name) {
   if (keiryouCol < 0) return false;
   if (String(row[keiryouCol] || '').trim() === '') return false;
   return !!keiryoEntryName(name);
+}
+
+/* 土曜日許可物件表は3つの表が横並びのため、各「計量」セルの左側を物件名として扱う。 */
+function saturdayPermitKeiryoName(row, colIndex) {
+  if (currentSheetName !== '土曜日許可物件表（休出用）') return '';
+  if (![2, 6, 10].includes(colIndex)) return '';
+  if (String(row[colIndex] || '').trim() !== '計量') return '';
+  const propertyName = String(row[colIndex - 1] || '').replace(/[\r\n]+/g, ' ').trim();
+  return keiryoEntryName(propertyName) ? propertyName : '';
 }
 
 function geoRegisteredCount() {
@@ -3056,7 +3068,18 @@ function renderTable() {
         const header = String(headers[ci] || '').trim();
         if (/^[月火水木金土日]曜日$/.test(header)) td.classList.add('weekday-col');
         if (['契約物件', '物件名', '名前'].includes(header)) td.classList.add('property-name-cell');
-        if ((header === '計量' && cell !== '') || cell === '計量') {
+        const permitKeiryoName = saturdayPermitKeiryoName(row, ci);
+        if (permitKeiryoName) {
+          td.classList.add('keiryou-td');
+          const keiryouBtn = document.createElement('button');
+          keiryouBtn.type = 'button';
+          keiryouBtn.className = 'keiryou-open-btn';
+          keiryouBtn.setAttribute('aria-label', `${permitKeiryoName}の計量データ入力を開く`);
+          updateKeiryouButtonState(keiryouBtn, permitKeiryoName);
+          keiryouBtn.addEventListener('click', () => openKeiryouEntry());
+          td.appendChild(keiryouBtn);
+          keiryouButtonRefs.push({ btn: keiryouBtn, name: permitKeiryoName });
+        } else if ((header === '計量' && cell !== '') || cell === '計量') {
           td.classList.add('keiryou-td');
           td.textContent = '計量';
         } else {
