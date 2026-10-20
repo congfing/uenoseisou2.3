@@ -2441,6 +2441,11 @@ function weekdayAssignmentCmp(a, b, direction) {
 function districtBackground(district) {
   const text = String(district || '').trim();
   if (!text) return '#fff';
+  const fixedColors = {
+    '白鳳通り':'#dbeafe',
+    '佐那具':'#fce7f3',
+  };
+  if (fixedColors[text]) return fixedColors[text];
   let hash = 0;
   for (let i = 0; i < text.length; i++) hash = ((hash * 31) + text.charCodeAt(i)) >>> 0;
   return `hsl(${hash % 360} 58% 88%)`;
@@ -3141,7 +3146,17 @@ function renderTable() {
         tr.appendChild(td);
       });
     }
-    tr.querySelectorAll('td').forEach(td => td.style.setProperty('background-color', districtBg, 'important'));
+    const renderedCells = [...tr.querySelectorAll('td')];
+    if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
+      renderedCells[0]?.style.setProperty('background-color', '#fff', 'important');
+      visArr.forEach((ci, cellIndex) => {
+        const groupDistrictCol = ci <= 3 ? 0 : (ci <= 7 ? 4 : 8);
+        const groupBg = districtBackground(row[groupDistrictCol]);
+        renderedCells[cellIndex + 1]?.style.setProperty('background-color', groupBg, 'important');
+      });
+    } else {
+      renderedCells.forEach(td => td.style.setProperty('background-color', districtBg, 'important'));
+    }
     tableBody.appendChild(tr);
   });
 
