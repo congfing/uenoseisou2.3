@@ -334,6 +334,19 @@
   #dataTable thead tr.saturday-group-row th:last-child .saturday-title-box {
     width:100%; margin-right:0;
   }
+  #dataTable thead tr.saturday-column-row th {
+    background:#fff; color:#111; padding:0 !important; border:0 !important;
+    box-sizing:border-box;
+  }
+  #dataTable thead tr.saturday-column-row th:hover { background:#fff; }
+  .saturday-column-box {
+    display:flex; align-items:center; width:calc(100% + 1px); min-height:32px;
+    margin-right:-1px; padding:6px; border:1px solid #111;
+    background:#fff; color:#111; box-sizing:border-box;
+  }
+  #dataTable thead tr.saturday-column-row th:last-child .saturday-column-box {
+    width:100%; margin-right:0;
+  }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
   #dataTable tbody tr:hover { background:#f0f6ff; }
   #dataTable tbody tr.newly-registered-row { outline:2px solid #222; outline-offset:-2px; }
@@ -3008,6 +3021,15 @@ function renderTable() {
       if (sortState.col===ci) th.classList.add(sortState.dir===1?'sorted-asc':'sorted-desc');
       th.addEventListener('click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
       htr.appendChild(th);
+    });
+  }
+  if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
+    htr.classList.add('saturday-column-row');
+    [...htr.children].forEach(th => {
+      const columnBox = document.createElement('div');
+      columnBox.className = 'saturday-column-box';
+      while (th.firstChild) columnBox.appendChild(th.firstChild);
+      th.appendChild(columnBox);
     });
   }
   tableHead.appendChild(htr);
