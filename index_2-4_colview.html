@@ -320,6 +320,14 @@
   #dataTable thead th:hover { background:#1558a0; }
   #dataTable thead th.sorted-asc::after  { content:' ▲'; font-size:9px; }
   #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
+  #dataTable thead tr.saturday-group-row th {
+    background:#fff; color:#111; text-align:center; font-weight:800;
+    cursor:default; border:1px solid #999;
+  }
+  #dataTable thead tr.saturday-group-row th:hover { background:#fff; }
+  #dataTable thead tr.saturday-group-row th.saturday-title-separator {
+    border-right:1px solid #111;
+  }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
   #dataTable tbody tr:hover { background:#f0f6ff; }
   #dataTable tbody tr.newly-registered-row { outline:2px solid #222; outline-offset:-2px; }
@@ -2938,6 +2946,27 @@ function renderTable() {
 
   // ヘッダー描画
   tableHead.innerHTML='';
+  if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
+    const groupRow = document.createElement('tr');
+    groupRow.className = 'saturday-group-row';
+    const rowNumberSpacer = document.createElement('th');
+    rowNumberSpacer.textContent = '';
+    groupRow.appendChild(rowNumberSpacer);
+    [
+      { label:'内回り', start:0, end:3 },
+      { label:'外回り', start:4, end:7 },
+      { label:'ダンボール', start:8, end:10 },
+    ].forEach(group => {
+      const visibleCount = visArr.filter(ci => ci >= group.start && ci <= group.end).length;
+      if (!visibleCount) return;
+      const th = document.createElement('th');
+      th.textContent = group.label;
+      th.colSpan = visibleCount;
+      if (group.end < 10) th.classList.add('saturday-title-separator');
+      groupRow.appendChild(th);
+    });
+    tableHead.appendChild(groupRow);
+  }
   const htr = document.createElement('tr');
   const thN = document.createElement('th');
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
