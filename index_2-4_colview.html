@@ -3084,6 +3084,8 @@ function renderTable() {
         if (/^[月火水木金土日]曜日$/.test(header)) td.classList.add('weekday-col');
         if (['契約物件', '物件名', '名前'].includes(header)) td.classList.add('property-name-cell');
         const permitKeiryoName = saturdayPermitKeiryoName(row, ci);
+        const unmappedPermitKeiryo = currentSheetName === '土曜日許可物件表（休出用）'
+          && [2, 6, 10].includes(ci) && cell === '計量' && !permitKeiryoName;
         if (permitKeiryoName) {
           td.classList.add('keiryou-td');
           const keiryouBtn = document.createElement('button');
@@ -3094,6 +3096,8 @@ function renderTable() {
           keiryouBtn.addEventListener('click', () => openKeiryouEntry());
           td.appendChild(keiryouBtn);
           keiryouButtonRefs.push({ btn: keiryouBtn, name: permitKeiryoName });
+        } else if (unmappedPermitKeiryo) {
+          td.textContent = '';
         } else if ((header === '計量' && cell !== '') || cell === '計量') {
           td.classList.add('keiryou-td');
           td.textContent = '計量';
