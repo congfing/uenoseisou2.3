@@ -322,12 +322,10 @@
   #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
   #dataTable thead tr.saturday-group-row th {
     background:#fff; color:#111; text-align:center; font-weight:800;
-    cursor:default; border:1px solid #999;
+    cursor:default; border:1px solid #111; height:32px; padding:5px 6px;
+    font-size:14px; white-space:nowrap; box-sizing:border-box;
   }
   #dataTable thead tr.saturday-group-row th:hover { background:#fff; }
-  #dataTable thead tr.saturday-group-row th.saturday-title-separator {
-    border-right:1px solid #111;
-  }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
   #dataTable tbody tr:hover { background:#f0f6ff; }
   #dataTable tbody tr.newly-registered-row { outline:2px solid #222; outline-offset:-2px; }
@@ -2965,7 +2963,6 @@ function renderTable() {
       const th = document.createElement('th');
       th.textContent = group.label;
       th.colSpan = visibleCount;
-      if (group.end < 10) th.classList.add('saturday-title-separator');
       groupRow.appendChild(th);
     });
     tableHead.appendChild(groupRow);
