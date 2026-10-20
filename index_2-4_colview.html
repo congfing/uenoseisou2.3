@@ -2954,15 +2954,13 @@ function renderTable() {
   if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
     const groupRow = document.createElement('tr');
     groupRow.className = 'saturday-group-row';
-    const rowNumberSpacer = document.createElement('th');
-    rowNumberSpacer.textContent = '';
-    groupRow.appendChild(rowNumberSpacer);
     [
-      { label:'内回り', start:0, end:3 },
-      { label:'外回り', start:4, end:7 },
-      { label:'ダンボール', start:8, end:10 },
+      { label:'内回り', start:0, end:2, includesRowNumber:true },
+      { label:'外回り', start:3, end:6 },
+      { label:'ダンボール', start:7, end:10 },
     ].forEach(group => {
-      const visibleCount = visArr.filter(ci => ci >= group.start && ci <= group.end).length;
+      const visibleCount = visArr.filter(ci => ci >= group.start && ci <= group.end).length
+        + (group.includesRowNumber ? 1 : 0);
       if (!visibleCount) return;
       const th = document.createElement('th');
       th.textContent = group.label;
@@ -3148,9 +3146,9 @@ function renderTable() {
     }
     const renderedCells = [...tr.querySelectorAll('td')];
     if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
-      renderedCells[0]?.style.setProperty('background-color', '#fff', 'important');
+      renderedCells[0]?.style.setProperty('background-color', districtBackground(row[0]), 'important');
       visArr.forEach((ci, cellIndex) => {
-        const groupDistrictCol = ci <= 3 ? 0 : (ci <= 7 ? 4 : 8);
+        const groupDistrictCol = ci <= 2 ? 0 : (ci <= 6 ? 4 : 8);
         const groupBg = districtBackground(row[groupDistrictCol]);
         renderedCells[cellIndex + 1]?.style.setProperty('background-color', groupBg, 'important');
       });
