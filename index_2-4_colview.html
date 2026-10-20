@@ -322,11 +322,18 @@
   #dataTable thead th.sorted-desc::after { content:' ▼'; font-size:9px; }
   #dataTable thead tr.saturday-group-row th {
     background:#fff; color:#111; text-align:center; font-weight:800;
-    cursor:default; border:1px solid transparent !important; height:32px; padding:5px 6px;
+    cursor:default; border:0 !important; height:34px; padding:0 !important;
     font-size:14px; white-space:nowrap; box-sizing:border-box;
-    box-shadow:inset 1px 0 #111, inset -1px 0 #111, inset 0 1px #111, inset 0 -1px #111;
   }
   #dataTable thead tr.saturday-group-row th:hover { background:#fff; }
+  .saturday-title-box {
+    display:flex; align-items:center; justify-content:center;
+    width:calc(100% + 1px); height:34px; margin-right:-1px;
+    border:1px solid #111; background:#fff; box-sizing:border-box;
+  }
+  #dataTable thead tr.saturday-group-row th:last-child .saturday-title-box {
+    width:100%; margin-right:0;
+  }
   #dataTable tbody tr { border-bottom:1px solid #e0eaf5; }
   #dataTable tbody tr:hover { background:#f0f6ff; }
   #dataTable tbody tr.newly-registered-row { outline:2px solid #222; outline-offset:-2px; }
@@ -2962,8 +2969,11 @@ function renderTable() {
         + (group.includesRowNumber ? 1 : 0);
       if (!visibleCount) return;
       const th = document.createElement('th');
-      th.textContent = group.label;
       th.colSpan = visibleCount;
+      const titleBox = document.createElement('div');
+      titleBox.className = 'saturday-title-box';
+      titleBox.textContent = group.label;
+      th.appendChild(titleBox);
       groupRow.appendChild(th);
     });
     tableHead.appendChild(groupRow);
