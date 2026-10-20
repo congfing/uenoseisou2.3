@@ -1068,7 +1068,9 @@ function detectHeaderRow(raw) {
   const ne = r => (r||[]).filter(c => String(c).trim()!=='').length;
   let idx=0;
   for (let i=0; i<Math.min(5,raw.length-1); i++) {
-    if (ne(raw[i])<=1 && ne(raw[i])<ne(raw[i+1])) idx=i+1;
+    const currentCount = ne(raw[i]);
+    const nextCount = ne(raw[i+1]);
+    if (currentCount <= 3 && currentCount < nextCount) idx=i+1;
     else break;
   }
   return idx;
