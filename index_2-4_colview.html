@@ -334,6 +334,10 @@
     vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     box-sizing:border-box; border:1px solid #999;
   }
+  #dataTable.saturday-permit-sheet tbody tr,
+  #dataTable.saturday-permit-sheet tbody td {
+    height:36px;
+  }
   #dataTable tbody td.rn { color:#aaa; font-size:11px; text-align:right; min-width:32px; }
   #dataTable tbody td.property-name-cell {
     width:220px; min-width:160px; max-width:260px;
@@ -2853,6 +2857,7 @@ function renderTable() {
   const visArr = [...visibleCols].sort((a,b) => a-b);
   dataTable.classList.toggle('compact-columns', !assignmentFilter.active && visArr.length < headers.length);
   dataTable.classList.toggle('assignment-mode', assignmentFilter.active);
+  dataTable.classList.toggle('saturday-permit-sheet', currentSheetName === '土曜日許可物件表（休出用）');
   let assignmentRows = null;
 
   if (!headers.length) {
