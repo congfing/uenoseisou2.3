@@ -527,11 +527,18 @@
     z-index: 30;
     margin-top: 248px;
     padding: 8px 10px;
-    border-style: solid;
+    border: 0;
+    border-top: 1px solid var(--button-border);
+    border-radius: 0;
   }
 
   .phone-card.running {
     min-height: 298px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 2px solid var(--button-border);
+    border-radius: 12px;
+    background: var(--button-bg);
   }
 
   .running-preview {
@@ -541,8 +548,8 @@
     right: 0;
     height: 242px;
     z-index: 25;
-    border: 1px solid var(--card-border);
-    border-radius: 16px;
+    border: 0;
+    border-radius: 10px 10px 0 0;
     background: transparent;
     cursor: pointer;
     overflow: hidden;
