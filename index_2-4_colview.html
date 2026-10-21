@@ -263,6 +263,13 @@
   .saturday-existing-row.selected { outline:2px solid #111; outline-offset:-2px; background:#ddd; }
   .saturday-existing-actions { display:flex; gap:8px; margin-top:10px; }
   .saturday-existing-actions button { border:2px solid #111; background:#fff; padding:8px 12px; font-weight:700; }
+  #saturdayHiddenList { display:none; margin-top:10px; border-top:1px solid #999; }
+  #saturdayHiddenList.open { display:block; }
+  .saturday-hidden-row {
+    display:grid; grid-template-columns:72px 42px minmax(70px,.7fr) minmax(130px,1.5fr);
+    gap:8px; padding:8px 4px; border-bottom:1px solid #bbb; cursor:pointer;
+  }
+  .saturday-hidden-row:hover { background:#ddd; }
   .saturday-add-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
   .saturday-add-actions button { border:2px solid #111; background:#fff; padding:9px 16px; font-weight:700; }
   #btnAssignment { font-weight:700; }
@@ -744,6 +751,7 @@
           <button type="button" id="saturdayExistingRestore" disabled>再表示</button>
           <button type="button" id="saturdayEntryReset">やり直し</button>
         </div>
+        <div id="saturdayHiddenList"></div>
       </div>
     </div>
     <label class="saturday-add-field">順番
@@ -2097,6 +2105,8 @@ function openSaturdayAddDialog() {
   selectedSaturdayExistingIndex = null;
   document.getElementById('saturdayExistingHide').disabled = true;
   document.getElementById('saturdayExistingRestore').disabled = hiddenSaturdayPermitItems.length === 0;
+  document.getElementById('saturdayHiddenList').classList.remove('open');
+  document.getElementById('saturdayHiddenList').innerHTML = '';
   document.querySelectorAll('#saturdayAddGroupChoices button').forEach(button => button.classList.remove('selected'));
   lastSaturdayPermitHistoryId = null;
   document.getElementById('saturdayAddApply').disabled = false;
@@ -2172,6 +2182,26 @@ function syncSaturdayGroupToPropertySheet(groupKey) {
   });
 }
 
+function renderSaturdayHiddenList() {
+  const host = document.getElementById('saturdayHiddenList');
+  host.innerHTML = '';
+  hiddenSaturdayPermitItems.forEach((hidden, hiddenIndex) => {
+    const group = SATURDAY_GROUPS[hidden.groupKey];
+    if (!group) return;
+    const row = document.createElement('div');
+    row.className = 'saturday-hidden-row';
+    [group.label, String(hidden.index + 1), String(hidden.values[group.district] || ''), String(hidden.values[group.property] || '')]
+      .forEach(value => {
+        const cell = document.createElement('span');
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+    row.addEventListener('click', () => restoreSaturdayExisting(hiddenIndex));
+    host.appendChild(row);
+  });
+  if (!host.children.length) host.textContent = '非表示の物件はありません';
+}
+
 function hideSelectedSaturdayExisting() {
   const groupKey = document.getElementById('saturdayAddGroup').value;
   const group = SATURDAY_GROUPS[groupKey];
@@ -2195,14 +2225,16 @@ function hideSelectedSaturdayExisting() {
   selectedSaturdayExistingIndex = null;
   document.getElementById('saturdayExistingHide').disabled = true;
   document.getElementById('saturdayExistingRestore').disabled = false;
+  if (document.getElementById('saturdayHiddenList').classList.contains('open')) renderSaturdayHiddenList();
   renderSaturdayAddExistingList(groupKey);
   renderTable();
   saveState();
   showToast('選択した物件を非表示にしました');
 }
 
-function restoreSaturdayExisting() {
-  const hidden = hiddenSaturdayPermitItems.pop();
+function restoreSaturdayExisting(hiddenIndex) {
+  const index = Number.isInteger(hiddenIndex) ? hiddenIndex : -1;
+  const hidden = index >= 0 ? hiddenSaturdayPermitItems.splice(index, 1)[0] : null;
   if (!hidden) { showToast('再表示する物件はありません'); return; }
   const groupKey = hidden.groupKey;
   const group = SATURDAY_GROUPS[groupKey];
@@ -2223,6 +2255,7 @@ function restoreSaturdayExisting() {
   propertyEditorApplied = true;
   syncCurrentSheetToWorkbook();
   document.getElementById('saturdayExistingRestore').disabled = hiddenSaturdayPermitItems.length === 0;
+  renderSaturdayHiddenList();
   if (document.getElementById('saturdayAddGroup').value !== groupKey) {
     document.getElementById('saturdayAddGroup').value = groupKey;
     document.getElementById('saturdayAddGroupValue').textContent = group.label;
@@ -2374,7 +2407,11 @@ document.querySelectorAll('#saturdayAddGroupChoices button').forEach(button => {
   button.addEventListener('click', () => selectSaturdayAddGroup(button.dataset.group, button));
 });
 document.getElementById('saturdayExistingHide').addEventListener('click', hideSelectedSaturdayExisting);
-document.getElementById('saturdayExistingRestore').addEventListener('click', restoreSaturdayExisting);
+document.getElementById('saturdayExistingRestore').addEventListener('click', () => {
+  const list = document.getElementById('saturdayHiddenList');
+  list.classList.toggle('open');
+  if (list.classList.contains('open')) renderSaturdayHiddenList();
+});
 document.getElementById('saturdayEntryReset').addEventListener('click', resetSaturdayEntryDraft);
 document.getElementById('saturdayAddApply').addEventListener('click', addSaturdayPermitProperty);
 document.getElementById('saturdayAddMail').addEventListener('click', sendLastSaturdayPermitMail);
