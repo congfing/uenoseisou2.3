@@ -1091,7 +1091,6 @@ function loadCollectionOrdersFromWeekdayCells(staffSet, daySet) {
       const suffix = value.slice(staff.length).match(/^\s*(\d+)/);
       if (!suffix) return;
       const key = assignmentRowKey(row, staff, day);
-      if (Object.prototype.hasOwnProperty.call(draftCollectionOrders, key)) return;
       const order = normalizedCollectionOrder(suffix[1]);
       if (order === null) return;
       draftCollectionOrders[key] = order;
