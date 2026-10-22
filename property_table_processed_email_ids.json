@@ -349,6 +349,38 @@
       "workbook": "2026年度物件表_KMN置換.xlsx",
       "result": "reflected",
       "changes": ["登録番号294 名張育成会 こころのいろの金曜日をK-からM-へ変更"]
+    },
+    {
+      "message_id": "1a1627412633fcb0",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T17:15:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["登録番号198 福田工業㈱の火曜日をK-へ変更"]
+    },
+    {
+      "message_id": "1a162946abf94bae",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T17:15:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["火曜日K-収集順55件を設定"]
+    },
+    {
+      "message_id": "1a1629cf037d1a0f",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T17:15:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["5物件の火曜日を未選択へ変更"]
+    },
+    {
+      "message_id": "1a162a325d51fe3c",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T17:15:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["朝日パンションの水曜日を未選択へ変更", "読売新聞 上野支局の火曜日をK-、水曜日を未選択へ変更"]
     }
   ]
 }
