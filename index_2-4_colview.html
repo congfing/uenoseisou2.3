@@ -76,7 +76,7 @@
 
   /* 担当者・曜日選択 */
   #assignmentDialog {
-    display:none; position:fixed; inset:0; z-index:280;
+    display:none; position:fixed; inset:0; z-index:520;
     padding:24px; background:rgba(0,0,0,0.35);
     align-items:center; justify-content:center;
   }
@@ -641,7 +641,7 @@
     <button class="tb-btn" id="btnNewRecord">新規登録</button>
     <button class="tb-btn" id="btnSaturdayAdd" hidden>土曜物件を追加</button>
     <button class="tb-btn" id="btnPropertyTableEditor">編集用物件表</button>
-    <button class="tb-btn" id="btnAssignment">担当者、曜日を選択 <span id="assignmentCount"></span></button>
+    <button class="tb-btn" id="btnAssignment" type="button" onclick="openAssignmentDialog()">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
     <button class="tb-btn" id="btnAllOff">全列非表示</button>
@@ -1584,13 +1584,15 @@ function renderAssignmentStaffOptions() {
   });
 }
 
-btnAssignment.addEventListener('click', () => {
+function openAssignmentDialog() {
+  document.getElementById('newRecordDialog')?.classList.remove('active');
+  document.getElementById('saturdayAddDialog')?.classList.remove('active');
   renderAssignmentStaffOptions();
   assignmentPanel.querySelectorAll('#staffOptions input').forEach(cb => cb.checked = assignmentFilter.staff.has(cb.value));
   assignmentPanel.querySelectorAll('#weekdayOptions input').forEach(cb => cb.checked = assignmentFilter.days.has(cb.value));
   assignmentDialog.classList.add('active');
-  assignmentPanel.querySelector('input').focus();
-});
+  assignmentPanel.querySelector('input')?.focus();
+}
 
 document.getElementById('assignmentStaffAdd').addEventListener('click', () => {
   const input = document.getElementById('assignmentStaffAddInput');
