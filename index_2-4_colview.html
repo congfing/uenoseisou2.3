@@ -714,7 +714,7 @@
     <div id="newRecordFields"></div>
     <div id="propertyManagePanel">
       <div class="property-search-inputs">
-        <input type="search" id="propertySearchInput" placeholder="物件名を2文字以上で検索">
+        <input type="search" id="propertySearchInput" placeholder="物件名を1文字以上で検索">
         <input type="number" id="propertyOrderSearchInput" min="1" inputmode="numeric" placeholder="整理番号">
       </div>
       <div class="property-selected-row">
@@ -1873,8 +1873,8 @@ function renderPropertySearchResults() {
     : dataArray;
   const query = normalizePropertySearch(input.value);
   const orderQuery = String(orderInput.value || '').trim();
-  if (propertyManageMode === 'search' && !orderQuery && query.length < 2) {
-    results.textContent = '物件名を2文字以上、または整理番号を入力すると候補を表示します。';
+  if (propertyManageMode === 'search' && !orderQuery && query.length < 1) {
+    results.textContent = '物件名を1文字以上、または整理番号を入力すると候補を表示します。';
     return;
   }
   const matches = source.filter(row => {
