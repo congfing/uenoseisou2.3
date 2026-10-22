@@ -389,6 +389,18 @@
       "workbook": "2026年度物件表_KMN置換.xlsx",
       "result": "reflected",
       "changes": ["段紙収集順13件を段紙-1から段紙-13へ設定"]
+    },
+    {
+      "message_id": "1a16551aa8b77ff9",
+      "subject": "物件表 収集順変更 物件表",
+      "processed_at": "2026-10-23T05:32:24+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": [
+        "金曜日N-収集順48件をメールと照合",
+        "アーバン松井をN-37からN-36へ変更",
+        "上野チキンをN-36からN-37へ変更"
+      ]
     }
   ]
 }
