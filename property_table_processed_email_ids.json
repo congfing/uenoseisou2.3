@@ -381,6 +381,14 @@
       "workbook": "2026年度物件表_KMN置換.xlsx",
       "result": "reflected",
       "changes": ["朝日パンションの水曜日を未選択へ変更", "読売新聞 上野支局の火曜日をK-、水曜日を未選択へ変更"]
+    },
+    {
+      "message_id": "1a162e5ed5e6e21b",
+      "subject": "物件表 収集順変更 物件表",
+      "processed_at": "2026-10-22T18:20:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["段紙収集順13件を段紙-1から段紙-13へ設定"]
     }
   ]
 }
