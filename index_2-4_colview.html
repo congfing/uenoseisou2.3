@@ -291,7 +291,8 @@
   .new-record-field { border-bottom:1px solid #999; min-width:0; }
   .new-record-field-title {
     display:flex; align-items:center; gap:8px; width:100%; padding:11px 4px;
-    border:0; background:#fff; color:#111; font:inherit; font-weight:700; text-align:left; cursor:pointer;
+    border:0 !important; border-radius:0 !important; box-shadow:none !important;
+    background:#fff; color:#111; font:inherit; font-weight:700; text-align:left; cursor:pointer;
   }
   .new-record-field-title::after { content:'▼'; margin-left:auto; font-size:10px; }
   .new-record-field.open .new-record-field-title::after { content:'▲'; }
