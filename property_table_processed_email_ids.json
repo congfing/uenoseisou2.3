@@ -293,6 +293,62 @@
       "changes": [
         "登録番号244 川口アパートの水曜日をK-からM-へ変更"
       ]
+    },
+    {
+      "message_id": "1a1618e8d75fedcb",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["月曜日K-収集順52件を設定"]
+    },
+    {
+      "message_id": "1a1619101b12691e",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["登録番号269 よい子のお家伊賀の火曜日をK-、金曜日をM-へ変更"]
+    },
+    {
+      "message_id": "1a161b577cc8b943",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["登録番号211 福田工業 治田工場の火曜日をK-へ変更"]
+    },
+    {
+      "message_id": "1a161b976cbce41d",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["水曜日K-収集順33件を設定"]
+    },
+    {
+      "message_id": "1a161beca435c1d4",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["金曜日K-収集順57件を設定"]
+    },
+    {
+      "message_id": "1a161c079c66799b",
+      "subject": "物件表 収集順変更 物件表",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "already_reflected",
+      "changes": ["木曜日K-収集順43件を照合し、全件が既存値と一致"]
+    },
+    {
+      "message_id": "1a161ed184bfb46d",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-22T14:10:00+09:00",
+      "workbook": "2026年度物件表_KMN置換.xlsx",
+      "result": "reflected",
+      "changes": ["登録番号294 名張育成会 こころのいろの金曜日をK-からM-へ変更"]
     }
   ]
 }
