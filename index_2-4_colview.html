@@ -671,8 +671,9 @@
           <label class="assignment-option"><input type="checkbox" value="段紙-">段紙-</label>
           <label class="assignment-option"><input type="checkbox" value="ガラ-">ガラ-</label>
           <label class="assignment-option"><input type="checkbox" value="おしめ-">おしめ-</label>
-          <label class="assignment-option"><input type="checkbox" value="A-">A-</label>
-          <label class="assignment-option"><input type="checkbox" value="B-">B-</label>
+          <label class="assignment-option"><input type="checkbox" value="内-">内-</label>
+          <label class="assignment-option"><input type="checkbox" value="外-">外-</label>
+          <label class="assignment-option"><input type="checkbox" value="段紙(土)-">段紙(土)-</label>
         </div>
         <div class="assignment-add-row">
           <input type="text" id="assignmentStaffAddInput" placeholder="担当者記号" maxlength="10" aria-label="追加する担当者記号">
@@ -881,12 +882,13 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '金属-', '段紙-', 'ガラ-', 'おしめ-', 'A-', 'B-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '内-', '外-', '段紙(土)-', '金属-', '段紙-', 'ガラ-', 'おしめ-'];
 const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
 const ASSIGNMENT_STAFF = (() => {
   try {
     const saved = JSON.parse(localStorage.getItem(ASSIGNMENT_STAFF_STORAGE_KEY) || '[]');
-    return [...new Set([...DEFAULT_ASSIGNMENT_STAFF, ...(Array.isArray(saved) ? saved : [])])];
+    const activeSaved = Array.isArray(saved) ? saved.filter(value => !['A-', 'B-'].includes(value)) : [];
+    return [...new Set([...DEFAULT_ASSIGNMENT_STAFF, ...activeSaved])];
   } catch (e) {
     return [...DEFAULT_ASSIGNMENT_STAFF];
   }
@@ -899,7 +901,7 @@ const NEW_RECORD_ASSIGNMENT_CHOICES = {
   '水曜日': BASIC_WEEKDAY_CHOICES,
   '木曜日': BASIC_WEEKDAY_CHOICES,
   '金曜日': BASIC_WEEKDAY_CHOICES,
-  '土曜日': ['N-', 'M-', 'K-', 'H-', 'A-', 'B-', 'PETアルミ', '段紙', '発泡'],
+  '土曜日': ['N-', 'M-', 'K-', 'H-', '内-', '外-', '段紙(土)-', 'PETアルミ', '段紙', '発泡'],
   '日曜日': BASIC_WEEKDAY_CHOICES,
   '金属': ['金属-'],
   '段紙': ['段紙-'],
