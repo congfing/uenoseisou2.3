@@ -671,7 +671,7 @@
           <label class="assignment-option"><input type="checkbox" value="金属-">金属-</label>
           <label class="assignment-option"><input type="checkbox" value="段紙-">段紙-</label>
           <label class="assignment-option"><input type="checkbox" value="ガラ-">ガラ-</label>
-          <label class="assignment-option"><input type="checkbox" value="おしめ-">おしめ-</label>
+          <label class="assignment-option"><input type="checkbox" value="おむつ-">おむつ-</label>
           <label class="assignment-option"><input type="checkbox" value="内-">内-</label>
           <label class="assignment-option"><input type="checkbox" value="外-">外-</label>
           <label class="assignment-option"><input type="checkbox" value="段紙(土)-">段紙(土)-</label>
@@ -694,7 +694,7 @@
           <label class="assignment-option"><input type="checkbox" value="金属">金属</label>
           <label class="assignment-option"><input type="checkbox" value="段紙">段紙</label>
           <label class="assignment-option"><input type="checkbox" value="ガラ">ガラ</label>
-          <label class="assignment-option"><input type="checkbox" value="おしめ">おしめ</label>
+          <label class="assignment-option"><input type="checkbox" value="おむつ">おむつ</label>
         </div>
       </div>
     </div>
@@ -884,7 +884,7 @@ let displayedRows = [];  // 現在表示中の行（フィルター＋ソート�
 let displayedAssignmentRows = [];
 let gitListLoading = false;
 let gitListLoadedAt = 0;
-const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '内-', '外-', '段紙(土)-', '金属-', '段紙-', 'ガラ-', 'おしめ-'];
+const DEFAULT_ASSIGNMENT_STAFF = ['N-', 'K-', 'M-', 'H-', '内-', '外-', '段紙(土)-', '金属-', '段紙-', 'ガラ-', 'おむつ-'];
 const ASSIGNMENT_STAFF_STORAGE_KEY = 'colview_assignment_staff_v1';
 const ASSIGNMENT_STAFF = (() => {
   try {
@@ -895,7 +895,7 @@ const ASSIGNMENT_STAFF = (() => {
     return [...DEFAULT_ASSIGNMENT_STAFF];
   }
 })();
-const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '段紙(土)', '金属', '段紙', 'ガラ', 'おしめ'];
+const ASSIGNMENT_DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '段紙(土)', '金属', '段紙', 'ガラ', 'おむつ'];
 const BASIC_WEEKDAY_CHOICES = ['N-', 'M-', 'K-', 'H-', 'PETアルミ', '段紙', '発泡'];
 const NEW_RECORD_ASSIGNMENT_CHOICES = {
   '月曜日': BASIC_WEEKDAY_CHOICES,
@@ -909,7 +909,7 @@ const NEW_RECORD_ASSIGNMENT_CHOICES = {
   '金属': ['金属-'],
   '段紙': ['段紙-'],
   'ガラ': ['ガラ-'],
-  'おしめ': ['おしめ-']
+  'おむつ': ['おむつ-']
 };
 let assignmentFilter = { active:false, staff:new Set(), days:new Set() };
 let committedCollectionOrders = {};
