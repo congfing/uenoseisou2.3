@@ -436,6 +436,16 @@
       "changes": [
         "月曜日H-収集順56件をH-1からH-56へ設定"
       ]
+    },
+    {
+      "message_id": "1a16ace5dd96101c",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-24T07:07:48+09:00",
+      "workbook": "許可物件表_Git.xlsx",
+      "result": "reflected",
+      "changes": [
+        "登録番号54の契約物件をJEWRLからJewelへ変更"
+      ]
     }
   ]
 }
