@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>列選択ビューア</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { overscroll-behavior-x: contain; margin:0; font-family:'Hiragino Sans','ヒラギノ角ゴ ProN','Meiryo','メイリオ',sans-serif; font-size:13px; font-weight:400; }
@@ -644,6 +645,7 @@
     <button class="tb-btn" id="btnPropertyTableEditor">編集用物件表</button>
     <button class="tb-btn" id="btnAssignment" type="button" onclick="openAssignmentDialog()">担当者、曜日を選択 <span id="assignmentCount"></span></button>
     <button class="tb-btn" id="btnTogglePanel">☑ 列を選択</button>
+    <button class="tb-btn" id="btnScreenshot" type="button">📷 スクショ</button>
     <button class="tb-btn" id="btnAllOn">全列表示</button>
     <button class="tb-btn" id="btnAllOff">全列非表示</button>
     <div class="toolbar-search">
@@ -2663,6 +2665,62 @@ document.getElementById('btnAllOn').addEventListener('click', () => {
 document.getElementById('btnAllOff').addEventListener('click', () => {
   visibleCols.clear(); syncCheckboxes(); renderTable(); saveState();
 });
+
+function screenshotFilename() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+  const sheet = String(currentSheetName || '物件表').replace(/[\\/:*?"<>|]/g, '_');
+  return `${sheet}_${stamp}.png`;
+}
+
+async function saveWholeTableScreenshot() {
+  if (!headers.length || dataTable.style.display === 'none') {
+    showToast('スクショする表を表示してください');
+    return;
+  }
+  if (typeof html2canvas !== 'function') {
+    showToast('スクショ機能を読み込めません。通信状態を確認してください');
+    return;
+  }
+
+  const button = document.getElementById('btnScreenshot');
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = '作成中…';
+  showToast('表全体のスクショを作成しています');
+
+  try {
+    const width = Math.max(dataTable.scrollWidth, dataTable.offsetWidth);
+    const height = Math.max(dataTable.scrollHeight, dataTable.offsetHeight);
+    const maxDimension = 8192;
+    const maxPixels = 16000000;
+    const scale = Math.min(1, maxDimension / Math.max(width, height), Math.sqrt(maxPixels / Math.max(1, width * height)));
+    const canvas = await html2canvas(dataTable, {
+      backgroundColor:'#ffffff', scale, width, height, windowWidth:width, windowHeight:height,
+      scrollX:0, scrollY:0, useCORS:true, logging:false
+    });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('画像を作成できませんでした');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = screenshotFilename();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    showToast('表全体のスクショを保存しました');
+  } catch (error) {
+    console.error(error);
+    showToast('スクショを作成できませんでした');
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+document.getElementById('btnScreenshot').addEventListener('click', saveWholeTableScreenshot);
 
 function adjustWrapperHeight() {
   const wrapper = document.getElementById('tableWrapper');
