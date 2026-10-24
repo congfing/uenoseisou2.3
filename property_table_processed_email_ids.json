@@ -446,6 +446,27 @@
       "changes": [
         "登録番号54の契約物件をJEWRLからJewelへ変更"
       ]
+    },
+    {
+      "message_id": "1a16ce3f3c59f1c7",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-24T16:50:28+09:00",
+      "workbook": "許可物件表_Git.xlsx",
+      "result": "reflected",
+      "changes": [
+        "登録番号17の火曜日をK-から未選択へ変更"
+      ]
+    },
+    {
+      "message_id": "1a16d5f155238982",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-24T19:05:10+09:00",
+      "workbook": "許可物件表_Git.xlsx",
+      "result": "reflected",
+      "changes": [
+        "整理番号297・登録番号300 クルーズを新規登録",
+        "土曜日を外-に設定"
+      ]
     }
   ]
 }
