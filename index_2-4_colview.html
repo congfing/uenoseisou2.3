@@ -18,6 +18,14 @@
     min-height:44px;
   }
   #app-header h1 { margin:0; font-size:15px; font-weight:700; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #header-actions {
+    display:flex; align-items:center; gap:10px; flex:0 1 auto; min-width:0;
+    max-width:72%; overflow-x:auto; overflow-y:hidden;
+    overscroll-behavior-x:contain; touch-action:pan-x;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  #header-actions::-webkit-scrollbar { display:none; }
+  #header-actions > button { flex:0 0 auto; }
   #backBtn {
     padding:5px 14px; background:rgba(255,255,255,0.2);
     border:1px solid rgba(255,255,255,0.5); border-radius:4px;
@@ -636,9 +644,11 @@
 
 <div id="app-header">
   <h1>📋 列選択ビューアv2-4</h1>
-  <button type="button" id="backBtn" onclick="closeApp()">✕ 閉じる</button>
-  <button type="button" id="toolbar-toggle" onclick="toggleToolbar()" aria-controls="toolbar-inner" aria-expanded="true">▲ 操作パネルを隠す</button>
-  <button type="button" id="btnScreenshot">📷 スクショ</button>
+  <div id="header-actions" aria-label="画面操作">
+    <button type="button" id="backBtn" onclick="closeApp()">✕ 閉じる</button>
+    <button type="button" id="toolbar-toggle" onclick="toggleToolbar()" aria-controls="toolbar-inner" aria-expanded="true">▲ 操作パネルを隠す</button>
+    <button type="button" id="btnScreenshot">📷 スクショ</button>
+  </div>
 </div>
 
 <div id="toolbar">
