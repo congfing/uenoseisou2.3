@@ -2720,7 +2720,21 @@ async function saveWholeTableScreenshot() {
     const scale = Math.min(1, maxDimension / Math.max(width, height), Math.sqrt(maxPixels / Math.max(1, width * height)));
     const canvas = await html2canvas(dataTable, {
       backgroundColor:'#ffffff', scale, width, height, windowWidth:width, windowHeight:height,
-      scrollX:0, scrollY:0, useCORS:true, logging:false
+      scrollX:0, scrollY:0, useCORS:true, logging:false,
+      onclone:clonedDocument => {
+        const clonedWrapper = clonedDocument.getElementById('tableWrapper');
+        const clonedHead = clonedDocument.querySelector('#dataTable thead');
+        if (clonedWrapper) {
+          clonedWrapper.scrollTop = 0;
+          clonedWrapper.scrollLeft = 0;
+          clonedWrapper.style.overflow = 'visible';
+          clonedWrapper.style.maxHeight = 'none';
+        }
+        if (clonedHead) {
+          clonedHead.style.position = 'static';
+          clonedHead.style.top = 'auto';
+        }
+      }
     });
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('画像を作成できませんでした');
