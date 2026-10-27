@@ -33,7 +33,7 @@
   `;
   document.head.append(style);
   const editor=document.createElement('dialog');editor.id='propertyTableEditor';editor.setAttribute('aria-label','編集用物件表');
-  editor.innerHTML='<div class="pte-toolbar"><h2>編集用物件表</h2><input id="pteSearch" aria-label="物件検索" placeholder="物件検索"><select class="pte-filter" id="pteFilterColumn" aria-label="絞り込む列"></select><select class="pte-filter" id="pteFilterValue" aria-label="絞り込む値"></select><button type="button" id="pteFilterClear">絞り込み解除</button><span id="pteCount"></span><button id="pteSave" type="button">保存して適用</button><button id="pteExcel" type="button">エクセル保存</button><button id="pteClose" type="button">閉じる</button><button id="pteBackToAssignment" type="button">担当者・曜日選択へ戻る</button></div><div id="pteGrid"></div>';
+  editor.innerHTML='<div class="pte-toolbar"><h2>編集用物件表</h2><input id="pteSearch" aria-label="物件検索" placeholder="物件検索"><select class="pte-filter" id="pteFilterColumn" aria-label="絞り込む列"></select><select class="pte-filter" id="pteFilterValue" aria-label="絞り込む値"></select><button type="button" id="pteFilterClear">絞り込み解除</button><span id="pteCount"></span><button id="pteSave" type="button">保存して適用</button><button id="pteExcel" type="button">エクセル保存</button><button id="pteMail" type="button">メール送信</button><button id="pteClose" type="button">閉じる</button><button id="pteBackToAssignment" type="button">担当者・曜日選択へ戻る</button></div><div id="pteGrid"></div>';
   document.body.append(editor);
   function fitEditorToViewport(){
     const zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
@@ -246,6 +246,13 @@
       doSaveExcel(makeTimestampedName(currentFilename||'物件表.xlsx'));
       source=currentFilename;
     }catch(error){alert(`エクセル保存に失敗しました：${error.message}`);}
+  };
+  editor.querySelector('#pteMail').onclick=()=>{
+    if(changeCount()&&!applyEditor(false))return;
+    pausedForAssignment=false;
+    editor.close();
+    if(typeof window.openPropertyHistoryPanel==='function')window.openPropertyHistoryPanel();
+    else showToast('変更履歴を開けませんでした');
   };
   document.getElementById('btnPropertyTableEditor').onclick=()=>{
     if(!workbook||!hasPropertyTableHeaders()){showToast('物件表を読み込んでください');return;}
