@@ -2576,7 +2576,26 @@ function sendPropertyChangeMail(changes) {
 }
 
 function sendLatestNewRecordMail() {
-  if (!lastRegisteredRecord) { showToast('先に新規登録してください'); return; }
+  // 非表示・再表示は新規登録を必要としない。未送信の変更履歴を優先する。
+  const historyForChanges = getPropertyChangeHistory();
+  const pendingNonRegistration = historyForChanges.filter(item =>
+    !item.sentAt && ['hide', 'restore', 'update'].includes(item.type) &&
+    item.filename === currentFilename && item.sheetName === currentSheetName
+  );
+  if (pendingNonRegistration.length) {
+    if (!sendPropertyChangeMail(pendingNonRegistration)) return;
+    const sentAt = Date.now();
+    pendingNonRegistration.forEach(item => { item.sentAt = sentAt; });
+    setPropertyChangeHistory(historyForChanges);
+    pendingPropertyChanges = pendingPropertyChanges.filter(change =>
+      !pendingNonRegistration.some(item => item.type === change.type &&
+        JSON.stringify(item.row) === JSON.stringify(change.row))
+    );
+    if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+    showToast(`${pendingNonRegistration.length}件の変更履歴のメール画面を開きました`);
+    return;
+  }
+  if (!lastRegisteredRecord) { showToast('送信する未送信の変更履歴がありません'); return; }
   const history = getPropertyChangeHistory();
   const target = history.find(item => item.type === 'register' && !item.sentAt &&
     item.filename === currentFilename && item.sheetName === currentSheetName &&
