@@ -620,7 +620,13 @@
   .property-change-item { display:grid; grid-template-columns:24px minmax(0,1fr); gap:7px; padding:8px; border:1px solid #aaa; margin-bottom:6px; background:#fff; }
   .property-change-item.sent { background:#e5e5e5; color:#666; }
   .property-change-item input { width:18px; height:18px; margin-top:2px; }
+  .property-change-heading { display:flex; align-items:center; gap:8px; min-width:0; }
   .property-change-name { font-size:13px; font-weight:800; }
+  .property-change-status {
+    flex-shrink:0; padding:2px 7px; border:1px solid #111; border-radius:4px;
+    background:#fff; color:#111; font-size:11px; font-weight:800;
+  }
+  .property-change-status.sent { background:#555; color:#fff; }
   .property-change-meta { margin-top:2px; font-size:11px; line-height:1.5; }
   .property-change-detail { margin-top:3px; font-size:12px; font-weight:700; line-height:1.5; }
   .property-history-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
@@ -3964,7 +3970,19 @@ document.getElementById('collectionOrderSaveExit').addEventListener('click', () 
 
 document.getElementById('collectionOrderCommit').addEventListener('click', () => {
   saveCollectionOrderProgress();
-  if (openCollectionOrderMail()) showToast('端末に保存してメールを開きました');
+  if (openCollectionOrderMail()) {
+    const history = getPropertyChangeHistory();
+    const target = history.find(item => item.type === 'collection_order' && !item.sentAt &&
+      item.filename === currentFilename && item.sheetName === currentSheetName);
+    if (target) {
+      target.sentAt = Date.now();
+      setPropertyChangeHistory(history);
+      if (typeof window.renderPropertyChangeHistory === 'function') window.renderPropertyChangeHistory();
+    }
+    showToast(target
+      ? '端末に保存してメールを開き、履歴を送信済みにしました'
+      : '端末に保存してメールを開きました');
+  }
 });
 
 // ===== 保存機能 =====
@@ -4260,17 +4278,22 @@ window._colviewCtx = {
       checkbox.setAttribute('aria-label',`${item.summary?.property||'変更'}を選択`);
       checkbox.onchange=()=>syncDate(dateKey(item));
       const body = document.createElement('div');
+      const heading = document.createElement('div'); heading.className = 'property-change-heading';
       const name = document.createElement('div'); name.className = 'property-change-name';
       const savedSummary = item.summary || {};
       const property = savedSummary.property || (propertyCol >= 0 ? String(item.row[propertyCol] || '') : '') || '名称未入力';
       name.textContent = `${propertyTypeLabels[item.type] || '変更'}：${property}`;
+      const status = document.createElement('span');
+      status.className = `property-change-status${item.sentAt ? ' sent' : ''}`;
+      status.textContent = item.sentAt ? '送信済み' : '未送信';
+      heading.append(name, status);
       const meta = document.createElement('div'); meta.className = 'property-change-meta';
       const order = savedSummary.order || (orderCol >= 0 ? String(item.row[orderCol] || '') : '') || '-';
       const registration = savedSummary.registration || (registrationCol >= 0 ? String(item.row[registrationCol] || '') : '') || '-';
       meta.textContent = `整理番号 ${order}／登録番号 ${registration}／${fmtTime(item.timestamp)}／${item.sentAt ? `送信済み ${fmtTime(item.sentAt)}` : '未送信'}`;
       if(item.type==='saturday_permit_add')meta.textContent=`${savedSummary.group||'土曜日'} ${order}番／${savedSummary.district||'-'}／${fmtTime(item.timestamp)}／${item.sentAt?`送信済み ${fmtTime(item.sentAt)}`:'未送信'}`;
       if(item.groupedOrders)meta.textContent=`${item.groupIds.length}件／${item.sentAt?'送信済み':'未送信'}`;
-      body.append(name, meta);
+      body.append(heading, meta);
       if (Array.isArray(item.changes) && item.changes.length) {
         const detail = document.createElement('div');
         detail.className = 'property-change-detail';
