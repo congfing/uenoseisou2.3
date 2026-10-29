@@ -179,6 +179,12 @@
   .keiryou-open-btn.registered {
     background:#d9d9d9 !important; color:#111 !important; border-color:#222;
   }
+  /* 担当者別表示では、計量ボタンを左端の順番のすぐ右に固定する */
+  #dataTable th.keiryou-quick-cell,
+  #dataTable td.keiryou-quick-cell {
+    width:72px; min-width:72px; max-width:72px;
+    padding-left:3px; padding-right:3px; text-align:center;
+  }
   /* 表の直後に置く（画面に固定しない）。表が短いときは表のすぐ下、
      長いときは表が上限いっぱいになるので結果的に画面の一番下に来る。 */
   #collectionOrderActions {
@@ -465,6 +471,10 @@
     .collection-order-change,
     .geo-register-btn,
     .keiryou-open-btn { padding:5px 7px; font-size:12px; }
+    #dataTable th.keiryou-quick-cell,
+    #dataTable td.keiryou-quick-cell {
+      width:68px; min-width:68px; max-width:68px;
+    }
     /* 下のボタン列は1行に収めたいので、狭い画面では小さめにする */
     #collectionOrderActions { padding:8px 10px; gap:6px; justify-content:flex-start; }
     #collectionOrderActions button { padding:8px 9px; font-size:13px; }
@@ -3570,10 +3580,11 @@ function renderTable() {
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
   htr.appendChild(thN);
   if (assignmentFilter.active) {
-    ['地区名', '物件名', '収集順', '担当者情報'].forEach(label => {
+    ['計量', '地区名', '物件名', '収集順', '担当者情報'].forEach(label => {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
+      if (label === '計量') th.className = 'keiryou-quick-cell';
       if (label === '物件名') th.className = 'property-name-cell';
       if (label === '収集順') th.className = 'collection-order-cell';
       if (label === '担当者情報') th.className = 'assignment-info-cell';
@@ -3625,7 +3636,7 @@ function renderTable() {
         const groupRow = document.createElement('tr');
         groupRow.className = 'assignment-group-row';
         const groupCell = document.createElement('td');
-        groupCell.colSpan = 5;
+        groupCell.colSpan = 6;
         groupCell.textContent = `${item.staff} / ${item.day}`;
         groupRow.appendChild(groupCell);
         tableBody.appendChild(groupRow);
@@ -3646,6 +3657,8 @@ function renderTable() {
       const tdProperty = document.createElement('td');
       tdProperty.className = 'property-name-cell';
       tdProperty.textContent = propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '';
+      const tdKeiryou = document.createElement('td');
+      tdKeiryou.className = 'keiryou-quick-cell';
       const tdOrder = document.createElement('td');
       tdOrder.className = 'collection-order-cell';
       const orderEditor = document.createElement('div');
@@ -3708,7 +3721,7 @@ function renderTable() {
         keiryouBtn.setAttribute('aria-label', '計量データ入力を開く');
         updateKeiryouButtonState(keiryouBtn, keiryouName);
         keiryouBtn.addEventListener('click', () => openKeiryouEntry());
-        orderEditor.appendChild(keiryouBtn);
+        tdKeiryou.appendChild(keiryouBtn);
         keiryouButtonRefs.push({ btn: keiryouBtn, name: keiryouName });
       }
 
@@ -3716,7 +3729,7 @@ function renderTable() {
       const tdAssignment = document.createElement('td');
       tdAssignment.className = 'assignment-info-cell';
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
-      tr.append(tdDistrict, tdProperty, tdOrder, tdAssignment);
+      tr.append(tdKeiryou, tdDistrict, tdProperty, tdOrder, tdAssignment);
     } else {
       visArr.forEach(ci => {
         const td = document.createElement('td');
