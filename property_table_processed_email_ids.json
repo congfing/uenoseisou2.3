@@ -594,6 +594,27 @@
         "水曜日を未選択からM-へ変更",
         "収集時間を未選択から第1第3水曜日へ変更"
       ]
+    },
+    {
+      "message_id": "1a18bfbbd720f6bc",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-30T17:48:10+09:00",
+      "workbook": "許可物件表_Git.xlsx",
+      "result": "already_reflected",
+      "changes": [
+        "登録番号131・セブンイレブン伊賀平野東町店の水曜日を未選択からM-へ変更済み（Git commit 8f2475a）"
+      ]
+    },
+    {
+      "message_id": "1a18cc2f3f67c9fd",
+      "subject": "物件表 登録・変更",
+      "processed_at": "2026-10-30T21:22:23+09:00",
+      "workbook": "許可物件表_Git.xlsx",
+      "result": "duplicate_no_change",
+      "changes": [
+        "メール1a18bfbbd720f6bcと同一内容のため追加変更なし",
+        "登録番号131の水曜日がM-であることを確認"
+      ]
     }
   ]
 }
