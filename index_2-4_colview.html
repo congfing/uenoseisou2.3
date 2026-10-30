@@ -89,6 +89,13 @@
   }
   #sheetSelector:disabled { color: #aaa; }
   #statusBar { font-size:11px; color:#555; }
+  #currentSourceBadge {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:28px; padding:3px 10px; border:1px solid #777; border-radius:4px;
+    background:#fff; color:#111; font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  #currentSourceBadge[data-source="git"] { background:#e8f2ff; border-color:#1a6eb5; color:#124f83; }
+  #currentSourceBadge[data-source="local"] { background:#eee; border-color:#555; color:#111; }
 
   /* 担当者・曜日選択 */
   #assignmentDialog {
@@ -450,6 +457,12 @@
     width:58px; min-width:58px; max-width:58px;
     padding-left:4px; padding-right:4px; text-align:center;
   }
+  #dataTable th.collection-time-cell,
+  #dataTable td.collection-time-cell {
+    width:130px; min-width:100px; max-width:180px;
+    white-space:normal; overflow:visible; text-overflow:clip;
+    overflow-wrap:anywhere; line-height:1.35;
+  }
   @media (max-width:620px) {
     #dataTable thead th { padding:5px 4px; font-size:12px; }
     #dataTable tbody td { padding:3px 4px; font-size:12px; max-width:190px; }
@@ -481,6 +494,10 @@
     #dataTable tbody td.assignment-info-cell,
     #dataTable thead th.assignment-info-cell {
       white-space:nowrap; font-size:11px;
+    }
+    #dataTable tbody td.collection-time-cell,
+    #dataTable thead th.collection-time-cell {
+      width:110px; min-width:90px; max-width:140px; font-size:11px;
     }
     #dataTable th.weekday-col,
     #dataTable td.weekday-col { width:52px; min-width:52px; max-width:52px; }
@@ -687,6 +704,7 @@
     </div>
     <button class="tb-btn" id="btnSave" style="background:#27ae60;color:#fff;border-color:#1e8449;font-weight:700;">💾 エクセル保存</button>
     <button class="tb-btn" onclick="toggleHistPanel()" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:700;">📌 履歴</button>
+    <span id="currentSourceBadge" data-source="none" aria-live="polite">—</span>
     <span id="statusBar">— 読み込み中 —</span>
     <div id="geoHistoryAction" style="flex-basis:100%"><button type="button" class="tb-btn" id="btnGeoMail" style="font-weight:700;" onclick="openGeoPointHistory()">地点履歴</button></div>
   </div>
@@ -886,6 +904,7 @@ const FALLBACK_XLSX_FILES = [
 const gitFileSel    = document.getElementById('gitFileSelector');
 const sheetSel      = document.getElementById('sheetSelector');
 const statusBar     = document.getElementById('statusBar');
+const currentSourceBadge = document.getElementById('currentSourceBadge');
 const colPanel      = document.getElementById('colPanel');
 const searchInput   = document.getElementById('searchInput');
 const tableHead     = document.getElementById('tableHead');
@@ -914,6 +933,13 @@ const sheetDataRowCounts = {};
 // フィルター状態: { colIdx, selectedValues: Set, filterType: 'exact'|'prefix' }
 let filterState = { colIdx: null, selectedValues: new Set(), filterType: 'exact' };
 let filterPopupCol = -1;
+
+function updateCurrentSourceBadge(sourcePath) {
+  const isGit = String(sourcePath || '').startsWith('GitHub:');
+  currentSourceBadge.dataset.source = isGit ? 'git' : 'local';
+  currentSourceBadge.textContent = isGit ? 'Git版' : 'Local版';
+  currentSourceBadge.title = String(sourcePath || 'ローカルファイル');
+}
 let toastTimer  = null;
 let displayedRows = [];  // 現在表示中の行（フィルター＋ソート済み）
 let displayedAssignmentRows = [];
@@ -1403,6 +1429,7 @@ function loadWorkbookData(buf, filename, sourcePath) {
     const wb = XLSX.read(new Uint8Array(buf), { type:'array', cellStyles:true, cellDates:true });
     workbook = wb;
     currentFilename = filename;
+    updateCurrentSourceBadge(sourcePath);
 
     // シートセレクタを更新
     sheetSel.innerHTML = '';
@@ -1450,8 +1477,10 @@ function loadWorkbookData(buf, filename, sourcePath) {
     // 保存済み状態を復元（同じファイル・同じシートの場合のみ）
     const saved = loadSavedState();
     if (saved) {
-      const restored = String(sourcePath || '').startsWith('GitHub:')
-        ? { ...saved, collectionOrders:{} }
+      const source = String(sourcePath || '');
+      const authoritative = source.startsWith('GitHub:') || source.startsWith('ローカルサーバー:');
+      const restored = authoritative
+        ? { ...saved, collectionOrders:{}, editedPropertyTable:null, hiddenPropertyRecords:[] }
         : saved;
       applyRestoredState(restored);
     }
@@ -3580,13 +3609,14 @@ function renderTable() {
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
   htr.appendChild(thN);
   if (assignmentFilter.active) {
-    ['計量', '地区名', '物件名', '収集順', '担当者情報'].forEach(label => {
+    ['計量', '地区名', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
       if (label === '計量') th.className = 'keiryou-quick-cell';
       if (label === '物件名') th.className = 'property-name-cell';
       if (label === '収集順') th.className = 'collection-order-cell';
+      if (label === '収集時間') th.className = 'collection-time-cell';
       if (label === '担当者情報') th.className = 'assignment-info-cell';
       htr.appendChild(th);
     });
@@ -3636,7 +3666,7 @@ function renderTable() {
         const groupRow = document.createElement('tr');
         groupRow.className = 'assignment-group-row';
         const groupCell = document.createElement('td');
-        groupCell.colSpan = 6;
+        groupCell.colSpan = 7;
         groupCell.textContent = `${item.staff} / ${item.day}`;
         groupRow.appendChild(groupCell);
         tableBody.appendChild(groupRow);
@@ -3726,10 +3756,14 @@ function renderTable() {
       }
 
       tdOrder.appendChild(orderEditor);
+      const collectionTimeCol = headers.findIndex(h => String(h || '').trim() === '収集時間');
+      const tdCollectionTime = document.createElement('td');
+      tdCollectionTime.className = 'collection-time-cell';
+      tdCollectionTime.textContent = collectionTimeCol >= 0 ? String(row[collectionTimeCol] || '').trim() : '';
       const tdAssignment = document.createElement('td');
       tdAssignment.className = 'assignment-info-cell';
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
-      tr.append(tdKeiryou, tdDistrict, tdProperty, tdOrder, tdAssignment);
+      tr.append(tdKeiryou, tdDistrict, tdProperty, tdOrder, tdCollectionTime, tdAssignment);
     } else {
       visArr.forEach(ci => {
         const td = document.createElement('td');
@@ -4061,6 +4095,21 @@ document.getElementById('sdlgCancel').addEventListener('click', () => {
 });
 
 async function openLastUsedFile() {
+  if (location.port === '9300') {
+    try {
+      const response = await fetch(DEFAULT_GITHUB_XLSX + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const buf = await response.arrayBuffer();
+      loadWorkbookData(buf, DEFAULT_GITHUB_XLSX, 'ローカルサーバー: ' + location.host);
+      try {
+        localStorage.setItem(LAST_FILE_SOURCE_KEY, JSON.stringify({ type:'server', filename:DEFAULT_GITHUB_XLSX }));
+      } catch (e) {}
+      fetchGitHubFileList(false);
+      return;
+    } catch (e) {
+      console.warn('ローカルサーバーの最新物件表を取得できませんでした:', e);
+    }
+  }
   const lastSource = getLastFileSource();
   if (lastSource?.type === 'local') {
     const saved = await readLastWorkbook();
