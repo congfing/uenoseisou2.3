@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>列選択ビューア</title>
+<script>
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) location.reload();
+  });
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -4230,7 +4238,7 @@ window._colviewCtx = {
   window.addEventListener('pagehide', saveResume);
 })();
 </script>
-<script src="ueno-tabbar.js"></script>
+<script>document.write('<script src="ueno-tabbar.js?ts=' + Date.now() + '"><\/script>');</script>
 
 <!-- 履歴パネル -->
 <div id="hist-overlay" onclick="closeHistPanel()"></div>
@@ -4431,9 +4439,9 @@ window._colviewCtx = {
 })();
 </script>
 
-<script src="property-geo-status.js?v=20261016_1"></script>
-<script src="property-confirm-panel.js?v=20261016_2"></script>
-<script src="property-table-editor.js?v=20261028_1"></script>
-<script src="property-geo-history.js?v=20261030_1"></script>
+<script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
+<script>document.write('<script src="property-confirm-panel.js?ts=' + Date.now() + '"><\/script>');</script>
+<script>document.write('<script src="property-table-editor.js?ts=' + Date.now() + '"><\/script>');</script>
+<script>document.write('<script src="property-geo-history.js?ts=' + Date.now() + '"><\/script>');</script>
 </body>
 </html>
