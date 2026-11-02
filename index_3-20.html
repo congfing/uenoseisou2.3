@@ -766,6 +766,35 @@ const LEGACY_MULTIPLIER_SOURCE_KEYS={
   [`${SAKAKURA_PROPERTY_NAME}::物販（透明）可燃ごみ__袋`]:'物販可燃 透明__袋',
   [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）可燃ごみ__袋`]:'カフェ可燃 黒__袋'
 };
+// 過去の計量データで袋数とkgが同時に記録された行の最頻値を初期倍率にする。
+// 保存済みの利用者設定は getAutoMultiplier() でこちらより優先される。
+// すき家は2026-11-02の指定により、既設の3項目をすべて3倍とする。
+const DEFAULT_AUTO_MULTIPLIERS={
+  'すき家::可燃物__袋':3,
+  'すき家::ビン・缶・PET__袋':3,
+  'すき家::われもの等__袋':3,
+  '古本市場 上野店::可燃物__袋':3,
+  '古本市場 上野店::資源物__袋':1.5,
+  '株式会社クスリのアオキ 伊賀上野店::生活ゴミ(可燃)__袋':4,
+  '株式会社クスリのアオキ 伊賀上野店::生活ゴミ(不燃)__袋':4,
+  '株式会社クスリのアオキ 平野東店::生活ゴミ(可燃)__袋':4,
+  'イオンタウン伊賀::ごみ__袋':1,
+  'イオンタウン伊賀::生ごみ__袋':2,
+  'マックスバリュ佐那具店::ごみ__袋':2,
+  'マックスバリュ佐那具店::生ごみ__袋':4,
+  'マックスバリュ上野店::ごみ__袋':2,
+  'マックスバリュ上野店::生ごみ__袋':7,
+  'チョーヤ梅酒伊賀上野工場::可燃物収集__㎥':75,
+  'チョーヤ梅酒伊賀上野工場::フィルター紙収集__㎥':175,
+  [`${SAKAKURA_PROPERTY_NAME}::ホテル（白）可燃ごみ__袋`]:3,
+  [`${SAKAKURA_PROPERTY_NAME}::図書館（青）可燃ごみ__袋`]:3,
+  [`${SAKAKURA_PROPERTY_NAME}::物販（透明）可燃ごみ__袋`]:5,
+  [`${SAKAKURA_PROPERTY_NAME}::カフェ（黒）可燃ごみ__袋`]:3,
+  '伊賀の街::可燃ごみ__袋':4,
+  'クラギ（株）農業屋 伊賀上野店::可燃ごみ__袋':4,
+  '（株）西松屋チェーン 伊賀上野店::可燃物__袋':2,
+  'コメリ::可燃物__袋':2
+};
 const SAKAKURA_OBSOLETE_FIELD_KEYS=new Set([
   '白袋__袋','青袋__袋','黒袋__袋',
   'ホテル可燃白__袋','ホテル不燃__kg','ホテル不燃白__kg',
@@ -974,7 +1003,12 @@ function getAutoMultiplier(prop,sourceKey,fallback){
     value=loadJSON(LS_AUTO_MULTIPLIER_PREFIX+name+'_'+key,undefined);
     if(value!==undefined) break;
   }
-  if(value===undefined) value=fallback;
+  if(value===undefined){
+    const defaultKey=`${prop.name}::${sourceKey}`;
+    value=Object.prototype.hasOwnProperty.call(DEFAULT_AUTO_MULTIPLIERS,defaultKey)
+      ? DEFAULT_AUTO_MULTIPLIERS[defaultKey]
+      : fallback;
+  }
   if(value===''||value===null||value==='none') return null;
   const numeric=parseFloat(value);
   return Number.isNaN(numeric) ? fallback : numeric;
