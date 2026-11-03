@@ -2356,7 +2356,7 @@ function openEntry(idx,event,returnScreen){
         const targetData={...(state.entryData[target.name]||{}),...(state.entryDraft[target.name]||{})};
         const linked=document.createElement('div');linked.className='combined-field-input';
         linked.style.marginTop='16px';
-        linked.innerHTML='<div class="field-label">ペットボトル<span class="field-unit">（ｋｇ）</span> <span style="color:#000">イオンタウン伊賀</span></div><input type="number" class="num-input" inputmode="decimal" min="0" step="any" id="linkedAeonPetBottle" placeholder="0">';
+        linked.innerHTML='<div class="field-label">ペットボトル<span class="field-unit">（kg）</span> <span style="color:#000">イオンタウン伊賀</span></div><input type="number" class="num-input" inputmode="decimal" min="0" step="any" id="linkedAeonPetBottle" placeholder="0">';
         const linkedInput=linked.querySelector('input');
         linkedInput.value=getEntryValue(targetData,targetField,target.name);
         bindEntryInput(target,linkedInput,targetKey);
@@ -2367,7 +2367,7 @@ function openEntry(idx,event,returnScreen){
   renderEntryScreenshot(prop);
   c.querySelectorAll('.field-unit').forEach(span=>{
     const text=span.textContent;
-    const match=text.match(/^（(kg|ｋｇ|袋|㎥|個|本|枚|L|リットル)）/);
+    const match=text.match(/^（(kg|袋|㎥|個|本|枚|L|リットル)）/);
     if(!match)return;
     const unit=document.createElement('span');unit.className='field-unit entry-unit';unit.style.marginLeft='0';unit.textContent=match[0];
     span.replaceChildren(unit,document.createTextNode(text.slice(match[0].length)));
