@@ -1364,7 +1364,7 @@
     frame.className = "software-frame";
     frame.title = app.name;
     frame.dataset.file = app.file;
-    if (app.locationRecorder) frame.allow = "geolocation; screen-wake-lock";
+    if (app.locationRecorder) frame.allow = "geolocation; screen-wake-lock; web-share";
     const revision = app.revision ? "&revision=" + encodeURIComponent(app.revision) : "";
     frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3" + revision + "&ts=" + Date.now();
     frame.addEventListener("load", () => {
