@@ -20,10 +20,11 @@
   <div class="list-area"><div class="list-heading"><h2>記録地点</h2><span id="recordDate"></span></div><div class="file-actions"><button id="saveFile">TXT保存</button><button id="loadFile">TXT選択</button><button id="emailFile">メールに添付して送信</button><button id="closeApp">閉じる</button><button id="downloadRecord" hidden>ダウンロード保存</button><button id="pasteMail" hidden>メール本文を読み込み</button><input id="fileInput" type="file" accept="application/json,text/plain,.json,.txt" hidden></div><p style="padding:0 16px;font-size:12px">全記録を日付・曜日付きのテキストファイルに保存します。</p><div id="list"></div><div class="list-footer"><button id="renumber">連番に整える</button><button id="deleteSession" class="danger">この記録を削除</button></div></div>
  </section>
  <section id="permitPanel" hidden>
-  <div class="permit-heading"><h2>許可物件リスト</h2><button id="refreshPermit">物件表の選択を読み込む</button></div>
+  <div class="permit-heading"><h2>許可物件リスト</h2><div class="permit-selection-actions"><button id="openPermitPicker">担当者、曜日を選択</button><button id="refreshPermit">物件表の選択を読み込む</button></div></div>
   <p id="permitScope"></p><p id="permitSelection" role="status"></p><p id="permitEmpty" hidden></p><div id="permitProperties"></div>
  </section>
 </main>
+<dialog id="permitPickerDialog"><div class="permit-picker-heading"><h2>担当者、曜日を選択</h2><button data-close="permitPickerDialog">閉じる</button></div><iframe id="permitPickerFrame" title="物件表の担当者・曜日選択"></iframe></dialog>
 <dialog id="saveNameDialog"><form id="saveNameForm"><h2>名前を付けて保存</h2><label>ファイル名<input id="saveName" maxlength="180" required></label><div class="dialog-actions"><button type="button" data-close="saveNameDialog">キャンセル</button><button class="primary">保存</button></div></form></dialog>
 <dialog id="pasteDialog"><form id="pasteForm"><h2>メール本文を読み込み</h2><label>メール本文<textarea id="pasteText" rows="12" style="width:100%;box-sizing:border-box" required></textarea></label><div class="dialog-actions"><button type="button" data-close="pasteDialog">キャンセル</button><button class="primary">読み込み</button></div></form></dialog>
 <dialog id="mailTextDialog"><h2>メール本文</h2><p id="mailCopyStatus" role="status"></p><textarea id="mailText" rows="12" readonly style="width:100%;box-sizing:border-box" aria-label="コピーするメール本文"></textarea><div class="dialog-actions"><button id="openTextMail">本文をコピーしてメールを開く</button><button id="manualTextMail" hidden>メールを開く</button><button data-close="mailTextDialog">閉じる</button></div></dialog>

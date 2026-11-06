@@ -60,6 +60,22 @@
    const s=api.session();if(s?.permitContext&&!await api.ask('物件表の現在の選択でリストを更新しますか？登録済み地点の名前と収集順は残ります。'))return;
    if(s){const old=s.permitContext;s.permitContext=JSON.parse(JSON.stringify(latest));if(!api.save()){s.permitContext=old;render();return;}}render();
   };
+  $('openPermitPicker').onclick=()=>{
+   const table=decodeURIComponent(location.pathname).includes('/停車地点記録/')?'../uenoseisou2.3/index_2-4_colview.html':'../index_2-4_colview.html';
+   $('permitPickerFrame').src=table+'?permitPicker=1&t='+Date.now();$('permitPickerDialog').showModal();
+  };
+  $('permitPickerDialog').addEventListener('close',()=>{$('permitPickerFrame').src='about:blank';});
+  window.addEventListener('message',async event=>{
+   const sameOrigin=location.protocol==='file:'?event.origin==='null':event.origin===location.origin;
+   if(event.source!==$('permitPickerFrame').contentWindow||!sameOrigin)return;
+   if(event.data?.type==='permit-route-picker-cancel'){$('permitPickerDialog').close();return;}
+   if(event.data?.type!=='permit-route-picked')return;
+   const ctx=checked(event.data.snapshot);if(!ctx?.active)return;
+   $('permitPickerDialog').close();
+   const s=api.session();if(s?.permitContext&&!await api.ask('選択した担当者・曜日の物件リストに変更しますか？登録済み地点は削除しません。'))return;
+   latest=ctx;if(s){const old=s.permitContext;s.permitContext=JSON.parse(JSON.stringify(ctx));if(!api.save()){s.permitContext=old;render();return;}}
+   render();api.notify('選択した担当者・曜日の物件を読み込みました。');
+  });
   window.addEventListener('storage',event=>{if(event.key===KEY){read();render();}});
   window.addEventListener('focus',()=>{read();render();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){read();render();}});
