@@ -137,10 +137,10 @@
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
  function recordExport(){
   const now=new Date(),stamp=`${dated(today())}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}`;
-  return {name:`停車地点記録_${stamp}.json`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
+  return {name:`停車地点記録_${stamp}.txt`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
  }
  function downloadRecord(record=recordExport()){
-  const url=URL.createObjectURL(new Blob([record.content],{type:'application/json'})),a=document.createElement('a');
+  const url=URL.createObjectURL(new Blob([record.content],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');
   a.href=url;a.download=record.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
  }
@@ -150,12 +150,12 @@
   try{
    const record=recordExport();let file=null;
    if(typeof File!=='undefined'&&navigator.share&&navigator.canShare){
-    for(const type of ['application/json','text/plain']){
+    for(const type of ['text/plain']){
      const candidate=new File([record.content],record.name,{type});
      if(navigator.canShare({files:[candidate]})){file=candidate;break;}
     }
    }
-   if(!file){downloadRecord();notify(email?'記録ファイルをダウンロードします。メールにこのJSONファイルを添付して送ってください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
+   if(!file){downloadRecord();notify(email?'添付共有に対応していないため、テキストファイルを保存します。メールに保存したファイルを添付してください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
    button.disabled=true;
    notify(email?'共有画面でメールアプリを選び、宛先を指定して送信してください。全記録の位置情報を含みます。':'「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
    await navigator.share(email?{files:[file],title:`停車地点記録 ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
@@ -166,30 +166,7 @@
   }finally{button.disabled=false;}
  }
  $('saveFile').onclick=()=>shareRecord();
- $('emailFile').onclick=()=>{
-  let list;
-  try{const saved=localStorage.getItem('keiryo_mail_list');list=saved?JSON.parse(saved):[{addr:'annsyuu38@gmail.com',enabled:true},{addr:'yuno.uejma@gmail.com',enabled:true},{addr:'kankyoubu.itaku@gmail.com',enabled:true}];}catch(e){notify('計量データのメール設定を確認してください。');return;}
-  if(!Array.isArray(list)){notify('計量データのメール設定を確認してください。');return;}
-  const to=list.filter(m=>m&&m.enabled&&typeof m.addr==='string'&&/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(m.addr.trim())).map(m=>m.addr.trim()).join(',');
-  if(!to){notify('計量データのメール設定で送信先を登録してください。');return;}
-  const s=session();if(!s){notify('送信する記録を選択してください。');return;}
-  const blocks=ordered().map(p=>`${p.order}. ${p.name||'名称未設定'}\r\n${time(p.arrival)} ～ ${time(p.departure||p.last)}　停車 ${duration((p.departure||p.last)-p.arrival)}\r\n${p.lat}, ${p.lng}　誤差 ${p.accuracy}m`);
-  const payload=JSON.stringify({version:1,settings:data.settings,sessions:[s]});
-  const body=['【停車地点記録】',`日付：${dated(s.date)}`,`担当：${s.person||'未設定'}`,'',blocks.join('\r\n\r\n'),'','---STOP-RECORDER-DATA---',payload,'---END-STOP-RECORDER-DATA---'].join('\r\n');
-  const base=`mailto:${to}?subject=${encodeURIComponent(`停車地点記録 ${dated(s.date)}（${s.person||'未設定'}）`)}`;
-  const url=base+`&body=${encodeURIComponent(body)}`;
-  $('mailText').value=body;$('mailTextDialog').showModal();
-  $('mailCopyStatus').textContent='本文をコピーしてメールを開きます。本文が空の場合は、メール本文欄を長押しして「ペースト」してください。';
-  $('openTextMail').onclick=async()=>{
-   let copied=false;
-   try{await navigator.clipboard.writeText(body);copied=true;}catch(error){$('mailText').focus();$('mailText').select();$('mailText').setSelectionRange(0,body.length);try{copied=document.execCommand('copy');}catch(e){}}
-   if(!copied){$('mailCopyStatus').textContent='自動コピーできませんでした。本文欄を全選択してコピーした後、下の「メールを開く」を押してください。';$('manualTextMail').hidden=false;return;}
-   $('mailCopyStatus').textContent='本文をコピーしました。メールの本文が空なら「ペースト」してください。';
-   openTextComposer();
-  };
-  function openTextComposer(){const a=document.createElement('a');a.href=url.length>7500?base:url;a.target='_top';a.rel='noopener';a.hidden=true;document.body.append(a);a.click();setTimeout(()=>a.remove(),1000);}
-  $('manualTextMail').hidden=true;$('manualTextMail').onclick=openTextComposer;
- };
+ $('emailFile').onclick=()=>shareRecord(true);
  $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
  $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
   const text=$('pasteText').value;if(text.length>20000000)throw Error('本文が大きすぎます');
