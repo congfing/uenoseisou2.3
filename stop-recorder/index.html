@@ -3,6 +3,7 @@
 <body>
 <header><div><h1>停車地点記録（テスト）</h1><span class="edition">v1.0</span></div><button id="settingsButton" title="記録設定" aria-label="記録設定">設定</button></header>
 <main>
+ <div class="recorder-modes" role="group" aria-label="用途"><button id="commissionMode" aria-pressed="true">委託用</button><button id="permitMode" aria-pressed="false">許可物件用</button></div>
  <section class="record-controls">
   <button id="selectTxtName" style="width:100%;text-align:left;overflow-wrap:anywhere;margin-bottom:8px" title="TXTファイルを選択">TXTファイルを選択</button>
   <div class="session-row"><select id="sessionSelect" aria-label="記録を選択"></select><span id="savedState" role="status">端末保存</span></div>
@@ -18,6 +19,10 @@
   <div class="map-area"><p>地図の空いている場所をタップすると、地点を追加できます。</p><div id="map" aria-label="記録地点の地図"></div><div class="map-tools"><button id="fit" title="全地点を表示">全地点</button><button id="locate" title="現在地を表示">現在地</button></div><p id="mapError" hidden>地図を読み込めません。地点一覧は利用できます。</p></div>
   <div class="list-area"><div class="list-heading"><h2>記録地点</h2><span id="recordDate"></span></div><div class="file-actions"><button id="saveFile">TXT保存</button><button id="loadFile">TXT選択</button><button id="emailFile">メールに添付して送信</button><button id="closeApp">閉じる</button><button id="downloadRecord" hidden>ダウンロード保存</button><button id="pasteMail" hidden>メール本文を読み込み</button><input id="fileInput" type="file" accept="application/json,text/plain,.json,.txt" hidden></div><p style="padding:0 16px;font-size:12px">全記録を日付・曜日付きのテキストファイルに保存します。</p><div id="list"></div><div class="list-footer"><button id="renumber">連番に整える</button><button id="deleteSession" class="danger">この記録を削除</button></div></div>
  </section>
+ <section id="permitPanel" hidden>
+  <div class="permit-heading"><h2>許可物件リスト</h2><button id="refreshPermit">物件表の選択を読み込む</button></div>
+  <p id="permitScope"></p><p id="permitSelection" role="status"></p><p id="permitEmpty" hidden></p><div id="permitProperties"></div>
+ </section>
 </main>
 <dialog id="saveNameDialog"><form id="saveNameForm"><h2>名前を付けて保存</h2><label>ファイル名<input id="saveName" maxlength="180" required></label><div class="dialog-actions"><button type="button" data-close="saveNameDialog">キャンセル</button><button class="primary">保存</button></div></form></dialog>
 <dialog id="pasteDialog"><form id="pasteForm"><h2>メール本文を読み込み</h2><label>メール本文<textarea id="pasteText" rows="12" style="width:100%;box-sizing:border-box" required></textarea></label><div class="dialog-actions"><button type="button" data-close="pasteDialog">キャンセル</button><button class="primary">読み込み</button></div></form></dialog>
@@ -28,5 +33,5 @@
 <dialog id="settingsDialog"><form id="settingsForm"><h2>記録設定</h2><label>停車時間（秒）<input name="seconds" type="number" min="5" max="1800" step="1" required></label><label>停車とみなす範囲（m）<input name="radius" type="number" min="10" max="200" step="1" required></label><label>許容するGPS誤差（m）<input name="accuracy" type="number" min="5" max="200" step="1" required></label><div class="dialog-actions"><button type="button" data-close="settingsDialog">キャンセル</button><button class="primary">保存</button></div></form></dialog>
 <dialog id="editDialog"><form id="editForm"><h2>地点の編集</h2><label>順番<input name="order" type="number" min="1" max="99999" step="1" required></label><label>物件名・メモ<input name="name" maxlength="160"></label><label>緯度<input name="lat" type="number" step="any" min="-90" max="90" required></label><label>経度<input name="lng" type="number" step="any" min="-180" max="180" required></label><div class="dialog-actions"><button type="button" data-close="editDialog">キャンセル</button><button class="primary">保存</button></div></form></dialog>
 <dialog id="confirmDialog"><h2 id="confirmTitle">確認</h2><p id="confirmText"></p><div class="dialog-actions"><button id="confirmCancel">キャンセル</button><button id="confirmOK" class="primary">OK</button></div></dialog>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="core.js"></script><script src="app.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="core.js"></script><script src="permit.js"></script><script src="app.js"></script>
 </body></html>

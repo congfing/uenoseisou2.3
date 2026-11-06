@@ -2,6 +2,7 @@
  'use strict';
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:30,accuracy:50};
+ let permit=null;
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
  let currentId=data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
@@ -55,13 +56,13 @@
   if(!s?.stops.length){const p=document.createElement('p');p.className='empty';p.textContent='記録地点はありません';list.append(p);}
   for(const stop of ordered()){
    const row=document.createElement('article');row.className='stop'+(selectedId===stop.id?' selected':'');row.dataset.id=stop.id;
-   const n=document.createElement('button');n.className='number';n.textContent=stop.order;n.title='地点の操作';n.onclick=()=>pointActions(stop.id);
+   const n=document.createElement('button');n.className='number';n.textContent=permit?.label(stop)||stop.order;n.title='地点の操作';n.onclick=()=>pointActions(stop.id);
    const body=document.createElement('div'),title=document.createElement('div'),meta=document.createElement('div');title.className='stop-title';title.textContent=stop.name||'名称未設定';meta.className='stop-meta';
    meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
    const actions=document.createElement('div');actions.className='stop-actions';
    const edit=document.createElement('button');edit.textContent='編集';edit.disabled=state==='running';edit.onclick=()=>openEdit(stop.id);
    const del=document.createElement('button');del.textContent='削除';del.className='danger';del.onclick=()=>deletePoint(stop.id);actions.append(edit,del);row.append(n,body,actions);list.append(row);
-  }drawMap();
+  }drawMap();permit?.render();
  }
  function initMap(){
   if(!window.L){$('mapError').hidden=false;return;}
@@ -90,11 +91,11 @@
   selectedId=record.id;$('mapAddDialog').close();render();notify(`地点 ${record.order} を地図から登録しました。`);
  };
  function drawMap(){if(!map)return;markers.clearLayers();const points=ordered();if(points.length>1)L.polyline(points.map(p=>[p.lat,p.lng]),{color:'#6d7d76',weight:2,dashArray:'5 5'}).addTo(markers);
-  for(const p of points){const div=document.createElement('div');div.textContent=String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>pointActions(p.id)).addTo(markers);}
+  for(const p of points){const div=document.createElement('div');div.textContent=permit?.label(p)||String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>pointActions(p.id)).addTo(markers);}
  }
  function fit(){if(!map)return;const points=ordered();if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])),{padding:[35,35],maxZoom:17});}
  function focusStop(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;selectedId=id;render();if(map)map.setView([p.lat,p.lng],17);$('list').querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});}
- function pointActions(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;focusStop(id);$('pointTitle').textContent=`地点 ${p.order}　${p.name||'名称未設定'}`;$('pointDialog').showModal();}
+ function pointActions(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;if(permit?.active()){selectedId=id;render();$('permitSelection').scrollIntoView({behavior:'smooth',block:'nearest'});return;}focusStop(id);$('pointTitle').textContent=`地点 ${p.order}　${p.name||'名称未設定'}`;$('pointDialog').showModal();}
  async function deletePoint(id){const s=session(),p=s?.stops.find(p=>p.id===id);if(!p)return;if(!await ask(`地点 ${p.order}「${p.name||'名称未設定'}」を削除しますか？\n後ろの番号は自動で詰めます。`))return;s.stops=s.stops.filter(p=>p.id!==id);makeSequential(s);if(selectedId===id)selectedId=null;if(detector?.candidate?.record?.id===id)detector.reset(lastPosition);persist();render();}
  $('pointDelete').onclick=()=>{const id=selectedId;$('pointDialog').close();deletePoint(id);};
  $('pointName').onclick=()=>{const p=session()?.stops.find(p=>p.id===selectedId);$('pointDialog').close();if(!p)return;$('nameForm').elements.name.value=p.name;$('nameDialog').showModal();$('nameForm').elements.name.focus();};
@@ -218,5 +219,6 @@
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
+ permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,save:persist,render,ask,notify});
  initMap();render();fit();
 })();
