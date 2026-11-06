@@ -38,18 +38,14 @@
   $('start').textContent=state==='paused'?'再開':'開始';$('start').disabled=state==='running'||!storageOK;
   $('pause').disabled=state!=='running';$('finish').disabled=state!=='running'&&state!=='paused';
   $('manual').disabled=state!=='running';$('resume').disabled=!session()||state==='running'||state==='paused';
-  $('sessionSelect').disabled=state==='running'||state==='paused';$('person').disabled=$('date').disabled=state==='running'||state==='paused';
+  $('person').disabled=$('date').disabled=state==='running'||state==='paused';
   $('loadFile').disabled=state==='running'||state==='paused';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
   $('threshold').textContent='判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
  }
  function renderSessions(){
-  $('sessionSelect').replaceChildren();
-  if(!data.sessions.length)$('sessionSelect').append(new Option('新しい記録',''));
-  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
   updateFileName();
-  $('sessionSelect').value=currentId||'';
  }
  function render(){
   renderSessions();updateControls();const s=session();$('count').textContent=`${s?.stops.length||0} 地点`;$('recordDate').textContent=dated(s?.date);$('dateWeekday').textContent=dated($('date').value).slice(10);
@@ -131,7 +127,6 @@
  $('start').onclick=start;$('pause').onclick=()=>pause();$('finish').onclick=async()=>{if(!await ask('記録を終了して保存しますか？'))return;if(state==='running')pause();if(!session())return;session().ended=Date.now();state='finished';detector=null;persist();render();fit();};
  $('resume').onclick=async()=>{const s=session();if(!s||state==='running')return;if(!await ask(`${s.date} ${s.person} の記録に続けて追加しますか？`))return;s.ended=null;state='paused';detector=null;lastPosition=null;persist();await start();};
  $('manual').onclick=()=>{if(state!=='running'||!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
- $('sessionSelect').onchange=()=>{currentId=$('sessionSelect').value;selectedId=null;detector=null;lastPosition=null;fileNameOverride=null;state=session()?.ended?'finished':'idle';$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();};
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
  setInterval(()=>{if(state!=='running'||window===window.parent)return;try{if(window.frameElement&&!window.frameElement.getClientRects().length){pause();notify('起動画面に戻ったため一時停止しました。');}}catch(e){}},1000);
  window.addEventListener('pagehide',()=>{if(state==='running')pause();});
@@ -156,7 +151,7 @@
  function recordExport(){
   const now=new Date();
   const name=newFileName();fileNameOverride=name;updateFileName();
-  return {name,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
+  return {name,content:JSON.stringify({...data,activeSessionId:currentId,exportedAt:now.toISOString()},null,2)};
  }
  function downloadRecord(record=recordExport()){
   fileNameOverride=record.name;updateFileName();
@@ -188,7 +183,7 @@
  $('saveFile').onclick=()=>{
   const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   if(mobile){shareRecord();return;}
-  $('saveName').value=recordExport().name.replace(/\.txt$/,'_編集済.txt');$('saveNameDialog').showModal();
+  $('saveName').value=recordExport().name;$('saveNameDialog').showModal();
  };
  $('saveTop').onclick=()=>$('saveFile').click();
  $('saveNameForm').onsubmit=async event=>{
@@ -233,7 +228,39 @@
   const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions){if(ids.has(s.id))continue;makeSequential(s);data.sessions.push(s);ids.add(s.id);count++;currentId=s.id;}
   state=session()?.ended?'finished':'idle';persist();$('pasteDialog').close();$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();notify(`${count}件追加しました。同じIDの記録は変更していません。`);
  }catch(error){notify('読み込めません：'+error.message);}};
- $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){s.sourceFile=file.name;makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=imported.sessions.at(-1)?.id||currentId;const selected=session();fileNameOverride=null;if(selected){selected.sourceFile=file.name;$("person").value=selected.person;$("date").value=selected.date;}state=selected?.ended?'finished':'idle';persist();render();fit();notify(`${count}件の記録を読み込みました。同じIDの既存データは上書きしていません。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
+ $('loadFile').onclick=()=>$('fileInput').click();
+ $('fileInput').onchange=async e=>{
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  if(state==='running'||state==='paused'){notify('現在の記録を終了してからTXTを選択してください。');return;}
+  if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}
+  try{
+   const imported=validate(JSON.parse(await file.text()));
+   if(!imported.sessions.length)throw Error('記録が入っていません');
+   if(!await ask('選択したTXTの内容を開きますか？同じIDの端末記録に違いがあれば、変更前を別の履歴として残してから読み込みます。元のTXTファイルは変更しません。'))return;
+   const next=storageOK?JSON.parse(JSON.stringify(data)):imported;
+   const comparable=s=>JSON.stringify({...s,sourceFile:undefined});
+   if(storageOK)for(const incoming of imported.sessions){
+    const index=next.sessions.findIndex(s=>s.id===incoming.id);
+    if(index>=0){
+     if(comparable(next.sessions[index])!==comparable(incoming)){
+      const backup={...next.sessions[index],id:id(),backupOf:incoming.id,backupAt:Date.now()};
+      next.sessions.push(backup);next.sessions[index]=incoming;
+     }
+    }else next.sessions.push(incoming);
+   }
+   if(next.sessions.length>1000)throw Error('保存記録が上限の1000件を超えます。先にTXTで退避して記録を整理してください');
+   const active=imported.sessions.find(s=>s.id===imported.activeSessionId)||imported.sessions.at(-1);
+   const old={data,currentId,storageOK};data=next;currentId=active.id;storageOK=true;
+   const selected=session();selected.sourceFile=file.name;makeSequential(selected);
+   if(['permit','commission'].includes(imported.viewMode))data.viewMode=imported.viewMode;
+   if(!persist()){data=old.data;currentId=old.currentId;storageOK=old.storageOK;render();return;}
+   closeWatch();detector=null;lastPosition=null;selectedId=null;fileNameOverride=null;
+   if(currentDot){currentDot.remove();currentDot=null;}
+   $('person').value=selected.person;$('date').value=selected.date;
+   state=selected.ended?'finished':'paused';render();fit();
+   notify(selected.ended?'TXTを開きました。保存時は新しいタイムスタンプで保存します。':'途中のTXTを開きました。「再開」で続けて記録できます。保存時は新しいタイムスタンプで保存します。');
+  }catch(error){notify('ファイルを読み込めません：'+error.message);}
+ };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);fileNameOverride=newFileName();updateFileName();};
  $('person').oninput=()=>{fileNameOverride=newFileName();updateFileName();};
