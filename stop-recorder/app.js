@@ -139,14 +139,14 @@
   const now=new Date(),stamp=`${dated(today())}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}`;
   return {name:`停車地点記録_${stamp}.json`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
  }
- function downloadRecord(){
-  const record=recordExport(),url=URL.createObjectURL(new Blob([record.content],{type:'application/json'})),a=document.createElement('a');
+ function downloadRecord(record=recordExport()){
+  const url=URL.createObjectURL(new Blob([record.content],{type:'application/json'})),a=document.createElement('a');
   a.href=url;a.download=record.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
  }
- $('downloadRecord').onclick=downloadRecord;
- $('saveFile').onclick=async()=>{
-  const button=$('saveFile');if(button.disabled)return;
+ $('downloadRecord').onclick=()=>downloadRecord();
+ async function shareRecord(email=false){
+  const button=$(email?'emailFile':'saveFile');if(button.disabled)return;
   try{
    const record=recordExport();let file=null;
    if(typeof File!=='undefined'&&navigator.share&&navigator.canShare){
@@ -155,16 +155,46 @@
      if(navigator.canShare({files:[candidate]})){file=candidate;break;}
     }
    }
-   if(!file){downloadRecord();notify('共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
+   if(!file){downloadRecord();notify(email?'記録ファイルをダウンロードします。メールにこのJSONファイルを添付して送ってください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
    button.disabled=true;
-   notify('「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
-   await navigator.share({files:[file]});
+   notify(email?'共有画面でメールアプリを選び、宛先を指定して送信してください。全記録の位置情報を含みます。':'「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
+   await navigator.share(email?{files:[file],title:`停車地点記録 ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
   }catch(error){
    if(error.name==='AbortError'){notify('保存操作を取り消しました。端末内の記録は残っています。');return;}
    $('downloadRecord').hidden=false;
    notify('共有画面を開けませんでした。「ダウンロード保存」から記録を保存できます。');
   }finally{button.disabled=false;}
+ }
+ $('saveFile').onclick=()=>shareRecord();
+ $('emailFile').onclick=()=>{
+  let list;
+  try{const saved=localStorage.getItem('keiryo_mail_list');list=saved?JSON.parse(saved):[{addr:'annsyuu38@gmail.com',enabled:true},{addr:'yuno.uejma@gmail.com',enabled:true},{addr:'kankyoubu.itaku@gmail.com',enabled:true}];}catch(e){notify('計量データのメール設定を確認してください。');return;}
+  if(!Array.isArray(list)){notify('計量データのメール設定を確認してください。');return;}
+  const to=list.filter(m=>m&&m.enabled&&typeof m.addr==='string'&&/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(m.addr.trim())).map(m=>m.addr.trim()).join(',');
+  if(!to){notify('計量データのメール設定で送信先を登録してください。');return;}
+  const s=session();if(!s){notify('送信する記録を選択してください。');return;}
+  const blocks=ordered().map(p=>`${p.order}. ${p.name||'名称未設定'}\r\n${time(p.arrival)} ～ ${time(p.departure||p.last)}　停車 ${duration((p.departure||p.last)-p.arrival)}\r\n${p.lat}, ${p.lng}　誤差 ${p.accuracy}m`);
+  const payload=JSON.stringify({version:1,settings:data.settings,sessions:[s]});
+  const body=['【停車地点記録】',`日付：${dated(s.date)}`,`担当：${s.person||'未設定'}`,'',blocks.join('\r\n\r\n'),'','---STOP-RECORDER-DATA---',payload,'---END-STOP-RECORDER-DATA---'].join('\r\n');
+  const base=`mailto:${to}?subject=${encodeURIComponent(`停車地点記録 ${dated(s.date)}（${s.person||'未設定'}）`)}`;
+  const url=base+`&body=${encodeURIComponent(body)}`;
+  const a=document.createElement('a');a.href=url.length>7500?base:url;a.target='_top';a.rel='noopener';a.hidden=true;document.body.append(a);
+  if(url.length>7500){$('mailText').value=body;$('mailTextDialog').showModal();$('mailText').select();notify('本文が長いため、表示した本文をコピーしてメールに貼り付けてください。');}
+  else{a.click();notify('一覧と復元用データを入れたメール画面を開きました。送信はメールアプリで行ってください。');}
+  $('openTextMail').onclick=()=>{a.href=base;a.click();};
+  setTimeout(()=>{if(!$('mailTextDialog').open)a.remove();},1000);
  };
+ $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
+ $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
+  const text=$('pasteText').value;if(text.length>20000000)throw Error('本文が大きすぎます');
+  const begin='---STOP-RECORDER-DATA---',end='---END-STOP-RECORDER-DATA---',start=text.indexOf(begin),finish=text.indexOf(end,start+begin.length);
+  if(start<0||finish<0)throw Error('復元用データを含む本文を貼り付けてください');
+  const imported=validate(JSON.parse(text.slice(start+begin.length,finish).trim()));
+  if(!storageOK)throw Error('既存データを読み込めないため、先にファイルから復旧してください');
+  if(!await ask('メールの記録を追加しますか？既存の同じ記録は上書きしません。'))return;
+  const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions){if(ids.has(s.id))continue;makeSequential(s);data.sessions.push(s);ids.add(s.id);count++;currentId=s.id;}
+  state=session()?.ended?'finished':'idle';persist();$('pasteDialog').close();$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();notify(`${count}件追加しました。同じIDの記録は変更していません。`);
+ }catch(error){notify('読み込めません：'+error.message);}};
  $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=data.sessions.at(-1)?.id||null;state='idle';persist();render();fit();notify(`${count}件の記録を読み込みました。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);};
