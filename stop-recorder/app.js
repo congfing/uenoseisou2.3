@@ -4,10 +4,11 @@
  const defaults={seconds:60,radius:30,accuracy:50};
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
- let currentId=data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
+ let currentId=data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false;
  const id=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
  const session=()=>data.sessions.find(s=>s.id===currentId);
+ const dated=d=>d?`${d}（${'日月火水木金土'[new Date(d+'T12:00:00').getDay()]}）`:'';
  const ordered=()=>[...(session()?.stops||[])].sort((a,b)=>a.order-b.order||a.arrival-b.arrival);
  function makeSequential(s){[...s.stops].sort((a,b)=>a.order-b.order||a.arrival-b.arrival).forEach((p,i)=>p.order=i+1);}
  const time=t=>new Date(t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -44,18 +45,18 @@
  function renderSessions(){
   $('sessionSelect').replaceChildren();
   if(!data.sessions.length)$('sessionSelect').append(new Option('新しい記録',''));
-  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${s.date}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
+  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
   $('sessionSelect').value=currentId||'';
  }
  function render(){
-  renderSessions();updateControls();const s=session();$('count').textContent=`${s?.stops.length||0} 地点`;$('recordDate').textContent=s?.date||'';
+  renderSessions();updateControls();const s=session();$('count').textContent=`${s?.stops.length||0} 地点`;$('recordDate').textContent=dated(s?.date);$('dateWeekday').textContent=dated($('date').value).slice(10);
   const list=$('list');list.replaceChildren();
   if(!s?.stops.length){const p=document.createElement('p');p.className='empty';p.textContent='記録地点はありません';list.append(p);}
   for(const stop of ordered()){
    const row=document.createElement('article');row.className='stop'+(selectedId===stop.id?' selected':'');row.dataset.id=stop.id;
    const n=document.createElement('button');n.className='number';n.textContent=stop.order;n.title='地点の操作';n.onclick=()=>pointActions(stop.id);
    const body=document.createElement('div'),title=document.createElement('div'),meta=document.createElement('div');title.className='stop-title';title.textContent=stop.name||'名称未設定';meta.className='stop-meta';
-   meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
+   meta.textContent=`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
    const actions=document.createElement('div');actions.className='stop-actions';
    const edit=document.createElement('button');edit.textContent='編集';edit.disabled=state==='running';edit.onclick=()=>openEdit(stop.id);
    const del=document.createElement('button');del.textContent='削除';del.className='danger';del.onclick=()=>deletePoint(stop.id);actions.append(edit,del);row.append(n,body,actions);list.append(row);
@@ -64,31 +65,9 @@
  function initMap(){
   if(!window.L){$('mapError').hidden=false;return;}
   map=L.map('map').setView([34.768,136.132],12);const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);let failures=0;tiles.on('tileerror',()=>{if(++failures>3){$('mapError').hidden=false;}});tiles.on('load',()=>{if(!failures)$('mapError').hidden=true;});markers=L.layerGroup().addTo(map);
-  map.on('click',event=>openMapAdd(event.latlng));
  }
- function openMapAdd(latlng){
-  if(!storageOK){notify('保存データを復旧してから地点を追加してください。');return;}
-  const s=session();if(!s){notify('先に記録を開始するか、追加する履歴を選択してください。');return;}
-  if(!Number.isFinite(latlng.lat)||!Number.isFinite(latlng.lng)||Math.abs(latlng.lat)>90)return;
-  pendingMapPoint={sessionId:s.id,lat:latlng.lat,lng:((latlng.lng+180)%360+360)%360-180};
-  const f=$('mapAddForm'),next=s.stops.length+1;f.elements.order.max=next;f.elements.order.value=next;f.elements.name.value='';
-  $('mapAddCoordinates').textContent=`緯度 ${pendingMapPoint.lat.toFixed(6)} / 経度 ${pendingMapPoint.lng.toFixed(6)}`;
-  $('mapAddDialog').showModal();
- }
- $('mapAddDialog').addEventListener('close',()=>{pendingMapPoint=null;});
- $('mapAddForm').onsubmit=e=>{
-  e.preventDefault();const point=pendingMapPoint,s=session(),f=e.target;
-  if(!point||!s||s.id!==point.sessionId||!storageOK)return;
-  const order=Number(f.elements.order.value);
-  if(!Number.isInteger(order)||order<1||order>s.stops.length+1){notify('追加できる地点番号を入力してください。');return;}
-  const previous=s.stops.map(p=>[p,p.order]),now=Date.now();
-  const record={id:id(),order,name:f.elements.name.value.trim(),lat:point.lat,lng:point.lng,accuracy:0,arrival:now,last:now,departure:now,source:'map',editedAt:now};
-  s.stops.forEach(p=>{if(p.order>=order)p.order++;});s.stops.push(record);
-  if(!persist()){s.stops=s.stops.filter(p=>p!==record);previous.forEach(([p,order])=>p.order=order);render();return;}
-  selectedId=record.id;$('mapAddDialog').close();render();notify(`地点 ${record.order} を地図から登録しました。`);
- };
  function drawMap(){if(!map)return;markers.clearLayers();const points=ordered();if(points.length>1)L.polyline(points.map(p=>[p.lat,p.lng]),{color:'#6d7d76',weight:2,dashArray:'5 5'}).addTo(markers);
-  for(const p of points){const div=document.createElement('div');div.textContent=String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>pointActions(p.id)).addTo(markers);}
+  for(const p of points){const div=document.createElement('div');div.textContent=String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon}).on('click',()=>pointActions(p.id)).addTo(markers);}
  }
  function fit(){if(!map)return;const points=ordered();if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])),{padding:[35,35],maxZoom:17});}
  function focusStop(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;selectedId=id;render();if(map)map.setView([p.lat,p.lng],17);$('list').querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});}
@@ -134,38 +113,10 @@
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
- function recordExport(){
-  const now=new Date(),stamp=`${today()}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}`;
-  return {name:`停車地点記録_${stamp}.json`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
- }
- function downloadRecord(){
-  const record=recordExport(),url=URL.createObjectURL(new Blob([record.content],{type:'application/json'})),a=document.createElement('a');
-  a.href=url;a.download=record.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-  notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
- }
- $('downloadRecord').onclick=downloadRecord;
- $('saveFile').onclick=async()=>{
-  const button=$('saveFile');if(button.disabled)return;
-  try{
-   const record=recordExport();let file=null;
-   if(typeof File!=='undefined'&&navigator.share&&navigator.canShare){
-    for(const type of ['application/json','text/plain']){
-     const candidate=new File([record.content],record.name,{type});
-     if(navigator.canShare({files:[candidate]})){file=candidate;break;}
-    }
-   }
-   if(!file){downloadRecord();notify('共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
-   button.disabled=true;
-   notify('「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
-   await navigator.share({files:[file]});
-  }catch(error){
-   if(error.name==='AbortError'){notify('保存操作を取り消しました。端末内の記録は残っています。');return;}
-   $('downloadRecord').hidden=false;
-   notify('共有画面を開けませんでした。「ダウンロード保存」から記録を保存できます。');
-  }finally{button.disabled=false;}
- };
+ $('saveFile').onclick=()=>{const content=JSON.stringify(data,null,2),url=URL.createObjectURL(new Blob([content],{type:'application/json'})),a=document.createElement('a'),now=new Date(),weekday='日月火水木金土'[now.getDay()];a.href=url;a.download=`停車地点記録_${today()}（${weekday}）_${now.toTimeString().slice(0,8).replaceAll(':','')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);};
  $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=data.sessions.at(-1)?.id||null;state='idle';persist();render();fit();notify(`${count}件の記録を読み込みました。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
+ $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
  initMap();render();fit();
