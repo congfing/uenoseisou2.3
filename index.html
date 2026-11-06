@@ -1102,7 +1102,8 @@
     { name: "計量データ入力（ルート）", detail: "v３−21", file: "index_3-21.html", revision: "20261013-v321" },
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
     { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
-    { name: "燃費管理", detail: "入力・履歴・読込", file: "index_nenpi.html" }
+    { name: "燃費管理", detail: "入力・履歴・読込", file: "index_nenpi.html" },
+    { name: "停車地点記録（テスト）", detail: "", file: "stop-recorder/index.html", revision: "20261106-test-1", locationRecorder: true }
   ];
 
   const softwareRoot = "./";
@@ -1128,6 +1129,7 @@
   const themeStorageKey = "uenoseisou23_theme";
   const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
   const softwareThemeExcludes = new Set([
+    "stop-recorder/index.html",
     ...calendarFiles.map((calendar) => calendar.file)
   ]);
   const defaultTheme = {
@@ -1362,6 +1364,7 @@
     frame.className = "software-frame";
     frame.title = app.name;
     frame.dataset.file = app.file;
+    if (app.locationRecorder) frame.allow = "geolocation; screen-wake-lock";
     const revision = app.revision ? "&revision=" + encodeURIComponent(app.revision) : "";
     frame.src = softwareRoot + encodeURI(app.file) + "?embedded=1&from=v2-3" + revision + "&ts=" + Date.now();
     frame.addEventListener("load", () => {
