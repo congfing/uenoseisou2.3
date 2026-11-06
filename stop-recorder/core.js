@@ -25,6 +25,13 @@
    return c.saved?'停車記録済み':'停車判定中';
   }
   close(time){const c=this.candidate;if(c?.saved&&c.record)c.record.departure=Math.min(time,c.last);this.candidate=null;this.onUpdate(null);}
+  registerNow(p){
+   if(p.accuracy>this.settings.accuracy)return null;
+   if(this.suppress&&distance(this.suppress,p)<=this.settings.radius*1.5)return null;
+   let c=this.candidate;if(c?.saved)return null;
+   if(!c){c={anchor:{...p},best:{...p},arrival:p.time,last:p.time,samples:1,saved:false};this.candidate=c;}
+   c.saved=true;c.record=this.onStop({lat:c.best.lat,lng:c.best.lng,accuracy:c.best.accuracy,arrival:c.arrival,last:c.last,departure:null,manual:true});this.onUpdate(c);return c.record;
+  }
  }
  const api={distance,StopDetector};if(typeof module!=='undefined')module.exports=api;root.StopRecorderCore=api;
 })(typeof window!=='undefined'?window:globalThis);
