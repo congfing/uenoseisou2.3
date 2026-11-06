@@ -4,6 +4,7 @@
 <header><div><h1>停車地点記録（テスト）</h1><span class="edition">v1.0</span></div><button id="settingsButton" title="記録設定" aria-label="記録設定">設定</button></header>
 <main>
  <section class="record-controls">
+  <button id="selectTxtName" style="width:100%;text-align:left;overflow-wrap:anywhere;margin-bottom:8px" title="TXTファイルを選択">TXTファイルを選択</button>
   <div class="session-row"><select id="sessionSelect" aria-label="記録を選択"></select><span id="savedState" role="status">端末保存</span></div>
   <div class="identity"><label>担当者<input id="person" autocomplete="name" placeholder="担当者名"></label><label>日付 <span id="dateWeekday"></span><input id="date" type="date"></label></div>
   <div class="commands"><button id="start" class="primary">開始</button><button id="pause">一時停止</button><button id="finish">終了</button></div>

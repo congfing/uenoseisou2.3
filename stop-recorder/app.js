@@ -45,7 +45,8 @@
  function renderSessions(){
   $('sessionSelect').replaceChildren();
   if(!data.sessions.length)$('sessionSelect').append(new Option('新しい記録',''));
-  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${s.sourceFile? s.sourceFile+'　｜　':''}${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
+  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
+  $('selectTxtName').textContent=session()?.sourceFile||'TXTファイルを選択';
   $('sessionSelect').value=currentId||'';
  }
  function render(){
@@ -187,6 +188,10 @@
   }catch(error){notify(error.name==='AbortError'?'保存をキャンセルしました。端末内の記録は残っています。':'保存できませんでした。'+error.message);}
  };
  $('emailFile').onclick=()=>shareRecord(true);
+ $('selectTxtName').onclick=()=>{
+  if(state==='running'||state==='paused'){notify('記録を終了してからTXTファイルを選択してください。');return;}
+  $('fileInput').click();
+ };
  $('closeApp').onclick=async()=>{
   if(!await ask('記録を端末に保存して終了しますか？TXTファイルが必要な場合は、先に「TXT保存」をしてください。'))return;
   if(state==='running')pause();
