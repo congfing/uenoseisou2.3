@@ -134,7 +134,36 @@
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
- $('saveFile').onclick=()=>{const content=JSON.stringify(data,null,2),url=URL.createObjectURL(new Blob([content],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`停車地点記録_${today()}_${new Date().toTimeString().slice(0,8).replaceAll(':','')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);};
+ function recordExport(){
+  const now=new Date(),stamp=`${today()}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}`;
+  return {name:`停車地点記録_${stamp}.json`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
+ }
+ function downloadRecord(){
+  const record=recordExport(),url=URL.createObjectURL(new Blob([record.content],{type:'application/json'})),a=document.createElement('a');
+  a.href=url;a.download=record.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
+ }
+ $('downloadRecord').onclick=downloadRecord;
+ $('saveFile').onclick=async()=>{
+  const button=$('saveFile');if(button.disabled)return;
+  try{
+   const record=recordExport();let file=null;
+   if(typeof File!=='undefined'&&navigator.share&&navigator.canShare){
+    for(const type of ['application/json','text/plain']){
+     const candidate=new File([record.content],record.name,{type});
+     if(navigator.canShare({files:[candidate]})){file=candidate;break;}
+    }
+   }
+   if(!file){downloadRecord();notify('共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
+   button.disabled=true;
+   notify('「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
+   await navigator.share({files:[file]});
+  }catch(error){
+   if(error.name==='AbortError'){notify('保存操作を取り消しました。端末内の記録は残っています。');return;}
+   $('downloadRecord').hidden=false;
+   notify('共有画面を開けませんでした。「ダウンロード保存」から記録を保存できます。');
+  }finally{button.disabled=false;}
+ };
  $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=data.sessions.at(-1)?.id||null;state='idle';persist();render();fit();notify(`${count}件の記録を読み込みました。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
