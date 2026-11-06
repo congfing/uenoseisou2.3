@@ -165,7 +165,10 @@
    notify('共有画面を開けませんでした。「ダウンロード保存」から記録を保存できます。');
   }finally{button.disabled=false;}
  }
- $('saveFile').onclick=()=>shareRecord();
+ $('saveFile').onclick=()=>{
+  const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(mobile)shareRecord();else downloadRecord();
+ };
  $('emailFile').onclick=()=>shareRecord(true);
  $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
  $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
