@@ -20,7 +20,7 @@
   <div class="list-area"><div class="list-heading"><h2>記録地点</h2><span id="recordDate"></span></div><div class="file-actions"><button id="saveFile">TXT保存</button><button id="loadFile">TXT選択</button><button id="emailFile">メールに添付して送信</button><button id="closeApp">閉じる</button><button id="downloadRecord" hidden>ダウンロード保存</button><button id="pasteMail" hidden>メール本文を読み込み</button><input id="fileInput" type="file" accept="application/json,text/plain,.json,.txt" hidden></div><p style="padding:0 16px;font-size:12px">全記録を日付・曜日付きのテキストファイルに保存します。</p><div id="list"></div><div class="list-footer"><button id="renumber">連番に整える</button><button id="deleteSession" class="danger">この記録を削除</button></div></div>
  </section>
  <section id="permitPanel" hidden>
-  <div class="permit-heading"><h2>許可物件リスト</h2><div class="permit-selection-actions"><button id="openPermitPicker">担当者、曜日を選択</button><button id="refreshPermit">物件表の選択を読み込む</button></div></div>
+  <div class="permit-heading"><h2>許可物件リスト</h2><div class="permit-selection-actions"><button id="openPermitPicker">担当者、曜日を選択</button><button id="refreshPermit">物件表の選択を読み込む</button><button id="syncPermit">同期</button></div></div>
   <p id="permitScope"></p><p id="permitSelection" role="status"></p><p id="permitEmpty" hidden></p><div id="permitProperties"></div>
  </section>
 </main>

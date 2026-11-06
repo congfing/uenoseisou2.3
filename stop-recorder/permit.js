@@ -20,39 +20,58 @@
    $('commissionMode').setAttribute('aria-pressed',String(!active()));$('permitMode').setAttribute('aria-pressed',String(active()));
    $('permitPanel').hidden=!active();if(!active())return;
    const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected());
-   $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:'地図の地点を選択';
+   $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:`地点 ${s?.stops.length||0}件`;
+   $('syncPermit').disabled=!s||!ctx?.properties.length||api.recording();
    $('permitScope').textContent=ctx?`${(ctx.staff||[]).join('・')} ／ ${(ctx.days||[]).join('・')}　${ctx.properties.length}件`:'物件表の選択データなし';
    $('permitProperties').replaceChildren();
    if(!ctx?.active||!ctx.properties.length){$('permitEmpty').hidden=false;$('permitEmpty').textContent='物件表の「担当者、曜日を選択」で対象を選択してください。';return;}
    $('permitEmpty').hidden=true;
    const stops=s?.stops||[],assigned=new Map(stops.filter(p=>p.propertyKey).map(p=>[p.propertyKey,p]));
    for(const p of ctx.properties){
-    const match=assigned.get(p.key),group=stops.filter(q=>q.propertyStaff===p.staff&&q.propertyDay===p.day&&q.propertyKey);
-    const next=Math.max(0,...group.map(q=>q.routeOrder||0))+1,number=match?.routeOrder??p.order??next;
-    const button=document.createElement('button');button.type='button';button.className='permit-property'+(match?' linked':'');button.dataset.key=p.key;button.setAttribute('aria-pressed',String(!!match));
-    const badge=document.createElement('span');badge.className='permit-number';badge.textContent=number;
-    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${match?' ／ 登録済み':''}`;body.append(name,meta);button.append(badge,body);
-    button.onclick=()=>assign(p,number,ctx);$('permitProperties').append(button);
+    const match=assigned.get(p.key),synced=match&&match.order===p.order&&match.routeOrder===p.order&&match.name===p.name;
+    const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
+    const badge=document.createElement('input');badge.className='permit-order';badge.type='number';badge.min='1';badge.max='99999';badge.step='1';badge.inputMode='numeric';badge.placeholder='未設定';badge.value=p.order??'';badge.disabled=!s||api.recording();badge.setAttribute('aria-label',`${p.name}の収集順`);
+    badge.onchange=()=>{
+     const number=badge.value===''?null:Number(badge.value);
+     if(number!==null&&(!Number.isInteger(number)||number<1||number>99999)){badge.setAttribute('aria-invalid','true');api.notify('収集順は1～99999の整数にしてください。');return;}
+     const target=api.session();if(!target)return;
+     const old=target.permitContext;target.permitContext=JSON.parse(JSON.stringify(context()));target.permitContext.properties.find(q=>q.key===p.key).order=number;
+     if(!api.save())target.permitContext=old;api.render();
+    };
+    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.append(name,meta);row.append(badge,body);$('permitProperties').append(row);
    }
   }
-  async function assign(property,number,ctx){
+  async function sync(){
    if(busy)return;
-   const s=api.session(),point=s?.stops.find(p=>p.id===api.selected());
-   if(!s||!point){api.notify('先に地図または地点一覧の番号を選択してください。');return;}
-   const other=s.stops.find(p=>p.id!==point.id&&p.propertyKey===property.key);
+   const s=api.session(),ctx=context();
+   if(!s||!ctx?.active||!ctx.properties.length){api.notify('先に地図の記録と担当者・曜日の物件リストを選択してください。');return;}
+   if(api.recording()){api.notify('記録を終了してから同期してください。');return;}
+   if([...$('permitProperties').querySelectorAll('input')].some(input=>!input.checkValidity())){api.notify('収集順は1～99999の整数にしてください。');return;}
+   const numbers=new Set(),points=new Map(s.stops.map(p=>[p.order,p])),problems=[];
+   for(const p of ctx.properties){
+    if(!Number.isInteger(p.order)||p.order<1){problems.push(`${p.name}：収集順が未設定`);continue;}
+    if(numbers.has(p.order))problems.push(`収集順 ${p.order} が重複`);numbers.add(p.order);
+    if(!points.has(p.order))problems.push(`${p.name}：地点 ${p.order} がない`);
+   }
+   if(problems.length){api.notify('同期しませんでした。'+problems.slice(0,8).join('／')+(problems.length>8?` ほか${problems.length-8}件`:''));return;}
    busy=true;
    try{
-    if((other||point.propertyKey)&&!await api.ask(`地点 ${label(point)} を「${property.name}」（収集順 ${number}）に変更しますか？${other?'\n以前の地点との対応付けは解除し、地点自体は残します。':''}`))return;
+    const extra=s.stops.length-ctx.properties.length;
+    if(!await api.ask(`${ctx.properties.length}件の物件名を、収集順と同じ番号の地点に同期しますか？\n地点の番号・位置は変更しません。以前の対応付けは置き換えます。${extra>0?`\n対象外の${extra}地点は削除せず残します。`:''}`))return;
     const before=JSON.stringify(s);
-    if(other){delete other.propertyKey;delete other.propertyStaff;delete other.propertyDay;delete other.propertyRegistration;delete other.routeOrder;other.name=other.previousName||'';delete other.previousName;}
-    if(!point.propertyKey)point.previousName=point.name;
-    Object.assign(point,{propertyKey:property.key,propertyRegistration:property.registration,propertyStaff:property.staff,propertyDay:property.day,routeOrder:number,name:property.name,editedAt:Date.now()});
-    if(!s.permitContext)s.permitContext=JSON.parse(JSON.stringify(ctx));
-    if(!api.save()){Object.assign(s,JSON.parse(before));api.render();return;}
-    api.render();api.notify(`収集順 ${number}「${property.name}」を地点に登録しました。`);
+    s.permitSyncBackup={at:Date.now(),stops:JSON.parse(JSON.stringify(s.stops))};
+    for(const point of s.stops)if(point.propertyKey){point.name=point.previousName||'';delete point.previousName;delete point.propertyKey;delete point.propertyRegistration;delete point.propertyStaff;delete point.propertyDay;delete point.routeOrder;delete point.collectionCode;}
+    for(const property of ctx.properties){
+     const point=points.get(property.order);point.previousName=point.name;
+     Object.assign(point,{propertyKey:property.key,propertyRegistration:property.registration,propertyStaff:property.staff,propertyDay:property.day,routeOrder:property.order,collectionCode:`${property.staff}${property.order}`,name:property.name,editedAt:Date.now()});
+    }
+    s.permitContext=JSON.parse(JSON.stringify(ctx));s.permitContext.properties.sort((a,b)=>a.order-b.order);s.permitSyncedAt=Date.now();
+    if(!api.save()){const restored=JSON.parse(before);for(const key of Object.keys(s))delete s[key];Object.assign(s,restored);api.render();return;}
+    api.render();api.notify(`${ctx.properties.length}件を同期しました。地点番号と物件表の収集順が一致しています。`);
    }finally{busy=false;}
   }
-  function label(point){return active()&&Number.isInteger(point.routeOrder)?String(point.routeOrder):String(point.order);}
+  function label(point){return String(point.order);}
+  $('syncPermit').onclick=sync;
   $('commissionMode').onclick=()=>{api.setMode('commission');api.render();};
   $('permitMode').onclick=()=>{read();api.setMode('permit');api.render();};
   $('refreshPermit').onclick=async()=>{

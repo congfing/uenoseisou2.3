@@ -151,7 +151,12 @@
  function recordExport(){
   const now=new Date();
   const name=newFileName();fileNameOverride=name;updateFileName();
-  return {name,content:JSON.stringify({...data,activeSessionId:currentId,exportedAt:now.toISOString()},null,2)};
+  const exported=JSON.parse(JSON.stringify(data));
+  for(const s of exported.sessions){
+   for(const p of s.permitContext?.properties||[]){if(typeof p.staff==='string'&&Number.isInteger(p.order)&&p.order>0)p.collectionCode=`${p.staff}${p.order}`;else delete p.collectionCode;}
+   for(const p of s.stops){if(p.propertyKey&&typeof p.propertyStaff==='string'&&Number.isInteger(p.routeOrder)&&p.routeOrder>0)p.collectionCode=`${p.propertyStaff}${p.routeOrder}`;else delete p.collectionCode;}
+  }
+  return {name,content:JSON.stringify({...exported,activeSessionId:currentId,exportedAt:now.toISOString()},null,2)};
  }
  function downloadRecord(record=recordExport()){
   fileNameOverride=record.name;updateFileName();
@@ -266,6 +271,6 @@
  $('person').oninput=()=>{fileNameOverride=newFileName();updateFileName();};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
- permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,save:persist,render,ask,notify});
+ permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',save:persist,render,ask,notify});
  initMap();render();fit();
 })();
