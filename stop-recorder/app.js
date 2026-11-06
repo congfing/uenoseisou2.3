@@ -45,7 +45,7 @@
  function renderSessions(){
   $('sessionSelect').replaceChildren();
   if(!data.sessions.length)$('sessionSelect').append(new Option('新しい記録',''));
-  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
+  [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${s.sourceFile? s.sourceFile+'　｜　':''}${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
   $('sessionSelect').value=currentId||'';
  }
  function render(){
@@ -167,9 +167,36 @@
  }
  $('saveFile').onclick=()=>{
   const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  if(mobile)shareRecord();else downloadRecord();
+  if(mobile){shareRecord();return;}
+  $('saveName').value=recordExport().name.replace(/\.txt$/,'_編集済.txt');$('saveNameDialog').showModal();
+ };
+ $('saveNameForm').onsubmit=async event=>{
+  event.preventDefault();
+  let name=$('saveName').value.trim();
+  if(!name||/[\\/:*?"<>|\x00-\x1f]/.test(name)){notify('ファイル名を入力してください。記号 \\ / : * ? " < > | は使えません。');return;}
+  if(!/\.txt$/i.test(name))name+='.txt';
+  const record=recordExport();record.name=name;$('saveNameDialog').close();
+  if(typeof window.showSaveFilePicker!=='function'){
+   downloadRecord(record);return;
+  }
+  try{
+   const handle=await window.showSaveFilePicker({suggestedName:record.name,types:[{description:'停車地点記録テキスト',accept:{'text/plain':['.txt']}}]});
+   const writer=await handle.createWritable();
+   try{await writer.write(record.content);await writer.close();}catch(error){try{await writer.abort();}catch(e){}throw error;}
+   notify(`「${handle.name}」に保存しました。`);
+  }catch(error){notify(error.name==='AbortError'?'保存をキャンセルしました。端末内の記録は残っています。':'保存できませんでした。'+error.message);}
  };
  $('emailFile').onclick=()=>shareRecord(true);
+ $('closeApp').onclick=async()=>{
+  if(!await ask('記録を端末に保存して終了しますか？TXTファイルが必要な場合は、先に「TXT保存」をしてください。'))return;
+  if(state==='running')pause();
+  if(session()&&!session().ended)session().ended=Date.now();
+  state='finished';detector=null;closeWatch();
+  if(!persist()){notify('保存できないため終了しません。「TXT保存」で記録を退避してください。');return;}
+  render();
+  if(window.parent!==window){window.parent.postMessage({type:'closeSoftware'},location.origin==='null'?'*':location.origin);return;}
+  window.close();notify('記録を保存して終了しました。このタブを閉じてください。');
+ };
  $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
  $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
   const text=$('pasteText').value;if(text.length>20000000)throw Error('本文が大きすぎます');
@@ -181,7 +208,7 @@
   const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions){if(ids.has(s.id))continue;makeSequential(s);data.sessions.push(s);ids.add(s.id);count++;currentId=s.id;}
   state=session()?.ended?'finished':'idle';persist();$('pasteDialog').close();$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();notify(`${count}件追加しました。同じIDの記録は変更していません。`);
  }catch(error){notify('読み込めません：'+error.message);}};
- $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=data.sessions.at(-1)?.id||null;state='idle';persist();render();fit();notify(`${count}件の記録を読み込みました。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
+ $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){s.sourceFile=file.name;makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=imported.sessions.at(-1)?.id||currentId;const selected=session();if(selected)selected.sourceFile=file.name;state=selected?.ended?'finished':'idle';persist();render();fit();notify(`${count}件の記録を読み込みました。同じIDの既存データは上書きしていません。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
