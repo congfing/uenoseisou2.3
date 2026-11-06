@@ -3,6 +3,7 @@
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:30,accuracy:50};
  let permit=null;
+ let fileNameOverride=null;
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
  let currentId=data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
@@ -47,7 +48,7 @@
   $('sessionSelect').replaceChildren();
   if(!data.sessions.length)$('sessionSelect').append(new Option('新しい記録',''));
   [...data.sessions].reverse().forEach(s=>$('sessionSelect').append(new Option(`${dated(s.date)}　${s.person||'担当者未設定'}　${s.stops.length}地点`,s.id)));
-  $('selectTxtName').textContent=session()?.sourceFile||'TXTファイルを選択';
+  updateFileName();
   $('sessionSelect').value=currentId||'';
  }
  function render(){
@@ -103,12 +104,18 @@
  function closeWatch(){token++;if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}if(wake){wake.release().catch(()=>{});wake=null;}}
  function pause(save=true){if(state!=='running')return;state='paused';const c=detector?.candidate;const last=c?.saved?{lat:c.best.lat,lng:c.best.lng}:lastPosition;detector?.close(Date.now());detector?.reset(last);closeWatch();if(save)persist();render();}
  async function start(){
+  if(state==='running')return;
   if(!navigator.geolocation){notify('このブラウザーでは位置情報を取得できません。');return;}
   if(!window.isSecureContext){notify('位置情報はHTTPSまたはこのPCのlocalhostで開いてください。');return;}
   if(!storageOK)return;
   if(state!=='paused'){
    const date=$('date').value;if(!date){notify('日付を入力してください。');return;}
-   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;
+   closeWatch();lastPosition=null;
+   if(currentDot){currentDot.remove();currentDot=null;}
+   if(markers)markers.clearLayers();
+   if(map)map.setView([34.768,136.132],12);
+   $('gps').textContent='GPS 更新待ち';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
+   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
    detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);
   }
   if(!detector){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
@@ -124,7 +131,7 @@
  $('start').onclick=start;$('pause').onclick=()=>pause();$('finish').onclick=async()=>{if(!await ask('記録を終了して保存しますか？'))return;if(state==='running')pause();if(!session())return;session().ended=Date.now();state='finished';detector=null;persist();render();fit();};
  $('resume').onclick=async()=>{const s=session();if(!s||state==='running')return;if(!await ask(`${s.date} ${s.person} の記録に続けて追加しますか？`))return;s.ended=null;state='paused';detector=null;lastPosition=null;persist();await start();};
  $('manual').onclick=()=>{if(state!=='running'||!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
- $('sessionSelect').onchange=()=>{currentId=$('sessionSelect').value;selectedId=null;detector=null;lastPosition=null;state=session()?.ended?'finished':'idle';$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();};
+ $('sessionSelect').onchange=()=>{currentId=$('sessionSelect').value;selectedId=null;detector=null;lastPosition=null;fileNameOverride=null;state=session()?.ended?'finished':'idle';$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();};
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
  setInterval(()=>{if(state!=='running'||window===window.parent)return;try{if(window.frameElement&&!window.frameElement.getClientRects().length){pause();notify('起動画面に戻ったため一時停止しました。');}}catch(e){}},1000);
  window.addEventListener('pagehide',()=>{if(state==='running')pause();});
@@ -137,11 +144,22 @@
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
+ function newFileName(){
+  const person=($('person').value.trim()||'担当者未設定').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,60);
+  const date=$('date').value||session()?.date||today(),now=new Date();
+  return `停車地点記録_${person}_${dated(date)}_保存${today().replaceAll('-','')}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}.txt`;
+ }
+ function updateFileName(){
+  if(!fileNameOverride&&!session()?.sourceFile)fileNameOverride=newFileName();
+  $('selectTxtName').textContent=fileNameOverride||session()?.sourceFile;
+ }
  function recordExport(){
-  const now=new Date(),stamp=`${dated(today())}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}`;
-  return {name:`停車地点記録_${stamp}.txt`,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
+  const now=new Date();
+  const name=newFileName();fileNameOverride=name;updateFileName();
+  return {name,content:JSON.stringify({...data,exportedAt:now.toISOString()},null,2)};
  }
  function downloadRecord(record=recordExport()){
+  fileNameOverride=record.name;updateFileName();
   const url=URL.createObjectURL(new Blob([record.content],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');
   a.href=url;a.download=record.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
@@ -172,6 +190,7 @@
   if(mobile){shareRecord();return;}
   $('saveName').value=recordExport().name.replace(/\.txt$/,'_編集済.txt');$('saveNameDialog').showModal();
  };
+ $('saveTop').onclick=()=>$('saveFile').click();
  $('saveNameForm').onsubmit=async event=>{
   event.preventDefault();
   let name=$('saveName').value.trim();
@@ -185,7 +204,7 @@
    const handle=await window.showSaveFilePicker({suggestedName:record.name,types:[{description:'停車地点記録テキスト',accept:{'text/plain':['.txt']}}]});
    const writer=await handle.createWritable();
    try{await writer.write(record.content);await writer.close();}catch(error){try{await writer.abort();}catch(e){}throw error;}
-   notify(`「${handle.name}」に保存しました。`);
+   fileNameOverride=handle.name;updateFileName();notify(`「${handle.name}」に保存しました。`);
   }catch(error){notify(error.name==='AbortError'?'保存をキャンセルしました。端末内の記録は残っています。':'保存できませんでした。'+error.message);}
  };
  $('emailFile').onclick=()=>shareRecord(true);
@@ -214,9 +233,10 @@
   const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions){if(ids.has(s.id))continue;makeSequential(s);data.sessions.push(s);ids.add(s.id);count++;currentId=s.id;}
   state=session()?.ended?'finished':'idle';persist();$('pasteDialog').close();$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();notify(`${count}件追加しました。同じIDの記録は変更していません。`);
  }catch(error){notify('読み込めません：'+error.message);}};
- $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){s.sourceFile=file.name;makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=imported.sessions.at(-1)?.id||currentId;const selected=session();if(selected)selected.sourceFile=file.name;state=selected?.ended?'finished':'idle';persist();render();fit();notify(`${count}件の記録を読み込みました。同じIDの既存データは上書きしていません。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
+ $('loadFile').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}try{const imported=validate(JSON.parse(await file.text()));if(!await ask('ファイルの記録を追加しますか？同じIDの記録は上書きせず、そのまま残します。'))return;const ids=new Set(data.sessions.map(s=>s.id));let count=0;for(const s of imported.sessions)if(!ids.has(s.id)){s.sourceFile=file.name;makeSequential(s);data.sessions.push(s);count++;}if(!storageOK){data=imported;storageOK=true;}currentId=imported.sessions.at(-1)?.id||currentId;const selected=session();fileNameOverride=null;if(selected){selected.sourceFile=file.name;$("person").value=selected.person;$("date").value=selected.date;}state=selected?.ended?'finished':'idle';persist();render();fit();notify(`${count}件の記録を読み込みました。同じIDの既存データは上書きしていません。`);}catch(e){notify('ファイルを読み込めません：'+e.message);}};
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
- $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);};
+ $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);fileNameOverride=newFileName();updateFileName();};
+ $('person').oninput=()=>{fileNameOverride=newFileName();updateFileName();};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
  permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,save:persist,render,ask,notify});
