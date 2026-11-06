@@ -178,11 +178,17 @@
   const body=['【停車地点記録】',`日付：${dated(s.date)}`,`担当：${s.person||'未設定'}`,'',blocks.join('\r\n\r\n'),'','---STOP-RECORDER-DATA---',payload,'---END-STOP-RECORDER-DATA---'].join('\r\n');
   const base=`mailto:${to}?subject=${encodeURIComponent(`停車地点記録 ${dated(s.date)}（${s.person||'未設定'}）`)}`;
   const url=base+`&body=${encodeURIComponent(body)}`;
-  const a=document.createElement('a');a.href=url.length>7500?base:url;a.target='_top';a.rel='noopener';a.hidden=true;document.body.append(a);
-  if(url.length>7500){$('mailText').value=body;$('mailTextDialog').showModal();$('mailText').select();notify('本文が長いため、表示した本文をコピーしてメールに貼り付けてください。');}
-  else{a.click();notify('一覧と復元用データを入れたメール画面を開きました。送信はメールアプリで行ってください。');}
-  $('openTextMail').onclick=()=>{a.href=base;a.click();};
-  setTimeout(()=>{if(!$('mailTextDialog').open)a.remove();},1000);
+  $('mailText').value=body;$('mailTextDialog').showModal();
+  $('mailCopyStatus').textContent='本文をコピーしてメールを開きます。本文が空の場合は、メール本文欄を長押しして「ペースト」してください。';
+  $('openTextMail').onclick=async()=>{
+   let copied=false;
+   try{await navigator.clipboard.writeText(body);copied=true;}catch(error){$('mailText').focus();$('mailText').select();$('mailText').setSelectionRange(0,body.length);try{copied=document.execCommand('copy');}catch(e){}}
+   if(!copied){$('mailCopyStatus').textContent='自動コピーできませんでした。本文欄を全選択してコピーした後、下の「メールを開く」を押してください。';$('manualTextMail').hidden=false;return;}
+   $('mailCopyStatus').textContent='本文をコピーしました。メールの本文が空なら「ペースト」してください。';
+   openTextComposer();
+  };
+  function openTextComposer(){const a=document.createElement('a');a.href=url.length>7500?base:url;a.target='_top';a.rel='noopener';a.hidden=true;document.body.append(a);a.click();setTimeout(()=>a.remove(),1000);}
+  $('manualTextMail').hidden=true;$('manualTextMail').onclick=openTextComposer;
  };
  $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
  $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
