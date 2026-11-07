@@ -18,6 +18,7 @@
   const context=()=>checked(api.session()?.permitContext)||latest;
   function render(){
    $('commissionMode').setAttribute('aria-pressed',String(!active()));$('permitMode').setAttribute('aria-pressed',String(active()));
+   $('openPermitPicker').hidden=!active();document.querySelector('.identity').classList.toggle('permit-identity',active());
    $('permitPanel').hidden=!active();if(!active())return;
    const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected());
    $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:`地点 ${s?.stops.length||0}件`;
@@ -72,13 +73,8 @@
   }
   function label(point){return String(point.order);}
   $('syncPermit').onclick=sync;
-  $('commissionMode').onclick=()=>{api.setMode('commission');api.render();};
-  $('permitMode').onclick=()=>{read();api.setMode('permit');api.render();};
-  $('refreshPermit').onclick=async()=>{
-   read();if(!latest?.active){api.notify('物件表で担当者と曜日を選択してから、再度読み込んでください。');return;}
-   const s=api.session();if(s?.permitContext&&!await api.ask('物件表の現在の選択でリストを更新しますか？登録済み地点の名前と収集順は残ります。'))return;
-   if(s){const old=s.permitContext;s.permitContext=JSON.parse(JSON.stringify(latest));if(!api.save()){s.permitContext=old;render();return;}}render();
-  };
+  $('commissionMode').onclick=()=>{api.setMode('commission');api.refreshFileName();api.render();};
+  $('permitMode').onclick=()=>{read();api.setMode('permit');api.refreshFileName();api.render();};
   $('openPermitPicker').onclick=()=>{
    const table=decodeURIComponent(location.pathname).includes('/停車地点記録/')?'../uenoseisou2.3/index_2-4_colview.html':'../index_2-4_colview.html';
    $('permitPickerFrame').src=table+'?permitPicker=1&t='+Date.now();$('permitPickerDialog').showModal();
@@ -93,12 +89,12 @@
    $('permitPickerDialog').close();
    const s=api.session();if(s?.permitContext&&!await api.ask('選択した担当者・曜日の物件リストに変更しますか？登録済み地点は削除しません。'))return;
    latest=ctx;if(s){const old=s.permitContext;s.permitContext=JSON.parse(JSON.stringify(ctx));if(!api.save()){s.permitContext=old;render();return;}}
-   render();api.notify('選択した担当者・曜日の物件を読み込みました。');
+   api.refreshFileName();render();api.notify('選択した担当者・曜日の物件を読み込みました。');
   });
   window.addEventListener('storage',event=>{if(event.key===KEY){read();render();}});
   window.addEventListener('focus',()=>{read();render();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){read();render();}});
   const area=document.querySelector('.list-area');area.insertBefore($('permitPanel'),area.firstChild);
-  read();return {render,active,label};
+  read();return {render,active,label,selection:context};
  }};
 })();

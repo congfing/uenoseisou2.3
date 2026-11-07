@@ -139,13 +139,16 @@
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
- function newFileName(){
+ function newFileName(withTimestamp=true){
   const person=($('person').value.trim()||'担当者未設定').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,60);
   const date=$('date').value||session()?.date||today(),now=new Date();
-  return `停車地点記録_${person}_${dated(date)}_保存${today().replaceAll('-','')}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}.txt`;
+  const ctx=permit?.active()?permit.selection():null;
+  const scope=ctx?.active?'_'+[...(ctx.staff||[]),...(ctx.days||[])].join('_').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_'):'';
+  const base=`停車地点記録_${person}${scope}_${dated(date)}`;
+  return withTimestamp?`${base}_保存${today().replaceAll('-','')}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}.txt`:base;
  }
  function updateFileName(){
-  if(!fileNameOverride&&!session()?.sourceFile)fileNameOverride=newFileName();
+  if(!fileNameOverride&&!session()?.sourceFile)fileNameOverride=newFileName(false);
   $('selectTxtName').textContent=fileNameOverride||session()?.sourceFile;
  }
  function recordExport(){
@@ -267,10 +270,10 @@
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
- $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);fileNameOverride=newFileName();updateFileName();};
- $('person').oninput=()=>{fileNameOverride=newFileName();updateFileName();};
+ $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);fileNameOverride=newFileName(false);updateFileName();};
+ $('person').oninput=()=>{fileNameOverride=newFileName(false);updateFileName();};
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
- permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',save:persist,render,ask,notify});
+ permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify});
  initMap();render();fit();
 })();
