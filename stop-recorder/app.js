@@ -22,6 +22,16 @@
  function makeSequential(s){[...s.stops].sort((a,b)=>a.order-b.order||a.arrival-b.arrival).forEach((p,i)=>p.order=i+1);}
  const time=t=>new Date(t).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
  const duration=ms=>{const n=Math.max(0,Math.floor(ms/1000));return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;};
+ const totalClock=seconds=>[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
+ const validInstant=n=>Number.isFinite(n)&&Number.isFinite(new Date(n).getTime());
+ function captureTiming(s,now=Date.now()){
+  if(!s||!validInstant(s.started))return null;
+  const end=validInstant(s.ended)?s.ended:now;
+  s.elapsedSeconds=Math.max(0,Math.floor((end-s.started)/1000));s.elapsedText=totalClock(s.elapsedSeconds);
+  s.startedAt=new Date(s.started).toISOString();s.endedAt=validInstant(s.ended)?new Date(s.ended).toISOString():null;
+  return s.elapsedText;
+ }
+ function refreshTotalTime(){$('totalElapsed').textContent='経過時間 '+(captureTiming(session())||'00:00:00');}
  function notify(text){$('message').hidden=!text;$('message').textContent=text;}
  function validate(d){
   if(!d||d.version!==1||!Array.isArray(d.sessions)||d.sessions.length>1000)throw Error('ファイル形式が違います');
@@ -37,8 +47,9 @@
  function persist(){
   if(!storageOK)return false;
   data.activeSessionId=currentId;data.activeFileName=fileNameOverride||session()?.sourceFile||null;data.lastViewedDay=today();
-  try{localStorage.setItem(KEY,JSON.stringify(data));$('savedState').textContent='端末に保存済み';lastPersist=Date.now();return true;}
-  catch(e){$('savedState').textContent='保存失敗';if(state==='running')pause(false);if(!storageWarned){storageWarned=true;notify('端末への保存に失敗しました。ファイル保存で記録を退避してください。');}return false;}
+  refreshTotalTime();
+  try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();return true;}
+  catch(e){if(state==='running')pause(false);if(!storageWarned){storageWarned=true;notify('端末への保存に失敗しました。ファイル保存で記録を退避してください。');}return false;}
  }
  let pendingConfirm=false;
  function ask(text){if(pendingConfirm)return Promise.resolve(false);pendingConfirm=true;return new Promise(resolve=>{$('confirmText').textContent=text;const d=$('confirmDialog');const finish=v=>{pendingConfirm=false;d.close();resolve(v);};$('confirmCancel').onclick=()=>finish(false);$('confirmOK').onclick=()=>finish(true);d.oncancel=e=>{e.preventDefault();finish(false);};d.showModal();});}
@@ -66,6 +77,7 @@
   updateFileName();
  }
  function render(){
+  refreshTotalTime();
   renderSessions();updateControls();const s=session();$('count').textContent=`${s?.stops.length||0} 地点`;$('recordDate').textContent=dated(s?.date);$('dateWeekday').textContent=dated($('date').value).slice(10);
   const list=$('list');list.replaceChildren();
   if(!s?.stops.length){const p=document.createElement('p');p.className='empty';p.textContent='記録地点はありません';list.append(p);}
@@ -151,6 +163,7 @@
  setInterval(()=>{if(state!=='running'||window===window.parent)return;try{if(window.frameElement&&!window.frameElement.getClientRects().length){pause();notify('起動画面に戻ったため一時停止しました。');}}catch(e){}},1000);
  window.addEventListener('pagehide',()=>{if(state==='running')pause();else persist();});
  window.addEventListener('focus',resetForNewDay);setInterval(resetForNewDay,1000);
+ setInterval(refreshTotalTime,1000);
  $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('settingsDialog').showModal();};
  $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value)};if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
@@ -160,13 +173,18 @@
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
- function newFileName(withTimestamp=true){
+ function newFileName(withTimes=true){
   const person=($('person').value.trim()||'担当者未設定').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,60);
-  const date=$('date').value||session()?.date||today(),now=new Date();
+  const date=$('date').value||session()?.date||today();
   const ctx=permit?.active()?permit.selection():null;
   const scope=ctx?.active?'_'+[...(ctx.staff||[]),...(ctx.days||[])].join('_').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_'):'';
   const base=`停車地点記録_${person}${scope}_${dated(date)}`;
-  return withTimestamp?`${base}_保存${today().replaceAll('-','')}_${now.toTimeString().slice(0,8).replaceAll(':','')}_${String(now.getMilliseconds()).padStart(3,'0')}.txt`:base;
+  if(!withTimes)return base;
+  const s=session();if(!s||!validInstant(s.started))return `${base}_未開始.txt`;
+  const clock=t=>new Date(t).toTimeString().slice(0,8).replaceAll(':','');
+  const day=t=>{const d=new Date(t);return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;};
+  const end=validInstant(s.ended)?(day(s.started)===day(s.ended)?clock(s.ended):`${day(s.ended)}-${clock(s.ended)}`):'未定';
+  return `${base}_開始${clock(s.started)}_終了${end}.txt`;
  }
  function updateFileName(){
   if(!fileNameOverride&&!session()?.sourceFile)fileNameOverride=newFileName(false);
@@ -178,6 +196,7 @@
   persist();
   const exported=JSON.parse(JSON.stringify(data));
   for(const s of exported.sessions){
+   if(Number.isFinite(s.ended))captureTiming(s,now.getTime());
    for(const p of s.permitContext?.properties||[]){if(typeof p.staff==='string'&&Number.isInteger(p.order)&&p.order>0)p.collectionCode=`${p.staff}${p.order}`;else delete p.collectionCode;}
    for(const p of s.stops){if(p.propertyKey&&typeof p.propertyStaff==='string'&&Number.isInteger(p.routeOrder)&&p.routeOrder>0)p.collectionCode=`${p.propertyStaff}${p.routeOrder}`;else delete p.collectionCode;}
   }
@@ -287,7 +306,7 @@
    if(currentDot){currentDot.remove();currentDot=null;}
    $('person').value=selected.person;$('date').value=selected.date;
    state=selected.ended?'finished':'paused';render();fit();
-   notify(selected.ended?'TXTを開きました。保存時は新しいタイムスタンプで保存します。':'途中のTXTを開きました。「再開」で続けて記録できます。保存時は新しいタイムスタンプで保存します。');
+   notify(selected.ended?'TXTを開きました。保存名に開始・終了時刻を入れます。':'途中のTXTを開きました。「再開」で続けて記録できます。保存名に開始・終了時刻を入れます。');
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
