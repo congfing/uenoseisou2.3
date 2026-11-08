@@ -1,14 +1,21 @@
 (()=>{
  'use strict';
+ const GIT_URL='https://congfing.github.io/uenoseisou2.3/stop-recorder/index.html';
+ const LOCAL_URL='http://localhost:9300/stop-recorder/index.html?edition=local';
+ const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
+ if(!gitVersion&&new URLSearchParams(location.search).get('edition')!=='local'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:30,accuracy:50};
  let permit=null;
  let fileNameOverride=null;
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
- let currentId=data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
+ let currentId=Object.hasOwn(data,'activeSessionId')?(data.sessions.some(s=>s.id===data.activeSessionId)?data.activeSessionId:null):data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
+ if(currentId&&typeof data.activeFileName==='string')fileNameOverride=data.activeFileName;
  const id=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+ const mobile=()=>/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ let viewedDay=data.lastViewedDay||data.sessions.find(s=>s.id===currentId)?.date||today();
  const session=()=>data.sessions.find(s=>s.id===currentId);
  const dated=d=>d?`${d}（${'日月火水木金土'[new Date(d+'T12:00:00').getDay()]}）`:'';
  const ordered=()=>[...(session()?.stops||[])].sort((a,b)=>a.order-b.order||a.arrival-b.arrival);
@@ -29,17 +36,28 @@
  }
  function persist(){
   if(!storageOK)return false;
+  data.activeSessionId=currentId;data.activeFileName=fileNameOverride||session()?.sourceFile||null;data.lastViewedDay=today();
   try{localStorage.setItem(KEY,JSON.stringify(data));$('savedState').textContent='端末に保存済み';lastPersist=Date.now();return true;}
   catch(e){$('savedState').textContent='保存失敗';if(state==='running')pause(false);if(!storageWarned){storageWarned=true;notify('端末への保存に失敗しました。ファイル保存で記録を退避してください。');}return false;}
  }
  let pendingConfirm=false;
  function ask(text){if(pendingConfirm)return Promise.resolve(false);pendingConfirm=true;return new Promise(resolve=>{$('confirmText').textContent=text;const d=$('confirmDialog');const finish=v=>{pendingConfirm=false;d.close();resolve(v);};$('confirmCancel').onclick=()=>finish(false);$('confirmOK').onclick=()=>finish(true);d.oncancel=e=>{e.preventDefault();finish(false);};d.showModal();});}
+ $('environmentLabel').textContent=gitVersion?'Git版':'Local版';
+ $('switchEnvironment').textContent=gitVersion?'Local版を開く':'Git版を開く';
+ $('switchEnvironment').onclick=async()=>{
+  const destination=gitVersion?'Local版':'Git版';
+  if(!await ask(`${destination}へ切り替えますか？\nGit版とLocal版の保存データは別管理です。記録を移す場合は、先にTXT保存して切り替え先で読み込んでください。${gitVersion?'\nLocal版には、このPCの9300番サーバーの起動が必要です。':''}`))return;
+  if(state==='running')pause();
+  if(!persist()){notify('保存できないため切り替えません。TXT保存で記録を退避してください。');return;}
+  const target=gitVersion?LOCAL_URL:GIT_URL;
+  window.top.location.assign(target);
+ };
  function updateControls(){
   $('start').textContent=state==='paused'?'再開':'開始';$('start').disabled=state==='running'||!storageOK;
   $('pause').disabled=state!=='running';$('finish').disabled=state!=='running'&&state!=='paused';
   $('manual').disabled=state!=='running';$('resume').disabled=!session()||state==='running'||state==='paused';
-  $('person').disabled=$('date').disabled=state==='running'||state==='paused';
-  $('loadFile').disabled=state==='running'||state==='paused';$('settingsButton').disabled=state==='running';
+  $('person').disabled=$('date').disabled=state==='running';
+  $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
   $('threshold').textContent='判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
@@ -101,6 +119,7 @@
  function pause(save=true){if(state!=='running')return;state='paused';const c=detector?.candidate;const last=c?.saved?{lat:c.best.lat,lng:c.best.lng}:lastPosition;detector?.close(Date.now());detector?.reset(last);closeWatch();if(save)persist();render();}
  async function start(){
   if(state==='running')return;
+  if(resetForNewDay())return;
   if(!navigator.geolocation){notify('このブラウザーでは位置情報を取得できません。');return;}
   if(!window.isSecureContext){notify('位置情報はHTTPSまたはこのPCのlocalhostで開いてください。');return;}
   if(!storageOK)return;
@@ -114,9 +133,10 @@
    const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
    detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);
   }
+  if(state==='paused'&&session())session().ended=null;
   if(!detector){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
   state='running';notify('');if(!persist()){state='paused';render();return;}render();const generation=++token;
-  watch=navigator.geolocation.watchPosition(position=>{if(generation!==token||state!=='running')return;const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp};if(Date.now()-p.time>30000){$('gps').textContent='GPS 更新待ち';return;}lastPosition=p;
+  watch=navigator.geolocation.watchPosition(position=>{if(generation!==token||state!=='running'||resetForNewDay())return;const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp};if(Date.now()-p.time>30000){$('gps').textContent='GPS 更新待ち';return;}lastPosition=p;
    $('gps').textContent=`GPS ±${Math.round(p.accuracy)}m`;
    const result=detector.feed(p);$('status').textContent=result;
    if(map){if(!currentDot){currentDot=L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:2,fillColor:'#237cad',fillOpacity:1}).addTo(map);if(!session().stops.length)map.setView([p.lat,p.lng],16);}else currentDot.setLatLng([p.lat,p.lng]);}
@@ -127,9 +147,10 @@
  $('start').onclick=start;$('pause').onclick=()=>pause();$('finish').onclick=async()=>{if(!await ask('記録を終了して保存しますか？'))return;if(state==='running')pause();if(!session())return;session().ended=Date.now();state='finished';detector=null;persist();render();fit();};
  $('resume').onclick=async()=>{const s=session();if(!s||state==='running')return;if(!await ask(`${s.date} ${s.person} の記録に続けて追加しますか？`))return;s.ended=null;state='paused';detector=null;lastPosition=null;persist();await start();};
  $('manual').onclick=()=>{if(state!=='running'||!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){resetForNewDay();return;}if(state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
  setInterval(()=>{if(state!=='running'||window===window.parent)return;try{if(window.frameElement&&!window.frameElement.getClientRects().length){pause();notify('起動画面に戻ったため一時停止しました。');}}catch(e){}},1000);
- window.addEventListener('pagehide',()=>{if(state==='running')pause();});
+ window.addEventListener('pagehide',()=>{if(state==='running')pause();else persist();});
+ window.addEventListener('focus',resetForNewDay);setInterval(resetForNewDay,1000);
  $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('settingsDialog').showModal();};
  $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value)};if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
@@ -154,6 +175,7 @@
  function recordExport(){
   const now=new Date();
   const name=newFileName();fileNameOverride=name;updateFileName();
+  persist();
   const exported=JSON.parse(JSON.stringify(data));
   for(const s of exported.sessions){
    for(const p of s.permitContext?.properties||[]){if(typeof p.staff==='string'&&Number.isInteger(p.order)&&p.order>0)p.collectionCode=`${p.staff}${p.order}`;else delete p.collectionCode;}
@@ -189,8 +211,7 @@
   }finally{button.disabled=false;}
  }
  $('saveFile').onclick=()=>{
-  const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  if(mobile){shareRecord();return;}
+  if(mobile()){shareRecord();return;}
   $('saveName').value=recordExport().name;$('saveNameDialog').showModal();
  };
  $('saveTop').onclick=()=>$('saveFile').click();
@@ -212,7 +233,7 @@
  };
  $('emailFile').onclick=()=>shareRecord(true);
  $('selectTxtName').onclick=()=>{
-  if(state==='running'||state==='paused'){notify('記録を終了してからTXTファイルを選択してください。');return;}
+  if(state==='running'){notify('一時停止してからTXTファイルを選択してください。');return;}
   $('fileInput').click();
  };
  $('closeApp').onclick=async()=>{
@@ -239,7 +260,7 @@
  $('loadFile').onclick=()=>$('fileInput').click();
  $('fileInput').onchange=async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;
-  if(state==='running'||state==='paused'){notify('現在の記録を終了してからTXTを選択してください。');return;}
+  if(state==='running'){notify('現在の記録を一時停止してからTXTを選択してください。');return;}
   if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}
   try{
    const imported=validate(JSON.parse(await file.text()));
@@ -258,10 +279,10 @@
    }
    if(next.sessions.length>1000)throw Error('保存記録が上限の1000件を超えます。先にTXTで退避して記録を整理してください');
    const active=imported.sessions.find(s=>s.id===imported.activeSessionId)||imported.sessions.at(-1);
-   const old={data,currentId,storageOK};data=next;currentId=active.id;storageOK=true;
+   const old={data,currentId,storageOK,fileNameOverride};data=next;currentId=active.id;storageOK=true;fileNameOverride=null;
    const selected=session();selected.sourceFile=file.name;makeSequential(selected);
    if(['permit','commission'].includes(imported.viewMode))data.viewMode=imported.viewMode;
-   if(!persist()){data=old.data;currentId=old.currentId;storageOK=old.storageOK;render();return;}
+   if(!persist()){data=old.data;currentId=old.currentId;storageOK=old.storageOK;fileNameOverride=old.fileNameOverride;render();return;}
    closeWatch();detector=null;lastPosition=null;selectedId=null;fileNameOverride=null;
    if(currentDot){currentDot.remove();currentDot=null;}
    $('person').value=selected.person;$('date').value=selected.date;
@@ -270,9 +291,20 @@
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
- $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);fileNameOverride=newFileName(false);updateFileName();};
- $('person').oninput=()=>{fileNameOverride=newFileName(false);updateFileName();};
- $('date').value=session()?.date||today();$('person').value=session()?.person||'';if(session()){state=session().ended?'finished':'paused';if(state==='paused')notify('保存した記録を復元しました。再開するまでは位置を取得しません。');}
+ function identityChanged(){if(state==='paused'){state='idle';detector=null;lastPosition=null;updateControls();}fileNameOverride=newFileName(false);updateFileName();}
+ $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);identityChanged();};
+ $('person').oninput=identityChanged;
+ function resetForNewDay(){
+  if(!mobile()||viewedDay===today())return false;
+  viewedDay=today();if(state==='running')pause();else closeWatch();
+  if(pendingConfirm)$('confirmCancel').click();document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+  currentId=null;selectedId=null;detector=null;lastPosition=null;pendingMapPoint=null;fileNameOverride=null;state='idle';
+  if(currentDot){currentDot.remove();currentDot=null;}if(markers)markers.clearLayers();if(map)map.setView([34.768,136.132],12);
+  $('date').value=today();$('gps').textContent='GPS 未取得';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
+  persist();render();notify('日付が変わったため、新しい記録画面にしました。前の記録は端末内に残っています。');return true;
+ }
+ $('date').value=session()?.date||today();$('person').value=session()?.person||'';
+ if(!resetForNewDay()&&session()){state=mobile()||!session().ended?'paused':'finished';notify(state==='paused'?'閉じる前の記録を復元しました。「再開」で同じ記録に続けて記録できます。':'閉じる前の記録を復元しました。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
  permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify});
  initMap();render();fit();
