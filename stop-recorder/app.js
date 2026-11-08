@@ -5,7 +5,7 @@
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
  if(!gitVersion&&new URLSearchParams(location.search).get('edition')!=='local'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
- const defaults={seconds:60,radius:30,accuracy:50};
+ const defaults={seconds:60,radius:10,accuracy:5};
  let permit=null;
  let fileNameOverride=null;
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
