@@ -5,7 +5,7 @@
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
  if(!gitVersion&&new URLSearchParams(location.search).get('edition')!=='local'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
- const defaults={seconds:60,radius:10,accuracy:5};
+ const defaults={seconds:60,radius:10,accuracy:5,moveMinutes:1};
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
@@ -18,6 +18,9 @@
  const mobile=()=>/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  let viewedDay=data.lastViewedDay||data.sessions.find(s=>s.id===currentId)?.date||today();
  const session=()=>data.sessions.find(s=>s.id===currentId);
+ const travelView=()=>data.viewMode==='travel';
+ const travelSession=()=>session()?.kind==='travel';
+ const travelInterval=s=>(s?.travelMinutes||data.settings.moveMinutes)*60000;
  const dated=d=>d?`${d}（${'日月火水木金土'[new Date(d+'T12:00:00').getDay()]}）`:'';
  const ordered=()=>[...(session()?.stops||[])].sort((a,b)=>a.order-b.order||a.arrival-b.arrival);
  function makeSequential(s){[...s.stops].sort((a,b)=>a.order-b.order||a.arrival-b.arrival).forEach((p,i)=>p.order=i+1);}
@@ -44,14 +47,51 @@
   return s.elapsedText;
  }
  function refreshTotalTime(){$('totalElapsed').textContent='経過時間 '+(captureTiming(session())||'00:00:00');}
+ function activeTimeMs(s){ensureElapsed(s);return s.activeElapsedMs+(s===session()&&state==='running'&&countingFrom!==null?Math.max(0,Date.now()-countingFrom):0);}
+ function addTravelPoint(manual=false){
+  const s=session(),p=lastPosition,now=Date.now();if(!s||s.kind!=='travel'||state!=='running')return false;
+  const elapsed=activeTimeMs(s),interval=travelInterval(s),due=Number.isFinite(s.nextTravelAtMs)?s.nextTravelAtMs:interval;
+  if(!manual&&elapsed<due)return false;
+  if(!p||!validInstant(p.time)||now-p.time>15000||now<p.time){if(manual)notify('新しい現在地を取得してから手動登録してください。');return false;}
+  if(!Number.isFinite(p.lat)||Math.abs(p.lat)>90||!Number.isFinite(p.lng)||Math.abs(p.lng)>180||!Number.isFinite(p.accuracy)||p.accuracy<0||p.accuracy>data.settings.accuracy){if(manual)notify('GPS精度が設定以内になるまでお待ちください。');return false;}
+  if(s.stops.some(q=>q.source==='travel'&&q.arrival===p.time)){if(manual)notify('この測位は登録済みです。次の測位を待ってください。');return false;}
+  const record={id:id(),order:Math.max(0,...s.stops.map(q=>q.order))+1,name:'',lat:p.lat,lng:p.lng,accuracy:p.accuracy,arrival:p.time,last:p.time,departure:p.time,source:'travel',manual,recordedAt:now,recordedElapsedMs:elapsed};
+  if(!manual){record.scheduledElapsedMs=due;record.skippedIntervals=Math.max(0,Math.floor((elapsed-due)/interval));s.nextTravelAtMs=(Math.floor(elapsed/interval)+1)*interval;}
+  s.stops.push(record);persist();render();return true;
+ }
+ function tickTravel(){
+  if(!travelView())return;
+  renderTravelProgress();
+  if(state==='running'){addTravelPoint();if(Date.now()-lastPersist>3000)persist();}
+ }
+ function switchRecordingMode(mode){
+  if(state==='running'||state==='paused')return;
+  const destination=mode==='travel'?'travel':'stop',current=session()?.kind||(data.viewMode==='travel'?'travel':'stop');
+  data.viewMode=mode;
+  if(current!==destination){
+   closeWatch();countingFrom=null;detector=null;lastPosition=null;selectedId=null;pendingMapPoint=null;
+   const next=[...data.sessions].reverse().find(s=>(s.kind||'stop')===destination&&!s.backupOf);
+   currentId=next?.id||null;state=next?(next.ended?'finished':'paused'):'idle';fileNameOverride=null;
+   if(next){$('person').value=next.person;$('date').value=next.date;}
+   if(currentDot){currentDot.remove();currentDot=null;}if(markers)markers.clearLayers();
+   if(!next&&map)map.setView([34.768,136.132],12);
+   $('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';$('gps').textContent='GPS 未取得';
+  }
+  persist();setTimeout(()=>{map?.invalidateSize();fit();},0);
+ }
  function notify(text){$('message').hidden=!text;$('message').textContent=text;}
  function validate(d){
   if(!d||d.version!==1||!Array.isArray(d.sessions)||d.sessions.length>1000)throw Error('ファイル形式が違います');
   const settings=d.settings||{};
   if(!Number.isInteger(settings.seconds)||settings.seconds<5||settings.seconds>1800||!Number.isFinite(settings.radius)||settings.radius<10||settings.radius>200||!Number.isFinite(settings.accuracy)||settings.accuracy<5||settings.accuracy>200)throw Error('設定値が範囲外です');
+  if(settings.moveMinutes===undefined)settings.moveMinutes=defaults.moveMinutes;
+  if(!Number.isInteger(settings.moveMinutes)||settings.moveMinutes<1||settings.moveMinutes>1440)throw Error('移動記録の間隔は1～1440分にしてください');
   const ids=new Set();
   for(const s of d.sessions){
    if(typeof s.id!=='string'||ids.has(s.id)||!/^\d{4}-\d{2}-\d{2}$/.test(s.date)||typeof s.person!=='string'||!Array.isArray(s.stops)||s.stops.length>50000)throw Error('記録の形式が違います');ids.add(s.id);
+   if(s.kind!==undefined&&!['stop','travel'].includes(s.kind))throw Error('記録の種類が不正です');
+   if(s.travelMinutes!==undefined&&(!Number.isInteger(s.travelMinutes)||s.travelMinutes<1||s.travelMinutes>1440))throw Error('記録間隔が不正です');
+   if(s.nextTravelAtMs!==undefined&&(!Number.isFinite(s.nextTravelAtMs)||s.nextTravelAtMs<1))throw Error('次の記録時刻が不正です');
    const stops=new Set(),orders=new Set();
    for(const p of s.stops){if(typeof p.id!=='string'||stops.has(p.id)||!Number.isInteger(p.order)||p.order<1||p.order>99999||orders.has(p.order)||!Number.isFinite(p.lat)||Math.abs(p.lat)>90||!Number.isFinite(p.lng)||Math.abs(p.lng)>180||!Number.isFinite(p.arrival)||!Number.isFinite(p.last)||p.last<p.arrival||typeof p.name!=='string'||!Number.isFinite(p.accuracy)||p.accuracy<0)throw Error('地点の形式が違います');if(p.departure!==null&&(!Number.isFinite(p.departure)||p.departure<p.arrival))throw Error('終了日時が不正です');stops.add(p.id);orders.add(p.order);}
   }return d;
@@ -84,7 +124,7 @@
   $('person').disabled=$('date').disabled=state==='running';
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
-  $('threshold').textContent='判定 '+duration(data.settings.seconds*1000);
+  $('threshold').textContent=travelView()?`記録間隔 ${session()?.travelMinutes||data.settings.moveMinutes}分`:'判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
  }
  function renderSessions(){
@@ -99,11 +139,16 @@
    const row=document.createElement('article');row.className='stop'+(selectedId===stop.id?' selected':'');row.dataset.id=stop.id;
    const n=document.createElement('button');n.className='number';n.textContent=permit?.label(stop)||stop.order;n.title='地点の操作';n.onclick=()=>pointActions(stop.id);
    const body=document.createElement('div'),title=document.createElement('div'),meta=document.createElement('div');title.className='stop-title';title.textContent=stop.name||'名称未設定';meta.className='stop-meta';
-   meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
+   meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:stop.source==='travel'?`記録時刻 ${time(stop.arrival)}${stop.manual?'（手動）':''}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
    const actions=document.createElement('div');actions.className='stop-actions';
    const edit=document.createElement('button');edit.textContent='編集';edit.disabled=state==='running';edit.onclick=()=>openEdit(stop.id);
    const del=document.createElement('button');del.textContent='削除';del.className='danger';del.onclick=()=>deletePoint(stop.id);actions.append(edit,del);row.append(n,body,actions);list.append(row);
-  }drawMap();permit?.render();
+  }drawMap();permit?.render();if(travelView())renderTravelProgress();
+ }
+ function renderTravelProgress(){
+  const s=session(),interval=travelInterval(s),elapsed=s?.kind==='travel'?activeTimeMs(s):0,due=Number.isFinite(s?.nextTravelAtMs)?s.nextTravelAtMs:interval,remaining=Math.max(0,due-elapsed);
+  $('candidate').textContent=state==='finished'?'移動記録終了':`次の記録まで ${duration(remaining)}`;
+  $('progressBar').style.width=Math.min(100,Math.max(0,(1-remaining/interval)*100))+'%';
  }
  function initMap(){
   if(!window.L){$('mapError').hidden=false;return;}
@@ -156,15 +201,15 @@
    if(markers)markers.clearLayers();
    if(map)map.setView([34.768,136.132],12);
    $('gps').textContent='GPS 更新待ち';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
-   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,activeElapsedMs:0,elapsedTiming:'active',stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
-   detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);
+   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,activeElapsedMs:0,elapsedTiming:'active',kind:travelView()?'travel':'stop',recordType:travelView()?'移動記録':'停車地点記録',stops:[]};if(s.kind==='travel'){s.travelMinutes=data.settings.moveMinutes;s.nextTravelAtMs=travelInterval(s);}data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
+   if(!travelSession())detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);else detector=null;
   }
   if(state==='paused'&&session())session().ended=null;
-  if(!detector){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
+  if(!detector&&!travelSession()){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
   state='running';countingFrom=Date.now();notify('');if(!persist()){commitElapsed(true);state='paused';render();return;}render();const generation=++token;
   watch=navigator.geolocation.watchPosition(position=>{if(generation!==token||state!=='running'||resetForNewDay())return;const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp};if(Date.now()-p.time>30000){$('gps').textContent='GPS 更新待ち';return;}lastPosition=p;
    $('gps').textContent=`GPS ±${Math.round(p.accuracy)}m`;
-   const result=detector.feed(p);$('status').textContent=result;
+   if(travelSession()){tickTravel();$('status').textContent='移動記録中';}else $('status').textContent=detector.feed(p);
    if(map){if(!currentDot){currentDot=L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:2,fillColor:'#237cad',fillOpacity:1}).addTo(map);if(!session().stops.length)map.setView([p.lat,p.lng],16);}else currentDot.setLatLng([p.lat,p.lng]);}
   },error=>{if(generation!==token)return;pause();notify(({1:'位置情報の利用が許可されていません。端末の設定を確認してください。',2:'現在地を取得できません。一時停止しました。',3:'位置情報の取得がタイムアウトしました。再開してください。'})[error.code]||'GPSエラーで一時停止しました。');},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
   try{if(navigator.wakeLock){const lock=await navigator.wakeLock.request('screen');if(generation!==token)await lock.release();else wake=lock;}}catch(e){}
@@ -184,14 +229,15 @@
   render();notify('表示中の記録を削除し、新規開始できる状態にリセットしました。');
  };
  $('resume').onclick=async()=>{const s=session();if(!s||state==='running')return;if(!await ask(`${s.date} ${s.person} の記録に続けて追加しますか？`))return;s.ended=null;state='paused';detector=null;lastPosition=null;persist();await start();};
- $('manual').onclick=()=>{if(state!=='running'||!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
+ $('manual').onclick=()=>{if(state!=='running')return;if(travelSession()){if(addTravelPoint(true))notify('現在地を手動で記録しました。');return;}if(!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){resetForNewDay();return;}if(state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
  setInterval(()=>{if(state!=='running'||window===window.parent)return;try{if(window.frameElement&&!window.frameElement.getClientRects().length){pause();notify('起動画面に戻ったため一時停止しました。');}}catch(e){}},1000);
  window.addEventListener('pagehide',()=>{if(state==='running')pause();else persist();});
  window.addEventListener('focus',resetForNewDay);setInterval(resetForNewDay,1000);
  setInterval(refreshTotalTime,1000);
- $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('settingsDialog').showModal();};
- $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value)};if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();};
+ setInterval(tickTravel,1000);
+ $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveMinutes:Number(f.elements.moveMinutes.value)};if(travelSession()&&state==='paused'&&session().travelMinutes!==data.settings.moveMinutes){session().travelMinutes=data.settings.moveMinutes;const interval=travelInterval(session());session().nextTravelAtMs=(Math.floor(activeTimeMs(session())/interval)+1)*interval;}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
  $('editForm').onsubmit=e=>{e.preventDefault();const f=e.target,p=session()?.stops.find(p=>p.id===editId);if(!p)return;const next=Number(f.elements.order.value),old=p.order;const collision=session().stops.some(q=>q.id!==p.id&&q.order===next);
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
@@ -204,7 +250,8 @@
   const date=$('date').value||session()?.date||today();
   const ctx=permit?.active()?permit.selection():null;
   const scope=ctx?.active?'_'+[...(ctx.staff||[]),...(ctx.days||[])].join('_').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_'):'';
-  const base=`停車地点記録_${person}${scope}_${dated(date)}`;
+  const prefix=travelSession()||(!session()&&travelView())?'移動記録':'停車地点記録';
+  const base=`${prefix}_${person}${scope}_${dated(date)}`;
   if(!withTimes)return base;
   const s=session();if(!s||!validInstant(s.started))return `${base}_未開始.txt`;
   const clock=t=>new Date(t).toTimeString().slice(0,8).replaceAll(':','');
@@ -222,6 +269,7 @@
   persist();
   const exported=JSON.parse(JSON.stringify(data));
   for(const s of exported.sessions){
+   s.recordType=s.kind==='travel'?'移動記録':'停車地点記録';
    if(Number.isFinite(s.ended))captureTiming(s,now.getTime());
    for(const p of s.permitContext?.properties||[]){if(typeof p.staff==='string'&&Number.isInteger(p.order)&&p.order>0)p.collectionCode=`${p.staff}${p.order}`;else delete p.collectionCode;}
    for(const p of s.stops){if(p.propertyKey&&typeof p.propertyStaff==='string'&&Number.isInteger(p.routeOrder)&&p.routeOrder>0)p.collectionCode=`${p.propertyStaff}${p.routeOrder}`;else delete p.collectionCode;}
@@ -248,7 +296,7 @@
    if(!file){downloadRecord();notify(email?'添付共有に対応していないため、テキストファイルを保存します。メールに保存したファイルを添付してください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
    button.disabled=true;
    notify(email?'共有画面でメールアプリを選び、宛先を指定して送信してください。全記録の位置情報を含みます。':'「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
-   await navigator.share(email?{files:[file],title:`停車地点記録 ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
+   await navigator.share(email?{files:[file],title:`${travelSession()||(!session()&&travelView())?'移動記録':'停車地点記録'} ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
   }catch(error){
    if(error.name==='AbortError'){notify('保存操作を取り消しました。端末内の記録は残っています。');return;}
    $('downloadRecord').hidden=false;
@@ -326,7 +374,7 @@
    const active=imported.sessions.find(s=>s.id===imported.activeSessionId)||imported.sessions.at(-1);
    const old={data,currentId,storageOK,fileNameOverride};data=next;currentId=active.id;storageOK=true;fileNameOverride=null;
    const selected=session();selected.sourceFile=file.name;makeSequential(selected);
-   if(['permit','commission'].includes(imported.viewMode))data.viewMode=imported.viewMode;
+   if(selected.kind==='travel')data.viewMode='travel';else if(['permit','commission'].includes(imported.viewMode))data.viewMode=imported.viewMode;else if(data.viewMode==='travel')data.viewMode='commission';
    if(!persist()){data=old.data;currentId=old.currentId;storageOK=old.storageOK;fileNameOverride=old.fileNameOverride;render();return;}
    closeWatch();detector=null;lastPosition=null;selectedId=null;fileNameOverride=null;
    if(currentDot){currentDot.remove();currentDot=null;}
@@ -351,6 +399,7 @@
  $('date').value=session()?.date||today();$('person').value=session()?.person||'';
  if(!resetForNewDay()&&session()){state=mobile()||!session().ended?'paused':'finished';notify(state==='paused'?'閉じる前の記録を復元しました。「再開」で同じ記録に続けて記録できます。':'閉じる前の記録を復元しました。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
- permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:mode=>{data.viewMode=mode;persist();setTimeout(()=>map?.invalidateSize(),0);},session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify});
+ if(session()?.kind==='travel')data.viewMode='travel';else if(session()&&data.viewMode==='travel')data.viewMode='commission';
+ permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:switchRecordingMode,session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify});
  initMap();render();fit();
 })();
