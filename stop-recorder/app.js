@@ -67,6 +67,7 @@
   $('start').textContent=state==='paused'?'再開':'開始';$('start').disabled=state==='running'||!storageOK;
   $('pause').disabled=state!=='running';$('finish').disabled=state!=='running'&&state!=='paused';
   $('manual').disabled=state!=='running';$('resume').disabled=!session()||state==='running'||state==='paused';
+  $('resetRecording').disabled=state==='running'||!storageOK;
   $('person').disabled=$('date').disabled=state==='running';
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
@@ -157,6 +158,18 @@
  }
  function candidateUpdate(c){$('candidate').textContent='停車時間 '+duration(c?c.last-c.arrival:0);$('progressBar').style.width=Math.min(100,c?(c.last-c.arrival)/(data.settings.seconds*10):0)+'%';if(Date.now()-lastPersist>3000)persist();}
  $('start').onclick=start;$('pause').onclick=()=>pause();$('finish').onclick=async()=>{if(!await ask('記録を終了して保存しますか？'))return;if(state==='running')pause();if(!session())return;session().ended=Date.now();state='finished';detector=null;persist();render();fit();};
+ $('resetRecording').onclick=async()=>{
+  if(state==='running'||!storageOK)return;
+  if(!await ask('表示中の記録を端末内から削除し、地図・地点一覧・経過時間をリセットしますか？\nこの記録の削除は元に戻せません。ほかの履歴と保存済みTXTは残します。担当者・日付・記録設定は変更しません。'))return;
+  if(!persist())return;
+  const previous={currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state},previousSessions=data.sessions;
+  data.sessions=data.sessions.filter(s=>s.id!==currentId);
+  closeWatch();currentId=null;selectedId=null;detector=null;lastPosition=null;pendingMapPoint=null;fileNameOverride=null;state='idle';
+  if(!persist()){data.sessions=previousSessions;({currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state}=previous);render();return;}
+  if(currentDot){currentDot.remove();currentDot=null;}if(markers)markers.clearLayers();if(map)map.setView([34.768,136.132],12);
+  $('gps').textContent='GPS 未取得';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
+  render();notify('表示中の記録を削除し、新規開始できる状態にリセットしました。');
+ };
  $('resume').onclick=async()=>{const s=session();if(!s||state==='running')return;if(!await ask(`${s.date} ${s.person} の記録に続けて追加しますか？`))return;s.ended=null;state='paused';detector=null;lastPosition=null;persist();await start();};
  $('manual').onclick=()=>{if(state!=='running'||!detector)return;const p=lastPosition;if(!p||Date.now()-p.time>15000){notify('新しい現在地を取得してから手動登録してください。');return;}if(p.accuracy>data.settings.accuracy){notify('GPS誤差が設定値を超えています。精度が安定してから登録してください。');return;}const record=detector.registerNow(p);if(!record){notify('この停車地点は登録済みです。移動後に次の地点を登録できます。');return;}persist();render();notify(`地点 ${record.order} を手動登録しました。`);};
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){resetForNewDay();return;}if(state==='running'){pause();notify('画面が非表示になったため一時停止しました。記録を続けるには再開してください。');}});
