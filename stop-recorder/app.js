@@ -8,6 +8,7 @@
  const defaults={seconds:60,radius:10,accuracy:5};
  let permit=null;
  let fileNameOverride=null;
+ let countingFrom=null;
  let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
  let currentId=Object.hasOwn(data,'activeSessionId')?(data.sessions.some(s=>s.id===data.activeSessionId)?data.activeSessionId:null):data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
@@ -24,11 +25,22 @@
  const duration=ms=>{const n=Math.max(0,Math.floor(ms/1000));return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;};
  const totalClock=seconds=>[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
  const validInstant=n=>Number.isFinite(n)&&Number.isFinite(new Date(n).getTime());
+ function ensureElapsed(s){
+  if(!Number.isFinite(s.activeElapsedMs)||s.activeElapsedMs<0){
+   const legacy=Number.isFinite(s.elapsedSeconds)&&s.elapsedSeconds>=0;
+   s.activeElapsedMs=legacy?s.elapsedSeconds*1000:0;s.elapsedTiming=legacy?'legacy-baseline-plus-active':'active';
+  }
+ }
+ function commitElapsed(stop=false){
+  const s=session(),now=Date.now();
+  if(s&&countingFrom!==null){ensureElapsed(s);s.activeElapsedMs+=Math.max(0,now-countingFrom);}
+  if(countingFrom!==null)countingFrom=stop?null:now;
+ }
  function captureTiming(s,now=Date.now()){
-  if(!s||!validInstant(s.started))return null;
-  const end=validInstant(s.ended)?s.ended:now;
-  s.elapsedSeconds=Math.max(0,Math.floor((end-s.started)/1000));s.elapsedText=totalClock(s.elapsedSeconds);
-  s.startedAt=new Date(s.started).toISOString();s.endedAt=validInstant(s.ended)?new Date(s.ended).toISOString():null;
+  if(!s)return null;ensureElapsed(s);
+  const running=s===session()&&state==='running'&&countingFrom!==null?Math.max(0,now-countingFrom):0;
+  s.elapsedSeconds=Math.floor((s.activeElapsedMs+running)/1000);s.elapsedText=totalClock(s.elapsedSeconds);
+  s.startedAt=validInstant(s.started)?new Date(s.started).toISOString():null;s.endedAt=validInstant(s.ended)?new Date(s.ended).toISOString():null;
   return s.elapsedText;
  }
  function refreshTotalTime(){$('totalElapsed').textContent='経過時間 '+(captureTiming(session())||'00:00:00');}
@@ -46,6 +58,7 @@
  }
  function persist(){
   if(!storageOK)return false;
+  commitElapsed();
   data.activeSessionId=currentId;data.activeFileName=fileNameOverride||session()?.sourceFile||null;data.lastViewedDay=today();
   refreshTotalTime();
   try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();return true;}
@@ -129,7 +142,7 @@
  $('pointName').onclick=()=>{const p=session()?.stops.find(p=>p.id===selectedId);$('pointDialog').close();if(!p)return;$('nameForm').elements.name.value=p.name;$('nameDialog').showModal();$('nameForm').elements.name.focus();};
  $('nameForm').onsubmit=e=>{e.preventDefault();const p=session()?.stops.find(p=>p.id===selectedId);if(p){p.name=e.target.elements.name.value.trim();p.editedAt=Date.now();persist();}$('nameDialog').close();render();};
  function closeWatch(){token++;if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}if(wake){wake.release().catch(()=>{});wake=null;}}
- function pause(save=true){if(state!=='running')return;state='paused';const c=detector?.candidate;const last=c?.saved?{lat:c.best.lat,lng:c.best.lng}:lastPosition;detector?.close(Date.now());detector?.reset(last);closeWatch();if(save)persist();render();}
+ function pause(save=true){if(state!=='running')return;commitElapsed(true);state='paused';const c=detector?.candidate;const last=c?.saved?{lat:c.best.lat,lng:c.best.lng}:lastPosition;detector?.close(Date.now());detector?.reset(last);closeWatch();if(save)persist();render();}
  async function start(){
   if(state==='running')return;
   if(resetForNewDay())return;
@@ -143,12 +156,12 @@
    if(markers)markers.clearLayers();
    if(map)map.setView([34.768,136.132],12);
    $('gps').textContent='GPS 更新待ち';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
-   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
+   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,activeElapsedMs:0,elapsedTiming:'active',stops:[]};data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
    detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);
   }
   if(state==='paused'&&session())session().ended=null;
   if(!detector){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
-  state='running';notify('');if(!persist()){state='paused';render();return;}render();const generation=++token;
+  state='running';countingFrom=Date.now();notify('');if(!persist()){commitElapsed(true);state='paused';render();return;}render();const generation=++token;
   watch=navigator.geolocation.watchPosition(position=>{if(generation!==token||state!=='running'||resetForNewDay())return;const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp};if(Date.now()-p.time>30000){$('gps').textContent='GPS 更新待ち';return;}lastPosition=p;
    $('gps').textContent=`GPS ±${Math.round(p.accuracy)}m`;
    const result=detector.feed(p);$('status').textContent=result;
