@@ -64,8 +64,15 @@
   renderTravelProgress();
   if(state==='running'){addTravelPoint();if(Date.now()-lastPersist>3000)persist();}
  }
- function switchRecordingMode(mode){
-  if(state==='running'||state==='paused')return;
+ async function switchRecordingMode(mode){
+  if(!storageOK){notify('保存データを復旧してから用途を切り替えてください。');return false;}
+  if(mode===(data.viewMode||'commission'))return true;
+  if(state==='running'||state==='paused'){
+   if(!await ask('現在の記録を保存して用途を切り替えますか？\n記録中の場合は一時停止します。地点や経過時間は残り、元の用途に戻って再開できます。'))return false;
+   if(state==='running')pause();
+   if(!persist())return false;
+  }
+  const previous={mode:data.viewMode,currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride};
   const destination=mode==='travel'?'travel':'stop',current=session()?.kind||(data.viewMode==='travel'?'travel':'stop');
   data.viewMode=mode;
   if(current!==destination){
@@ -77,7 +84,8 @@
    if(!next&&map)map.setView([34.768,136.132],12);
    $('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';$('gps').textContent='GPS 未取得';
   }
-  persist();setTimeout(()=>{map?.invalidateSize();fit();},0);
+  if(!persist()){data.viewMode=previous.mode;({currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride}=previous);render();return false;}
+  setTimeout(()=>{map?.invalidateSize();fit();},0);return true;
  }
  function notify(text){$('message').hidden=!text;$('message').textContent=text;}
  function validate(d){

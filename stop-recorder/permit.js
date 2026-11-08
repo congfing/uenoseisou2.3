@@ -18,7 +18,7 @@
   const context=()=>checked(api.session()?.permitContext)||latest;
   function render(){
    $('commissionMode').setAttribute('aria-pressed',String(api.mode()==='commission'));$('permitMode').setAttribute('aria-pressed',String(active()));$('travelMode').setAttribute('aria-pressed',String(api.mode()==='travel'));
-   for(const id of ['commissionMode','permitMode','travelMode'])$(id).disabled=api.recording();
+   for(const id of ['commissionMode','permitMode','travelMode'])$(id).disabled=false;
    document.querySelector('h1').textContent=api.mode()==='travel'?'移動記録（テスト）':'停車地点記録（テスト）';document.title=document.querySelector('h1').textContent;
    $('openPermitPicker').hidden=!active();document.querySelector('.identity').classList.toggle('permit-identity',active());
    $('permitPanel').hidden=!active();if(!active())return;
@@ -75,9 +75,10 @@
   }
   function label(point){return String(point.order);}
   $('syncPermit').onclick=sync;
-  $('commissionMode').onclick=()=>{api.setMode('commission');api.refreshFileName();api.render();};
-  $('permitMode').onclick=()=>{read();api.setMode('permit');api.refreshFileName();api.render();};
-  $('travelMode').onclick=()=>{api.setMode('travel');api.refreshFileName();api.render();};
+  async function chooseMode(mode){if(mode==='permit')read();if(await api.setMode(mode)===false)return;api.refreshFileName();api.render();}
+  $('commissionMode').onclick=()=>chooseMode('commission');
+  $('permitMode').onclick=()=>chooseMode('permit');
+  $('travelMode').onclick=()=>chooseMode('travel');
   $('openPermitPicker').onclick=()=>{
    const table=decodeURIComponent(location.pathname).includes('/停車地点記録/')?'../uenoseisou2.3/index_2-4_colview.html':'../index_2-4_colview.html';
    $('permitPickerFrame').src=table+'?permitPicker=1&t='+Date.now();$('permitPickerDialog').showModal();
