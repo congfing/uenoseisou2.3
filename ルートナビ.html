@@ -59,6 +59,12 @@
   #donebtn { background:#2e7d32; color:#fff; }
   .note { font-size:12px; color:#555; }
   #reset, #reopen { margin-top:12px; margin-right:14px; font-size:12px; color:#888; background:none; border:none; text-decoration:underline; }
+  #navoverlay { display:none; position:fixed; inset:0; background:#fff; z-index:2000; flex-direction:column; }
+  #ovbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 12px calc(10px + env(safe-area-inset-top)); background:#1f4e79; }
+  #ovback { padding:12px 16px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#fff; color:#1f4e79; white-space:nowrap; }
+  #ovlabel { flex:1; min-width:0; color:#fff; font-size:15px; font-weight:bold; text-align:center; overflow-wrap:anywhere; }
+  #ovapp { padding:12px 12px; font-size:13px; border:1px solid #fff; border-radius:10px; background:transparent; color:#fff; white-space:nowrap; }
+  #ovframe { flex:1; min-height:0; width:100%; border:0; }
 </style>
 </head>
 <body>
@@ -102,6 +108,14 @@
   <button id="navbtn" class="bigbtn" type="button">ナビ開始</button>
 </div>
 
+<div id="navoverlay">
+  <div id="ovbar">
+    <button id="ovback" type="button">← 一覧に戻る</button>
+    <span id="ovlabel"></span>
+    <button id="ovapp" type="button">アプリで開く</button>
+  </div>
+  <iframe id="ovframe" title="ナビ地図" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 'use strict';
@@ -177,6 +191,32 @@ function navUrl(p){
     : 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
 }
 function byOrder(n){ return STOPS.find(p => p.order === n); }
+let ovTarget = null;
+function embedUrl(p, origin){
+  const d = p.lat + ',' + p.lng;
+  if (origin) return 'https://maps.google.com/maps?saddr=' + origin.lat + ',' + origin.lng + '&daddr=' + d + '&output=embed';
+  return 'https://maps.google.com/maps?q=' + d + '&output=embed';
+}
+function openNav(p){
+  setCurrent(p.order);
+  ovTarget = p;
+  $('ovlabel').textContent = p.order + '番' + (p.name ? ' ' + p.name : '');
+  const prev = STOPS.filter(q => q.order < p.order).pop() || null;
+  $('ovframe').src = embedUrl(p, prev);
+  $('navoverlay').style.display = 'flex';
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      if (ovTarget === p && $('navoverlay').style.display === 'flex') {
+        $('ovframe').src = embedUrl(p, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }
+    }, () => {}, { timeout: 4000, maximumAge: 60000 });
+  }
+}
+function closeNav(){
+  $('navoverlay').style.display = 'none';
+  $('ovframe').src = 'about:blank';
+  ovTarget = null;
+}
 function nextOrder(){ const p = STOPS.find(p => !done.has(p.order)); return p ? p.order : null; }
 function saveProgress(){ localStorage.setItem(progressKey, JSON.stringify({ done: [...done], current })); }
 function closeNavigator(){
@@ -257,7 +297,7 @@ function buildSessionView(){
     tr.innerHTML = '<td><span class="num">' + p.order + '</span></td>' +
       '<td class="tm">' + main + '<small>' + p.arr + '〜' + p.dep + '・停車 ' + p.dur + '</small></td>' +
       '<td style="text-align:right"><button type="button" class="rowbtn donebtn"></button></td>';
-    tr.addEventListener('click', () => { setCurrent(p.order, true); window.open(navUrl(p), '_blank'); });
+    tr.addEventListener('click', () => { openNav(p); });
     const b = tr.querySelector('.donebtn');
     b.addEventListener('click', ev => { ev.stopPropagation(); toggleDone(p.order); });
     listEl.appendChild(tr);
@@ -358,7 +398,9 @@ function loadText(text){
   }
 }
 $('sessionSel').addEventListener('change', ev => startSession(Number(ev.target.value)));
-$('navbtn').addEventListener('click', () => { if (current) window.open(navUrl(byOrder(current)), '_blank'); });
+$('navbtn').addEventListener('click', () => { if (current) openNav(byOrder(current)); });
+$('ovback').addEventListener('click', closeNav);
+$('ovapp').addEventListener('click', () => { if (ovTarget) window.open(navUrl(ovTarget), '_blank'); });
 $('donebtn').addEventListener('click', () => { if (current) toggleDone(current); });
 $('appGoogle').addEventListener('click', () => { app = 'google'; localStorage.setItem('route_nav_app', app); render(); });
 $('appApple').addEventListener('click', () => { app = 'apple'; localStorage.setItem('route_nav_app', app); render(); });
