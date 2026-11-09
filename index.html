@@ -1103,8 +1103,10 @@
     { name: "メモ", detail: "記録", file: "index_5-1.html" },
     { name: "収集カレンダー", detail: "選択して表示", file: "__calendar_picker__", calendarPicker: true },
     { name: "燃費管理", detail: "入力・履歴・読込", file: "index_nenpi.html" },
-    { name: "停車地点記録（テスト）", detail: "", file: "stop-recorder/index.html", revision: "20261106-test-1", locationRecorder: true }
+    { name: "停車地点記録（テスト）", detail: "", file: "stop-recorder/index.html", revision: "20261106-test-1", locationRecorder: true },
+    { name: "ルートナビ", detail: "", file: "ルートナビ.html", revision: "20261109-route1", routePicker: true }
   ];
+  const routeTxtFiles = ["停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt"];
 
   const softwareRoot = "./";
   const launcher = document.getElementById("launcher");
@@ -1130,6 +1132,7 @@
   const defaultThemeEnabledKey = "uenoseisou23_default_theme_enabled";
   const softwareThemeExcludes = new Set([
     "stop-recorder/index.html",
+    "ルートナビ.html",
     ...calendarFiles.map((calendar) => calendar.file)
   ]);
   const defaultTheme = {
@@ -1273,6 +1276,7 @@
     `;
     card.querySelector(".launch-btn").addEventListener("click", () => {
       if (app.calendarPicker) showCalendarPicker();
+      else if (app.routePicker) showRoutePicker();
       else openSoftware(app);
     });
     // カードから全画面へ広がる動きを付ける
@@ -1337,6 +1341,8 @@
   }
 
   function showCalendarPicker() {
+    calendarPicker.querySelector('.calendar-panel-title').textContent = '収集カレンダー';
+    calendarPicker.setAttribute('aria-label', '収集カレンダー選択');
     calendarList.innerHTML = "";
     calendarFiles.forEach((calendar) => {
       const button = document.createElement("button");
@@ -1357,6 +1363,29 @@
 
   function closeCalendarPicker() {
     calendarPicker.hidden = true;
+  }
+
+  function showRoutePicker() {
+    calendarPicker.querySelector('.calendar-panel-title').textContent = 'ルートナビ：TXTを選択';
+    calendarPicker.setAttribute('aria-label', 'ルートTXT選択');
+    calendarList.replaceChildren();
+    [...routeTxtFiles, null].forEach(filename => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'calendar-choice';
+      const title = document.createElement('span'); title.className = 'calendar-choice-title';
+      title.textContent = filename || '端末のTXTを開く'; button.append(title);
+      button.onclick = () => {
+        closeCalendarPicker();
+        const app = software.find(item => item.routePicker);
+        openSoftware(app);
+        const frame = frames.get(app.file);
+        const send = () => frame.contentWindow.postMessage({type:'ueno-route-txt', filename}, location.protocol === 'file:' ? '*' : location.origin);
+        frame.addEventListener('load', send, {once:true});
+        try { if(frame.contentDocument?.readyState === 'complete' && frame.contentWindow.location.href !== 'about:blank') send(); } catch(e) {}
+      };
+      calendarList.append(button);
+    });
+    calendarPicker.hidden = false;
   }
 
   function createFrame(app) {

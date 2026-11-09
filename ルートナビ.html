@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ルートナビ（停車地点記録TXT変換）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  body { margin:0; font-family:-apple-system,"Hiragino Sans",sans-serif; }
+  header { padding:10px 14px; background:#1f4e79; color:#fff; }
+  header h1 { font-size:15px; margin:0 0 4px; }
+  header p { margin:0; font-size:12px; opacity:.92; }
+  #loader { padding:18px 14px; }
+  #loader h2 { font-size:16px; margin:0 0 8px; }
+  #loader p { font-size:13px; color:#444; line-height:1.6; }
+  #file { display:block; width:100%; padding:14px; font-size:15px; border:2px dashed #1f4e79; border-radius:10px; background:#f2f6fb; box-sizing:border-box; }
+  #paste { width:100%; height:110px; margin-top:12px; font-size:12px; box-sizing:border-box; }
+  #loadbtn { margin-top:10px; width:100%; padding:13px; font-size:15px; font-weight:bold; background:#1f4e79; color:#fff; border:none; border-radius:10px; }
+  #err { color:#b71c1c; font-size:13px; margin-top:10px; white-space:pre-wrap; }
+  #navview { display:none; padding-bottom:86px; }
+  #map { height:44vh; }
+  .pin { border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center;
+         font-size:12px; font-weight:bold; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.4);
+         background:#1f4e79; color:#fff; }
+  .pin.done { background:#9e9e9e; }
+  .pin.current { background:#e65100; width:30px; height:30px; line-height:30px; font-size:14px; }
+  .wrap { padding:10px 12px; }
+  .seg { display:flex; gap:8px; margin-bottom:10px; }
+  .seg button { flex:1; padding:10px; font-size:14px; border:1px solid #1f4e79; background:#fff; color:#1f4e79; border-radius:8px; }
+  .seg button.on { background:#1f4e79; color:#fff; }
+  #sessionSel { width:100%; padding:10px; font-size:14px; margin-bottom:10px; box-sizing:border-box; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  td { border-bottom:1px solid #ddd; padding:9px 6px; }
+  tr.done { color:#999; }
+  tr.done .tm { text-decoration:line-through; }
+  tr.current { background:#fff3e0; }
+  .num { display:inline-block; min-width:26px; height:26px; line-height:26px; border-radius:50%;
+         background:#1f4e79; color:#fff; text-align:center; font-weight:bold; font-size:13px; }
+  tr.done .num { background:#9e9e9e; }
+  tr.current .num { background:#e65100; }
+  .addr { font-size:13px; }
+  .rowbtn { padding:8px 10px; font-size:13px; border-radius:8px; border:1px solid #888; background:#fff; white-space:nowrap; }
+  .rowbtn.donebtn { border-color:#2e7d32; color:#2e7d32; }
+  #nextbar { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:2px solid #1f4e79;
+             padding:10px 12px calc(10px + env(safe-area-inset-bottom)); display:none; gap:8px; align-items:center; z-index:1000; }
+  #nextlabel { font-size:13px; flex:1; line-height:1.35; }
+  #nextlabel b { font-size:16px; }
+  .bigbtn { padding:14px 16px; font-size:16px; font-weight:bold; border:none; border-radius:10px; }
+  #navbtn { background:#e65100; color:#fff; }
+  #donebtn { background:#2e7d32; color:#fff; }
+  .note { font-size:12px; color:#555; }
+  .chunks a { display:inline-block; margin:0 6px 6px 0; padding:7px 10px; background:#e8f0fe; border-radius:6px; font-size:13px; text-decoration:none; color:#1f4e79; }
+  #reset, #reopen { margin-top:12px; margin-right:14px; font-size:12px; color:#888; background:none; border:none; text-decoration:underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">ルートナビ（試作）</h1>
+  <p id="subtitle">停車地点記録のTXTを選ぶと、収集順の地図とナビになります</p>
+</header>
+
+<div id="loader">
+  <h2>記録TXTを開く</h2>
+  <select id="publishedTxt" aria-label="登録済みTXTを選択" style="width:100%;min-height:44px;margin-bottom:12px;font:inherit"><option value="">登録済みTXTを選択</option></select>
+  <p>停車地点記録アプリから書き出したTXTファイルを選んでください。毎回このページ1つで変換できます（専用HTMLは不要です）。</p>
+  <input type="file" id="file" accept=".txt,.json,text/plain,application/json">
+  <textarea id="paste" placeholder="または、TXTの中身をここに貼り付け"></textarea>
+  <button id="loadbtn" type="button">貼り付けた内容で開く</button>
+  <div id="err"></div>
+</div>
+
+<div id="navview">
+  <div id="map"></div>
+  <div class="wrap">
+    <select id="sessionSel" aria-label="記録の切り替え"></select>
+    <div class="seg" role="group" aria-label="ナビアプリ">
+      <button id="appGoogle" type="button">Googleマップで案内</button>
+      <button id="appApple" type="button">Appleマップで案内</button>
+    </div>
+    <p class="note">一覧の地点をタップすると、その地点がナビアプリに入力されて案内が始まります。終わったら下のバーの「済みにする」を押すと次の地点が自動で指定されます。済みの状態はこの端末に保存されます。許可物件の記録では番号の横に店名が出ます。</p>
+    <p class="note" style="margin-bottom:4px">Googleマップにまとめて入力（10件ずつ）:</p>
+    <div class="chunks" id="chunks"></div>
+    <table><tbody id="list"></tbody></table>
+    <button id="reset" type="button">進捗をリセット</button>
+    <button id="reopen" type="button">別のTXTを開く</button>
+  </div>
+</div>
+
+<div id="nextbar">
+  <div id="nextlabel"></div>
+  <button id="donebtn" class="bigbtn" type="button">済みにする</button>
+  <button id="navbtn" class="bigbtn" type="button">ナビ開始</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+// === CORE START ===
+// 記録TXT（JSON）を解析し、セッションと停車地点を正規化する純粋関数群
+function fmtTime(ms){
+  if (!Number.isFinite(ms)) return '--:--';
+  const d = new Date(ms);
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function fmtDur(ms){
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const s = Math.round(ms/1000);
+  return Math.floor(s/60) + '分' + String(s%60).padStart(2,'0') + '秒';
+}
+function parseRecord(text){
+  const data = JSON.parse(String(text).replace(/^﻿/, ''));
+  const rawSessions = Array.isArray(data) ? data : (data.sessions || []);
+  const sessions = [];
+  for (const s of rawSessions){
+    const rawStops = Array.isArray(s.stops) ? s.stops : [];
+    const stops = rawStops
+      .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+      .sort((a,b) => (a.order||0) - (b.order||0))
+      .map((p, i) => {
+        const depMs = Number.isFinite(p.departure) ? p.departure : (Number.isFinite(p.last) ? p.last : p.arrival);
+        return {
+          order: Number.isFinite(p.order) ? p.order : i + 1,
+          lat: p.lat, lng: p.lng,
+          name: String(p.name || ''),
+          code: String(p.collectionCode || ''),
+          arr: fmtTime(p.arrival), dep: fmtTime(depMs),
+          dur: fmtDur(depMs - p.arrival)
+        };
+      });
+    if (!stops.length) continue;
+    sessions.push({
+      id: String(s.id || (s.date + '_' + s.started)),
+      date: String(s.date || ''), person: String(s.person || ''),
+      started: s.started, ended: s.ended, stops
+    });
+  }
+  if (!sessions.length) throw new Error('停車地点のある記録が見つかりませんでした。');
+  let defaultIndex = sessions.findIndex(s => s.id === data.activeSessionId);
+  if (defaultIndex < 0) defaultIndex = sessions.length - 1;
+  return { sessions, defaultIndex };
+}
+function gmapChunkUrls(stops){
+  const urls = [];
+  const url = pts => {
+    const o = pts[0].lat + ',' + pts[0].lng;
+    const d = pts[pts.length-1].lat + ',' + pts[pts.length-1].lng;
+    const wp = pts.slice(1,-1).map(p => p.lat + ',' + p.lng).join('|');
+    return 'https://www.google.com/maps/dir/?api=1&origin=' + o + '&destination=' + d + '&travelmode=driving' + (wp ? '&waypoints=' + wp : '');
+  };
+  for (let i = 0; i < stops.length - 1; i += 10){
+    const seg = stops.slice(i, i + 11);
+    urls.push({ label: seg[0].order + '〜' + seg[seg.length-1].order, url: url(seg) });
+  }
+  return urls;
+}
+// === CORE END ===
+
+const $ = id => document.getElementById(id);
+let SESSIONS = [], session = null, STOPS = [];
+let map = null, line = null, markers = {};
+let app = localStorage.getItem('route_nav_app') || 'google';
+let done = new Set(), current = null, progressKey = '';
+
+function navUrl(p){
+  return app === 'apple'
+    ? 'https://maps.apple.com/?daddr=' + p.lat + ',' + p.lng + '&dirflg=d'
+    : 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
+}
+function byOrder(n){ return STOPS.find(p => p.order === n); }
+function nextOrder(){ const p = STOPS.find(p => !done.has(p.order)); return p ? p.order : null; }
+function saveProgress(){ localStorage.setItem(progressKey, JSON.stringify({ done: [...done], current })); }
+function loadProgress(){
+  done = new Set(); current = null;
+  try { const s = JSON.parse(localStorage.getItem(progressKey) || '{}'); (s.done || []).forEach(n => done.add(n)); current = s.current || null; } catch (e) {}
+  if (!current || done.has(current)) current = nextOrder();
+}
+
+function startSession(idx){
+  session = SESSIONS[idx];
+  STOPS = session.stops;
+  progressKey = 'route_nav_progress_' + session.id;
+  loadProgress();
+  const wd = ['日','月','火','水','木','金','土'];
+  const dstr = session.date ? session.date.replace(/-/g,'/') : '';
+  let w = '';
+  if (session.date){ const d = new Date(session.date + 'T00:00:00'); if (!isNaN(d)) w = '（' + wd[d.getDay()] + '）'; }
+  $('title').textContent = '収集ルートナビ ' + dstr + w + (session.person ? ' ' + session.person : '');
+  $('subtitle').textContent = '停車' + STOPS.length + '件 / 記録 ' + fmtTime(session.started) + '〜' + fmtTime(session.ended) + '　|　済み ';
+  const prog = document.createElement('span'); prog.id = 'prog'; prog.textContent = '0';
+  $('subtitle').appendChild(prog);
+  $('subtitle').appendChild(document.createTextNode('/' + STOPS.length + '件　|　ルート計算中…'));
+  $('subtitle').lastChild.id = 'routestat';
+
+  const sel = $('sessionSel');
+  sel.replaceChildren();
+  SESSIONS.forEach((s, i) => {
+    const o = new Option((s.date || '日付不明') + ' ' + (s.person || '担当不明') + '（' + s.stops.length + '件）', String(i));
+    sel.appendChild(o);
+  });
+  sel.value = String(idx);
+  sel.style.display = SESSIONS.length > 1 ? '' : 'none';
+
+  $('loader').style.display = 'none';
+  $('navview').style.display = 'block';
+  $('nextbar').style.display = 'flex';
+  if (!map){
+    map = L.map('map');
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+  }
+  buildSessionView();
+  fetchRoute();
+}
+
+function iconFor(p){
+  const cls = 'pin' + (done.has(p.order) ? ' done' : '') + (p.order === current ? ' current' : '');
+  const label = done.has(p.order) ? '✓' : p.order;
+  const size = p.order === current ? 30 : 24;
+  return L.divIcon({ className: '', html: '<div class="' + cls + '">' + label + '</div>', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+}
+
+function buildSessionView(){
+  Object.values(markers).forEach(m => m.remove());
+  markers = {};
+  if (line) { line.remove(); line = null; }
+  STOPS.forEach(p => {
+    const m = L.marker([p.lat, p.lng], { icon: iconFor(p) }).addTo(map);
+    m.on('click', () => setCurrent(p.order));
+    markers[p.order] = m;
+  });
+  const bounds = L.latLngBounds(STOPS.map(p => [p.lat, p.lng]));
+  map.fitBounds(bounds, { padding: [24, 24] });
+
+  const listEl = $('list');
+  listEl.replaceChildren();
+  STOPS.forEach(p => {
+    const tr = document.createElement('tr'); tr.id = 'row' + p.order;
+    const main = p.name ? '<span class="addr">' + (p.code ? p.code + ' ' : '') + p.name + '</span><br>' : '';
+    tr.innerHTML = '<td><span class="num">' + p.order + '</span></td>' +
+      '<td class="tm">' + main + '<small>' + p.arr + '〜' + p.dep + '・停車 ' + p.dur + '</small></td>' +
+      '<td style="text-align:right"><button type="button" class="rowbtn donebtn"></button></td>';
+    tr.addEventListener('click', () => { setCurrent(p.order, true); window.open(navUrl(p), '_blank'); });
+    const b = tr.querySelector('.donebtn');
+    b.addEventListener('click', ev => { ev.stopPropagation(); toggleDone(p.order); });
+    listEl.appendChild(tr);
+  });
+
+  const ch = $('chunks');
+  ch.replaceChildren();
+  gmapChunkUrls(STOPS).forEach(c => {
+    const a = document.createElement('a');
+    a.href = c.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = c.label + ' を入力';
+    ch.appendChild(a);
+  });
+  render();
+}
+
+async function fetchRoute(){
+  const el = $('routestat');
+  try {
+    const coords = STOPS.map(p => p.lng + ',' + p.lat).join(';');
+    const r = await fetch('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson');
+    const j = await r.json();
+    if (!j.routes || !j.routes.length) throw new Error('no route');
+    const rt = j.routes[0];
+    const latlngs = rt.geometry.coordinates.map(c => [c[1], c[0]]);
+    if (line) line.remove();
+    line = L.polyline(latlngs, { color: '#1f4e79', weight: 4, opacity: .7 }).addTo(map);
+    map.fitBounds(line.getBounds(), { padding: [24, 24] });
+    if (el) el.textContent = 'ルート約' + (rt.distance/1000).toFixed(1) + 'km・走行約' + Math.round(rt.duration/60) + '分';
+  } catch (e) {
+    if (line) line.remove();
+    line = L.polyline(STOPS.map(p => [p.lat, p.lng]), { color: '#1f4e79', weight: 3, opacity: .6, dashArray: '6 6' }).addTo(map);
+    if (el) el.textContent = '道路ルートを取得できず直線表示です';
+  }
+}
+
+function render(){
+  $('prog').textContent = done.size;
+  $('appGoogle').classList.toggle('on', app === 'google');
+  $('appApple').classList.toggle('on', app === 'apple');
+  STOPS.forEach(p => {
+    const tr = $('row' + p.order);
+    if (!tr) return;
+    tr.classList.toggle('done', done.has(p.order));
+    tr.classList.toggle('current', p.order === current);
+    tr.querySelector('.num').textContent = done.has(p.order) ? '✓' : p.order;
+    tr.querySelector('.donebtn').textContent = done.has(p.order) ? '戻す' : '済み';
+    markers[p.order].setIcon(iconFor(p));
+  });
+  const lbl = $('nextlabel');
+  if (current) { const p = byOrder(current); lbl.innerHTML = '次の地点<br><b>' + p.order + '番</b>' + (p.name ? ' ' + p.name : '') + '（記録 ' + p.arr + '着）'; }
+  else lbl.innerHTML = '全地点が済みです<br><b>おつかれさまでした</b>';
+  $('navbtn').style.display = current ? '' : 'none';
+  $('donebtn').style.display = current ? '' : 'none';
+}
+function setCurrent(n, pan){
+  current = n; saveProgress(); render();
+  const p = byOrder(n);
+  if (pan && map) map.setView([p.lat, p.lng], Math.max(map.getZoom(), 16));
+}
+function toggleDone(n){
+  if (done.has(n)) done.delete(n); else done.add(n);
+  if (current === n && done.has(n)) current = nextOrder();
+  if (!current) current = nextOrder();
+  saveProgress(); render();
+}
+
+$('file').addEventListener('change', ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => loadText(reader.result);
+  reader.onerror = () => { $('err').textContent = 'ファイルを読み込めませんでした。'; };
+  reader.readAsText(f);
+});
+const publishedTxtFiles = ['停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt'];
+publishedTxtFiles.forEach(filename => $('publishedTxt').append(new Option(filename, filename)));
+let txtLoadToken = 0;
+async function loadPublishedTxt(filename){
+  if(!publishedTxtFiles.includes(filename)) return;
+  const token = ++txtLoadToken;
+  $('reopen').click(); $('err').textContent = 'TXTを読み込んでいます…';
+  try {
+    const response = await fetch(encodeURIComponent(filename), {cache:'no-store'});
+    if(!response.ok) throw new Error('HTTP ' + response.status);
+    const text = await response.text(); if(token !== txtLoadToken) return;
+    $('publishedTxt').value = filename; loadText(text);
+  } catch(error){ if(token === txtLoadToken) $('err').textContent = 'TXTを読み込めませんでした：' + error.message; }
+}
+$('publishedTxt').onchange = () => { if($('publishedTxt').value) loadPublishedTxt($('publishedTxt').value); };
+window.addEventListener('message', event => {
+  const sameOrigin = location.protocol === 'file:' ? event.origin === 'null' : event.origin === location.origin;
+  if(event.source !== window.parent || !sameOrigin || event.data?.type !== 'ueno-route-txt') return;
+  if(event.data.filename === null){ txtLoadToken++; $('reopen').click(); return; }
+  loadPublishedTxt(event.data.filename);
+});
+$('loadbtn').addEventListener('click', () => loadText($('paste').value));
+function loadText(text){
+  $('err').textContent = '';
+  try {
+    const parsed = parseRecord(text);
+    SESSIONS = parsed.sessions;
+    startSession(parsed.defaultIndex);
+  } catch (e) {
+    $('err').textContent = '読み込めませんでした: ' + e.message;
+  }
+}
+$('sessionSel').addEventListener('change', ev => startSession(Number(ev.target.value)));
+$('navbtn').addEventListener('click', () => { if (current) window.open(navUrl(byOrder(current)), '_blank'); });
+$('donebtn').addEventListener('click', () => { if (current) toggleDone(current); });
+$('appGoogle').addEventListener('click', () => { app = 'google'; localStorage.setItem('route_nav_app', app); render(); });
+$('appApple').addEventListener('click', () => { app = 'apple'; localStorage.setItem('route_nav_app', app); render(); });
+$('reset').addEventListener('click', () => { if (confirm('済みの記録をすべて消しますか？')) { done.clear(); current = nextOrder(); saveProgress(); render(); } });
+$('reopen').addEventListener('click', () => {
+  $('navview').style.display = 'none'; $('nextbar').style.display = 'none'; $('loader').style.display = 'block';
+  $('title').textContent = 'ルートナビ（試作）';
+  $('subtitle').textContent = '停車地点記録のTXTを選ぶと、収集順の地図とナビになります';
+});
+</script>
+</body>
+</html>
