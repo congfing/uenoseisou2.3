@@ -10,6 +10,7 @@
 #totalElapsed{display:block;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums;color:#111}
 .commands{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:760px){.commands{gap:8px}.commands button{font-size:13px;padding:8px 4px;min-height:44px}}
 .recorder-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.recorder-modes button{min-width:0;max-width:none;width:100%;padding:8px 5px}@media(max-width:760px){.recorder-modes{gap:8px}.recorder-modes button{font-size:13px}}#settingsForm label[hidden]{display:none}
+#list{max-height:500px;max-height:min(500px,50dvh);overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
 .permit-order{flex:none;width:66px;min-width:0;max-width:40%;min-height:44px;border:1px solid #888;border-radius:3px;padding:6px;font:inherit;background:white;color:#111}.permit-order[aria-invalid=true]{border-color:#a62626}.permit-order::placeholder{font-size:11px}#syncPermit{border-color:#333;font-weight:600}
 .identity.permit-identity{grid-template-columns:repeat(3,minmax(0,1fr));max-width:760px;align-items:end}.identity #openPermitPicker{font-size:13px;min-width:0;width:100%;height:44px;padding:4px 7px;line-height:1.3}.identity.permit-identity input{padding:6px}
 @media(max-width:760px){.identity.permit-identity{gap:8px}.identity.permit-identity input[type=date]{font-size:12px;padding:4px}}@media(max-width:380px){.identity.permit-identity input{font-size:12px}.identity #openPermitPicker{font-size:12px;padding:4px}}
