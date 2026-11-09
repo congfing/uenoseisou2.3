@@ -504,6 +504,7 @@
     display: grid;
     gap: 8px;
   }
+  .calendar-close.route-close { width:auto; min-width:70px; height:40px; padding:6px 12px; font-size:14px; flex:none; }
 
   .calendar-choice {
     width: 100%;
@@ -1341,6 +1342,7 @@
   }
 
   function showCalendarPicker() {
+    calendarClose.textContent = '×'; calendarClose.classList.remove('route-close');
     calendarPicker.querySelector('.calendar-panel-title').textContent = '収集カレンダー';
     calendarPicker.setAttribute('aria-label', '収集カレンダー選択');
     calendarList.innerHTML = "";
@@ -1366,6 +1368,7 @@
   }
 
   function showRoutePicker() {
+    calendarClose.textContent = '閉じる'; calendarClose.classList.add('route-close');
     calendarPicker.querySelector('.calendar-panel-title').textContent = 'ルートナビ：TXTを選択';
     calendarPicker.setAttribute('aria-label', 'ルートTXT選択');
     calendarList.replaceChildren();

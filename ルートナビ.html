@@ -6,25 +6,34 @@
 <title>ルートナビ（停車地点記録TXT変換）</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  body { margin:0; font-family:-apple-system,"Hiragino Sans",sans-serif; }
+  html { height:100%; }
+  body { margin:0; height:100vh; height:100dvh; display:flex; flex-direction:column; overflow:hidden; font-family:-apple-system,"Hiragino Sans",sans-serif; }
   header { padding:10px 14px; background:#1f4e79; color:#fff; }
   header h1 { font-size:15px; margin:0 0 4px; }
   header p { margin:0; font-size:12px; opacity:.92; }
-  #loader { padding:18px 14px; }
+  .route-heading { display:flex; align-items:flex-start; gap:12px; }
+  .route-heading > div { flex:1; min-width:0; overflow-wrap:anywhere; }
+  #closeNav { flex:none; min-height:44px; padding:8px 12px; border:1px solid #fff; border-radius:4px; background:#fff; color:#1f4e79; font:inherit; font-size:13px; cursor:pointer; }
+  #closeStatus { margin-top:8px; }
+  #loader { padding:18px 14px; flex:1; min-height:0; overflow:auto; }
   #loader h2 { font-size:16px; margin:0 0 8px; }
   #loader p { font-size:13px; color:#444; line-height:1.6; }
   #file { display:block; width:100%; padding:14px; font-size:15px; border:2px dashed #1f4e79; border-radius:10px; background:#f2f6fb; box-sizing:border-box; }
   #paste { width:100%; height:110px; margin-top:12px; font-size:12px; box-sizing:border-box; }
   #loadbtn { margin-top:10px; width:100%; padding:13px; font-size:15px; font-weight:bold; background:#1f4e79; color:#fff; border:none; border-radius:10px; }
   #err { color:#b71c1c; font-size:13px; margin-top:10px; white-space:pre-wrap; }
-  #navview { display:none; padding-bottom:86px; }
-  #map { height:44vh; }
+  header { flex:none; }
+  #navview { display:none; flex:1; min-height:0; flex-direction:column; }
+  #map { flex:none; height:36vh; height:36dvh; min-height:140px; max-height:380px; }
   .pin { border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center;
          font-size:12px; font-weight:bold; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.4);
          background:#1f4e79; color:#fff; }
   .pin.done { background:#9e9e9e; }
   .pin.current { background:#e65100; width:30px; height:30px; line-height:30px; font-size:14px; }
-  .wrap { padding:10px 12px; }
+  .wrap { padding:10px 12px 0; flex:1; min-height:0; display:flex; flex-direction:column; }
+  .seg, #sessionSel { flex:none; }
+  #routeListScroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  .route-footer { flex:none; display:flex; flex-wrap:wrap; gap:10px; padding-bottom:8px; }
   .seg { display:flex; gap:8px; margin-bottom:10px; }
   .seg button { flex:1; padding:10px; font-size:14px; border:1px solid #1f4e79; background:#fff; color:#1f4e79; border-radius:8px; }
   .seg button.on { background:#1f4e79; color:#fff; }
@@ -41,7 +50,7 @@
   .addr { font-size:13px; }
   .rowbtn { padding:8px 10px; font-size:13px; border-radius:8px; border:1px solid #888; background:#fff; white-space:nowrap; }
   .rowbtn.donebtn { border-color:#2e7d32; color:#2e7d32; }
-  #nextbar { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:2px solid #1f4e79;
+  #nextbar { position:static; flex:none; background:#fff; border-top:2px solid #1f4e79;
              padding:10px 12px calc(10px + env(safe-area-inset-bottom)); display:none; gap:8px; align-items:center; z-index:1000; }
   #nextlabel { font-size:13px; flex:1; line-height:1.35; }
   #nextlabel b { font-size:16px; }
@@ -49,14 +58,16 @@
   #navbtn { background:#e65100; color:#fff; }
   #donebtn { background:#2e7d32; color:#fff; }
   .note { font-size:12px; color:#555; }
-  .chunks a { display:inline-block; margin:0 6px 6px 0; padding:7px 10px; background:#e8f0fe; border-radius:6px; font-size:13px; text-decoration:none; color:#1f4e79; }
   #reset, #reopen { margin-top:12px; margin-right:14px; font-size:12px; color:#888; background:none; border:none; text-decoration:underline; }
 </style>
 </head>
 <body>
 <header>
+  <div class="route-heading"><div>
   <h1 id="title">ルートナビ（試作）</h1>
   <p id="subtitle">停車地点記録のTXTを選ぶと、収集順の地図とナビになります</p>
+  </div><button id="closeNav" type="button">閉じる</button></div>
+  <p id="closeStatus" role="alert" hidden></p>
 </header>
 
 <div id="loader">
@@ -77,12 +88,11 @@
       <button id="appGoogle" type="button">Googleマップで案内</button>
       <button id="appApple" type="button">Appleマップで案内</button>
     </div>
-    <p class="note">一覧の地点をタップすると、その地点がナビアプリに入力されて案内が始まります。終わったら下のバーの「済みにする」を押すと次の地点が自動で指定されます。済みの状態はこの端末に保存されます。許可物件の記録では番号の横に店名が出ます。</p>
-    <p class="note" style="margin-bottom:4px">Googleマップにまとめて入力（10件ずつ）:</p>
-    <div class="chunks" id="chunks"></div>
-    <table><tbody id="list"></tbody></table>
+    <div id="routeListScroll" tabindex="0" role="region" aria-label="地点番号リスト"><table><tbody id="list"></tbody></table></div>
+    <div class="route-footer">
     <button id="reset" type="button">進捗をリセット</button>
     <button id="reopen" type="button">別のTXTを開く</button>
+    </div>
   </div>
 </div>
 
@@ -169,6 +179,15 @@ function navUrl(p){
 function byOrder(n){ return STOPS.find(p => p.order === n); }
 function nextOrder(){ const p = STOPS.find(p => !done.has(p.order)); return p ? p.order : null; }
 function saveProgress(){ localStorage.setItem(progressKey, JSON.stringify({ done: [...done], current })); }
+function closeNavigator(){
+  if(session){
+    try { saveProgress(); }
+    catch(error){ $('closeStatus').hidden = false; $('closeStatus').textContent = '進捗を保存できませんでした。画面は閉じていません。'; return; }
+  }
+  if(window.parent !== window){ window.parent.postMessage({type:'closeSoftware'}, location.protocol === 'file:' ? '*' : location.origin); }
+  else { location.assign('index.html'); }
+}
+$('closeNav').addEventListener('click', closeNavigator);
 function loadProgress(){
   done = new Set(); current = null;
   try { const s = JSON.parse(localStorage.getItem(progressKey) || '{}'); (s.done || []).forEach(n => done.add(n)); current = s.current || null; } catch (e) {}
@@ -201,7 +220,7 @@ function startSession(idx){
   sel.style.display = SESSIONS.length > 1 ? '' : 'none';
 
   $('loader').style.display = 'none';
-  $('navview').style.display = 'block';
+  $('navview').style.display = 'flex';
   $('nextbar').style.display = 'flex';
   if (!map){
     map = L.map('map');
@@ -244,13 +263,6 @@ function buildSessionView(){
     listEl.appendChild(tr);
   });
 
-  const ch = $('chunks');
-  ch.replaceChildren();
-  gmapChunkUrls(STOPS).forEach(c => {
-    const a = document.createElement('a');
-    a.href = c.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = c.label + ' を入力';
-    ch.appendChild(a);
-  });
   render();
 }
 
