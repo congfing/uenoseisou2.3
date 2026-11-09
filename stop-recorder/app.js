@@ -20,6 +20,7 @@
  const session=()=>data.sessions.find(s=>s.id===currentId);
  const travelView=()=>data.viewMode==='travel';
  const travelSession=()=>session()?.kind==='travel';
+ const purposeName=()=>({commission:'委託用',permit:'許可物件用',travel:'移動記録用'}[data.viewMode]||'委託用');
  const travelInterval=s=>(s?.travelMinutes||data.settings.moveMinutes)*60000;
  const dated=d=>d?`${d}（${'日月火水木金土'[new Date(d+'T12:00:00').getDay()]}）`:'';
  const ordered=()=>[...(session()?.stops||[])].sort((a,b)=>a.order-b.order||a.arrival-b.arrival);
@@ -258,7 +259,7 @@
   const date=$('date').value||session()?.date||today();
   const ctx=permit?.active()?permit.selection():null;
   const scope=ctx?.active?'_'+[...(ctx.staff||[]),...(ctx.days||[])].join('_').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_'):'';
-  const prefix=travelSession()||(!session()&&travelView())?'移動記録':'停車地点記録';
+  const prefix=purposeName();
   const base=`${prefix}_${person}${scope}_${dated(date)}`;
   if(!withTimes)return base;
   const s=session();if(!s||!validInstant(s.started))return `${base}_未開始.txt`;
@@ -304,7 +305,7 @@
    if(!file){downloadRecord();notify(email?'添付共有に対応していないため、テキストファイルを保存します。メールに保存したファイルを添付してください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
    button.disabled=true;
    notify(email?'共有画面でメールアプリを選び、宛先を指定して送信してください。全記録の位置情報を含みます。':'「“ファイル”に保存」を選び、「停車地点記録」フォルダに保存してください。全記録を1つのファイルにまとめています。');
-   await navigator.share(email?{files:[file],title:`${travelSession()||(!session()&&travelView())?'移動記録':'停車地点記録'} ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
+   await navigator.share(email?{files:[file],title:`${purposeName()} ${dated(session()?.date||today())} ${session()?.person||''}`}:{files:[file]});
   }catch(error){
    if(error.name==='AbortError'){notify('保存操作を取り消しました。端末内の記録は残っています。');return;}
    $('downloadRecord').hidden=false;
