@@ -203,7 +203,7 @@
  }
  function fit(){if(!map)return;const points=ordered();if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])),{padding:[35,35],maxZoom:17});}
  function focusStop(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;selectedId=id;render();if(map)map.setView([p.lat,p.lng],17);$('list').querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});}
- function pointActions(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;if(permit?.active()){selectedId=id;render();}else focusStop(id);$('pointTitle').textContent=`地点 ${p.order}　${p.name||'名称未設定'}`;$('pointDialog').showModal();}
+ function pointActions(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;focusStop(id);$('pointTitle').textContent=`地点 ${p.order}　${p.name||'名称未設定'}`;$('pointDialog').showModal();}
  async function deletePoint(id){const s=session(),p=s?.stops.find(p=>p.id===id);if(!p)return;if(!await ask(`地点 ${p.order}「${p.name||'名称未設定'}」を削除しますか？\n後ろの番号は自動で詰めます。`))return;s.stops=s.stops.filter(p=>p.id!==id);makeSequential(s);if(selectedId===id)selectedId=null;if(detector?.candidate?.record?.id===id)detector.reset(lastPosition);persist();render();}
  $('pointDelete').onclick=()=>{const id=selectedId;$('pointDialog').close();deletePoint(id);};
  $('pointName').onclick=()=>{const p=session()?.stops.find(p=>p.id===selectedId);$('pointDialog').close();if(!p)return;$('nameForm').elements.name.value=p.name;$('nameDialog').showModal();$('nameForm').elements.name.focus();};
