@@ -12,7 +12,9 @@
  }
  window.StopPermit={create(api){
   const $=id=>document.getElementById(id);
-  let latest=null,busy=false,checksSig=null;const checks=new Set();
+  let latest=null,busy=false,checksSig=null,permitClosed=false;const checks=new Set();
+  try{permitClosed=localStorage.getItem('stop-recorder-permit-closed')==='1';}catch(error){}
+  function applyPermitClosed(){document.body.classList.toggle('permit-closed',permitClosed);const b=$('permitToggle');if(b){b.textContent=permitClosed?'開く':'閉じる';b.setAttribute('aria-expanded',String(!permitClosed));}}
   function syncChecks(ctx){if(!ctx?.properties?.length)return;const sig=ctx.properties.map(p=>p.key).sort().join('\n');if(sig===checksSig)return;checksSig=sig;checks.clear();for(const p of ctx.properties)checks.add(p.key);}
   const active=()=>api.mode()==='permit';
   function read(){try{latest=checked(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(error){latest=null;}}
@@ -85,6 +87,8 @@
   }
   function label(point){return String(point.order);}
   $('syncPermit').onclick=sync;
+  if($('permitToggle'))$('permitToggle').onclick=()=>{permitClosed=!permitClosed;try{localStorage.setItem('stop-recorder-permit-closed',permitClosed?'1':'0');}catch(error){}applyPermitClosed();};
+  applyPermitClosed();
   $('permitCheckAll').onchange=()=>{const c=context();if(!c?.properties?.length)return;syncChecks(c);if($('permitCheckAll').checked)for(const p of c.properties)checks.add(p.key);else checks.clear();render();};
   async function chooseMode(mode){if(mode==='permit')read();if(await api.setMode(mode)===false)return;api.refreshFileName();api.render();}
   $('commissionMode').onclick=()=>chooseMode('commission');
