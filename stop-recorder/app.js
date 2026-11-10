@@ -430,6 +430,7 @@
   try{panelClosed=localStorage.getItem('stop-recorder-panel-closed')==='1';}catch(e){}
   const applyPanel=()=>{document.body.classList.toggle('panel-closed',panelClosed);$('panelToggle').textContent=panelClosed?'操作パネルを開く':'操作パネルを閉じる';$('panelToggle').setAttribute('aria-expanded',String(!panelClosed));if(map)setTimeout(()=>map.invalidateSize(),60);};
   $('panelToggle').onclick=()=>{panelClosed=!panelClosed;try{localStorage.setItem('stop-recorder-panel-closed',panelClosed?'1':'0');}catch(e){}applyPanel();};
+  if($('panelClose'))$('panelClose').onclick=()=>{if(!panelClosed){panelClosed=true;try{localStorage.setItem('stop-recorder-panel-closed','1');}catch(e){}applyPanel();}};
   applyPanel();
  }
  function identityChanged(){if(state==='paused'){state='idle';detector=null;lastPosition=null;updateControls();}fileNameOverride=newFileName(false);updateFileName();}
