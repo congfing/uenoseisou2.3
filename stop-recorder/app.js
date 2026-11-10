@@ -310,6 +310,7 @@
   notify('記録ファイルのダウンロードを開始しました。保存先はブラウザーで確認してください。');
  }
  $('downloadRecord').onclick=()=>downloadRecord();
+ function mailTo(){try{const list=JSON.parse(localStorage.getItem('keiryo_mail_list')||'null');const addrs=Array.isArray(list)?list.filter(m=>m&&m.addr&&m.enabled).map(m=>m.addr):[];return addrs.length?addrs.join(','):'annsyuu38@gmail.com';}catch(e){return 'annsyuu38@gmail.com';}}
  async function shareRecord(email=false){
   const button=$(email?'emailFile':'saveFile');if(button.disabled)return;
   try{
@@ -319,6 +320,13 @@
      const candidate=new File([record.content],record.name,{type});
      if(navigator.canShare({files:[candidate]})){file=candidate;break;}
     }
+   }
+   if(email&&!mobile()){
+    downloadRecord(record);
+    const s=session(),subject=`停車地点記録 ${s?.date||today()}${s?.person?`（${s.person}）`:''}`;
+    notify('メールを作成します（宛先・件名は自動）。ダウンロードしたTXTファイルを添付してください。');
+    location.href=`mailto:${mailTo()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(record.name+' をダウンロードしました。メールに添付して送信してください。')}`;
+    return;
    }
    if(!file){downloadRecord();notify(email?'添付共有に対応していないため、テキストファイルを保存します。メールに保存したファイルを添付してください。':'共有保存に対応していないため、ファイルをダウンロードします。iPhoneの「ファイル」で保存先を確認してください。');return;}
    button.disabled=true;
