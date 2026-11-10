@@ -430,7 +430,7 @@
   try{panelClosed=localStorage.getItem('stop-recorder-panel-closed')==='1';}catch(e){}
   const applyPanel=()=>{document.body.classList.toggle('panel-closed',panelClosed);$('panelToggle').textContent=panelClosed?'操作パネルを開く':'操作パネルを閉じる';$('panelToggle').setAttribute('aria-expanded',String(!panelClosed));if(map)setTimeout(()=>map.invalidateSize(),60);};
   $('panelToggle').onclick=()=>{panelClosed=!panelClosed;try{localStorage.setItem('stop-recorder-panel-closed',panelClosed?'1':'0');}catch(e){}applyPanel();};
-  if($('panelClose'))$('panelClose').onclick=async()=>{if(state==='running'&&!await ask('記録中です。閉じると一時停止します。再度開くと続きを記録できます。閉じますか？'))return;if(window.self!==window.top){try{window.parent.postMessage('closeSoftware',location.protocol==='file:'?'*':location.origin);}catch(e){}}else if(history.length>1)history.back();else location.href='../index.html';};
+  if($('panelClose'))$('panelClose').onclick=async()=>{if(state==='running'&&!await ask('記録中です。閉じると一時停止します。再度開くと続きを記録できます。閉じますか？'))return;const launcher=new URL('../index.html',location.href).href;if(window.self!==window.top){try{window.parent.postMessage('closeSoftware','*');}catch(e){}setTimeout(()=>{if(!document.hidden){try{window.top.location.href=launcher;}catch(e){}}},400);}else location.href=launcher;};
   applyPanel();
  }
  function identityChanged(){if(state==='paused'){state='idle';detector=null;lastPosition=null;updateControls();}fileNameOverride=newFileName(false);updateFileName();}
