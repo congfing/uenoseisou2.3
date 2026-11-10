@@ -162,7 +162,7 @@
    const body=document.createElement('div'),title=document.createElement('div'),meta=document.createElement('div');title.className='stop-title';title.textContent=stop.name||'名称未設定';meta.className='stop-meta';
    meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:stop.source==='travel'?`記録時刻 ${time(stop.arrival)}${stop.manual?'（手動）':''}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;meta.style.whiteSpace='pre-line';body.append(title,meta);
    const actions=document.createElement('div');actions.className='stop-actions';
-   const edit=document.createElement('button');edit.textContent='編集';edit.disabled=state==='running';edit.onclick=()=>openEdit(stop.id);
+   const edit=document.createElement('button');edit.textContent='編集';edit.onclick=()=>openEdit(stop.id);
    const del=document.createElement('button');del.textContent='削除';del.className='danger';del.onclick=()=>deletePoint(stop.id);actions.append(edit,del);row.append(n,body,actions);list.append(row);
   }drawMap();permit?.render();if(travelView())renderTravelProgress();
  }
