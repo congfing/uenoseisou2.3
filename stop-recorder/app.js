@@ -3,7 +3,7 @@
  const GIT_URL='https://congfing.github.io/uenoseisou2.3/stop-recorder/index.html';
  const LOCAL_URL='http://localhost:9300/stop-recorder/index.html?edition=local';
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
- if(!gitVersion&&new URLSearchParams(location.search).get('edition')!=='local'){window.top.location.replace(GIT_URL);return;}
+ const query=new URLSearchParams(location.search);if(!gitVersion&&query.get('edition')!=='local'&&query.get('embedded')!=='1'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:10,accuracy:5,moveMinutes:1,locateSeconds:0};
  let permit=null;
