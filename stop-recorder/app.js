@@ -405,6 +405,13 @@
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
+ if($('panelToggle')){
+  let panelClosed=false;
+  try{panelClosed=localStorage.getItem('stop-recorder-panel-closed')==='1';}catch(e){}
+  const applyPanel=()=>{document.body.classList.toggle('panel-closed',panelClosed);$('panelToggle').textContent=panelClosed?'操作パネルを開く':'操作パネルを閉じる';$('panelToggle').setAttribute('aria-expanded',String(!panelClosed));if(map)setTimeout(()=>map.invalidateSize(),60);};
+  $('panelToggle').onclick=()=>{panelClosed=!panelClosed;try{localStorage.setItem('stop-recorder-panel-closed',panelClosed?'1':'0');}catch(e){}applyPanel();};
+  applyPanel();
+ }
  function identityChanged(){if(state==='paused'){state='idle';detector=null;lastPosition=null;updateControls();}fileNameOverride=newFileName(false);updateFileName();}
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);identityChanged();};
  $('person').oninput=identityChanged;
