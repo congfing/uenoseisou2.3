@@ -26,7 +26,9 @@
    const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected());
    $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:`地点 ${s?.stops.length||0}件`;
    if(ctx?.properties.length)syncChecks(ctx);
-   $('syncPermit').disabled=!s||!ctx?.properties.length||api.recording()||!ctx.properties.some(p=>checks.has(p.key));
+   const total=ctx?.properties.length||0,checkedCount=total?ctx.properties.filter(p=>checks.has(p.key)).length:0,checkAll=$('permitCheckAll');
+   checkAll.checked=total>0&&checkedCount===total;checkAll.indeterminate=checkedCount>0&&checkedCount<total;checkAll.disabled=!s||!total||api.recording();
+   $('syncPermit').disabled=!s||!total||api.recording()||checkedCount===0;
    $('permitScope').textContent=ctx?`${(ctx.staff||[]).join('・')} ／ ${(ctx.days||[]).join('・')}　${ctx.properties.length}件`:'物件表の選択データなし';
    $('permitProperties').replaceChildren();
    if(!ctx?.active||!ctx.properties.length){$('permitEmpty').hidden=false;$('permitEmpty').textContent='物件表の「担当者、曜日を選択」で対象を選択してください。';return;}
@@ -83,6 +85,7 @@
   }
   function label(point){return String(point.order);}
   $('syncPermit').onclick=sync;
+  $('permitCheckAll').onchange=()=>{const c=context();if(!c?.properties?.length)return;syncChecks(c);if($('permitCheckAll').checked)for(const p of c.properties)checks.add(p.key);else checks.clear();render();};
   async function chooseMode(mode){if(mode==='permit')read();if(await api.setMode(mode)===false)return;api.refreshFileName();api.render();}
   $('commissionMode').onclick=()=>chooseMode('commission');
   $('permitMode').onclick=()=>chooseMode('permit');
