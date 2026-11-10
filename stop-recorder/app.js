@@ -5,7 +5,7 @@
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
  if(!gitVersion&&new URLSearchParams(location.search).get('edition')!=='local'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
- const defaults={seconds:60,radius:10,accuracy:5,moveMinutes:1};
+ const defaults={seconds:60,radius:10,accuracy:5,moveMinutes:1,locateSeconds:0};
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
@@ -95,6 +95,8 @@
   if(!Number.isInteger(settings.seconds)||settings.seconds<5||settings.seconds>1800||!Number.isFinite(settings.radius)||settings.radius<10||settings.radius>200||!Number.isFinite(settings.accuracy)||settings.accuracy<5||settings.accuracy>200)throw Error('設定値が範囲外です');
   if(settings.moveMinutes===undefined)settings.moveMinutes=defaults.moveMinutes;
   if(!Number.isInteger(settings.moveMinutes)||settings.moveMinutes<1||settings.moveMinutes>1440)throw Error('移動記録の間隔は1～1440分にしてください');
+  if(settings.locateSeconds===undefined)settings.locateSeconds=defaults.locateSeconds;
+  if(!Number.isInteger(settings.locateSeconds)||!(settings.locateSeconds===0||(settings.locateSeconds>=2&&settings.locateSeconds<=30)))settings.locateSeconds=defaults.locateSeconds;
   const ids=new Set();
   for(const s of d.sessions){
    if(typeof s.id!=='string'||ids.has(s.id)||!/^\d{4}-\d{2}-\d{2}$/.test(s.date)||typeof s.person!=='string'||!Array.isArray(s.stops)||s.stops.length>50000)throw Error('記録の形式が違います');ids.add(s.id);
@@ -135,6 +137,16 @@
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
   $('threshold').textContent=travelView()?`記録間隔 ${session()?.travelMinutes||data.settings.moveMinutes}分`:'判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
+  updateLocateTimer();
+ }
+ function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
+ let locateTimer=null,locateTimerSec=0;
+ function stopLocateTimer(){if(locateTimer!==null){clearInterval(locateTimer);locateTimer=null;locateTimerSec=0;}}
+ function updateLocateTimer(){
+  const sec=data.settings.locateSeconds||0;
+  const want=state==='running'&&sec>=2;
+  if(want&&(locateTimer===null||locateTimerSec!==sec)){stopLocateTimer();locateTimerSec=sec;locateTimer=setInterval(()=>{if(state==='running')locateNow();},sec*1000);}
+  else if(!want)stopLocateTimer();
  }
  function renderSessions(){
   updateFileName();
@@ -246,7 +258,7 @@
  setInterval(refreshTotalTime,1000);
  setInterval(tickTravel,1000);
  $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
- $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveMinutes:Number(f.elements.moveMinutes.value)};if(travelSession()&&state==='paused'&&session().travelMinutes!==data.settings.moveMinutes){session().travelMinutes=data.settings.moveMinutes;const interval=travelInterval(session());session().nextTravelAtMs=(Math.floor(activeTimeMs(session())/interval)+1)*interval;}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveMinutes:Number(f.elements.moveMinutes.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0};if(travelSession()&&state==='paused'&&session().travelMinutes!==data.settings.moveMinutes){session().travelMinutes=data.settings.moveMinutes;const interval=travelInterval(session());session().nextTravelAtMs=(Math.floor(activeTimeMs(session())/interval)+1)*interval;}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
  $('editForm').onsubmit=e=>{e.preventDefault();const f=e.target,p=session()?.stops.find(p=>p.id===editId);if(!p)return;const next=Number(f.elements.order.value),old=p.order;const collision=session().stops.some(q=>q.id!==p.id&&q.order===next);
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
@@ -392,7 +404,7 @@
    notify(selected.ended?'TXTを開きました。保存名に開始・終了時刻を入れます。':'途中のTXTを開きました。「再開」で続けて記録できます。保存名に開始・終了時刻を入れます。');
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  };
- $('fit').onclick=fit;$('locate').onclick=()=>{if(lastPosition&&map)map.setView([lastPosition.lat,lastPosition.lng],17);else notify('現在地は開始後に取得します。');};
+ $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
  function identityChanged(){if(state==='paused'){state='idle';detector=null;lastPosition=null;updateControls();}fileNameOverride=newFileName(false);updateFileName();}
  $('date').onchange=()=>{$('dateWeekday').textContent=dated($('date').value).slice(10);identityChanged();};
  $('person').oninput=identityChanged;
