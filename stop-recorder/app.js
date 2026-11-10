@@ -89,6 +89,7 @@
   setTimeout(()=>{map?.invalidateSize();fit();},0);return true;
  }
  function notify(text){$('message').hidden=!text;$('message').textContent=text;}
+ $('message').onclick=()=>notify('');
  function validate(d){
   if(!d||d.version!==1||!Array.isArray(d.sessions)||d.sessions.length>1000)throw Error('ファイル形式が違います');
   const settings=d.settings||{};
@@ -136,7 +137,7 @@
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
   $('threshold').textContent=travelView()?`記録間隔 ${session()?.travelMinutes||data.settings.moveMinutes}分`:'判定 '+duration(data.settings.seconds*1000);
-  $('renumber').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
+  $('renumber').disabled=$('fillAddresses').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
   updateLocateTimer();
  }
  function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
@@ -264,6 +265,11 @@
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
   p.order=next;makeSequential(session());p.name=f.elements.name.value.trim();p.lat=Number(f.elements.lat.value);p.lng=Number(f.elements.lng.value);p.editedAt=Date.now();selectedId=p.id;if(detector)detector.reset(lastPosition);persist();$('editDialog').close();render();};
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
+ function formatAddress(j){const a=j.address||{};const parts=[];const push=v=>{if(v&&!parts.includes(v))parts.push(v);};push(a.province);push(a.state);push(a.city);push(a.town);push(a.village);push(a.suburb);push(a.quarter);push(a.neighbourhood);if(parts.length<3)push(a.road);let name=parts.join('');if(a.house_number&&parts.length>=2)name+=a.house_number;if(name.length<4){const head=String(j.display_name||'').split(',').map(s=>s.trim()).filter(s=>s&&s!=='日本'&&!/^\d{3}-\d{4}$/.test(s)).slice(0,3).reverse().join('');if(head)name=head;}return name;}
+ async function lookupAddress(lat,lng){const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ja`);if(!res.ok)throw new Error('住所検索エラー');return formatAddress(await res.json());}
+ let geocoding=false;
+ async function fillAddresses(){const s=session();if(!s||geocoding)return;const targets=ordered().filter(p=>!p.name&&!p.propertyKey&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));if(!targets.length){notify('住所を入れる地点がありません。名称が未設定の地点が対象です。');return;}if(!await ask(`${targets.length}件の地点について、座標から住所を調べて名称に入れますか？\n1件ずつ問い合わせるため時間がかかります（目安は1件あたり約1秒です）。\n名称が入力済みの地点と、許可物件の地点は対象外です。`))return;geocoding=true;const btn=$('fillAddresses'),original=btn.textContent;btn.disabled=true;let done=0,failed=0;try{for(const p of targets){btn.textContent=`住所検索中 ${done+failed+1}/${targets.length}`;try{const name=await lookupAddress(p.lat,p.lng);if(name){p.name=name;p.editedAt=Date.now();done++;}else failed++;}catch(error){failed++;}if(done+failed<targets.length)await new Promise(r=>setTimeout(r,1100));}}finally{geocoding=false;btn.textContent=original;btn.disabled=false;persist();render();notify(failed?`${done}件に住所を入れました。${failed}件は住所が分かりませんでした。`:`${done}件に住所を入れました。`);}}
+ $('fillAddresses').onclick=fillAddresses;
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
  $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
  function newFileName(withTimes=true){
