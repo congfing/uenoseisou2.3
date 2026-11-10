@@ -240,13 +240,14 @@
  $('start').onclick=start;$('pause').onclick=()=>pause();$('finish').onclick=async()=>{if(!await ask('記録を終了して保存しますか？'))return;if(state==='running')pause();if(!session())return;session().ended=Date.now();state='finished';detector=null;persist();render();fit();};
  $('resetRecording').onclick=async()=>{
   if(state==='running'||!storageOK)return;
-  if(!await ask('表示中の記録を端末内から削除し、地図・地点一覧・経過時間をリセットしますか？\nこの記録の削除は元に戻せません。ほかの履歴と保存済みTXTは残します。担当者・日付・記録設定は変更しません。'))return;
+  if(!await ask('表示中の記録を端末内から削除し、地図・地点一覧・経過時間をリセットしますか？\nこの記録の削除は元に戻せません。ほかの履歴と保存済みTXTは残します。担当者は空に戻し、日付は本日に戻します。記録設定は変更しません。'))return;
   if(!persist())return;
   const previous={currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state},previousSessions=data.sessions;
   data.sessions=data.sessions.filter(s=>s.id!==currentId);
   closeWatch();currentId=null;selectedId=null;detector=null;lastPosition=null;pendingMapPoint=null;fileNameOverride=null;state='idle';
   if(!persist()){data.sessions=previousSessions;({currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state}=previous);render();return;}
   if(currentDot){currentDot.remove();currentDot=null;}if(markers)markers.clearLayers();if(map)map.setView([34.768,136.132],12);
+  $('person').value='';$('date').value=today();viewedDay=today();
   $('gps').textContent='GPS 未取得';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
   render();notify('表示中の記録を削除し、新規開始できる状態にリセットしました。');
  };
