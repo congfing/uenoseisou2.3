@@ -378,8 +378,8 @@
   state=session()?.ended?'finished':'idle';persist();$('pasteDialog').close();$('person').value=session()?.person||'';$('date').value=session()?.date||today();render();fit();notify(`${count}件追加しました。同じIDの記録は変更していません。`);
  }catch(error){notify('読み込めません：'+error.message);}};
  $('loadFile').onclick=()=>$('fileInput').click();
- $('fileInput').onchange=async e=>{
-  const file=e.target.files[0];e.target.value='';if(!file)return;
+ $('fileInput').onchange=e=>{const file=e.target.files[0];e.target.value='';if(file)importTxtFile(file);};
+ async function importTxtFile(file){
   if(state==='running'){notify('現在の記録を一時停止してからTXTを選択してください。');return;}
   if(file.size>20000000){notify('読み込めるファイルは20MBまでです。');return;}
   try{
@@ -409,6 +409,12 @@
    state=selected.ended?'finished':'paused';render();fit();
    notify(selected.ended?'TXTを開きました。保存名に開始・終了時刻を入れます。':'途中のTXTを開きました。「再開」で続けて記録できます。保存名に開始・終了時刻を入れます。');
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
+ }
+ const publishedTxtFiles=['完成版_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_委託用_西山_南_2026-11-09（月）_開始083951_終了114533.txt','停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt'];
+ $('loadPublished').onclick=()=>{
+  const list=$('publishedList');list.replaceChildren();
+  for(const name of publishedTxtFiles){const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=async()=>{$('publishedDialog').close();try{const res=await fetch('../'+encodeURIComponent(name),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const blob=await res.blob();importTxtFile(new File([blob],name,{type:'text/plain'}));}catch(error){notify('GitのTXTを読み込めません：'+error.message);}};list.append(b);}
+  $('publishedDialog').showModal();
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
  if($('panelToggle')){
