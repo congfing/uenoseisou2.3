@@ -29,8 +29,8 @@
    $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:`地点 ${s?.stops.length||0}件`;
    if(ctx?.properties.length)syncChecks(ctx);
    const total=ctx?.properties.length||0,checkedCount=total?ctx.properties.filter(p=>checks.has(p.key)).length:0,checkAll=$('permitCheckAll');
-   checkAll.checked=total>0&&checkedCount===total;checkAll.indeterminate=checkedCount>0&&checkedCount<total;checkAll.disabled=!s||!total||api.recording();
-   $('syncPermit').disabled=!s||!total||api.recording()||checkedCount===0;
+   checkAll.checked=total>0&&checkedCount===total;checkAll.indeterminate=checkedCount>0&&checkedCount<total;checkAll.disabled=!s||!total;
+   $('syncPermit').disabled=!s||!total||checkedCount===0;
    $('permitScope').textContent=ctx?`${(ctx.staff||[]).join('・')} ／ ${(ctx.days||[]).join('・')}　${ctx.properties.length}件`:'物件表の選択データなし';
    $('permitProperties').replaceChildren();
    if(!ctx?.active||!ctx.properties.length){$('permitEmpty').hidden=false;$('permitEmpty').textContent='物件表の「担当者、曜日を選択」で対象を選択してください。';return;}
@@ -39,8 +39,8 @@
    for(const p of ctx.properties){
     const match=assigned.get(p.key),synced=match&&match.order===p.order&&match.routeOrder===p.order&&match.name===p.name;
     const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
-    const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s||api.recording();check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{if(check.checked)checks.add(p.key);else checks.delete(p.key);render();};
-    const badge=document.createElement('input');badge.className='permit-order';badge.type='number';badge.min='1';badge.max='99999';badge.step='1';badge.inputMode='numeric';badge.placeholder='未設定';badge.value=p.order??'';badge.disabled=!s||api.recording();badge.setAttribute('aria-label',`${p.name}の収集順`);
+    const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{if(check.checked)checks.add(p.key);else checks.delete(p.key);render();};
+    const badge=document.createElement('input');badge.className='permit-order';badge.type='number';badge.min='1';badge.max='99999';badge.step='1';badge.inputMode='numeric';badge.placeholder='未設定';badge.value=p.order??'';badge.disabled=!s;badge.setAttribute('aria-label',`${p.name}の収集順`);
     badge.onchange=()=>{
      const number=badge.value===''?null:Number(badge.value);
      if(number!==null&&(!Number.isInteger(number)||number<1||number>99999)){badge.setAttribute('aria-invalid','true');api.notify('収集順は1～99999の整数にしてください。');return;}
@@ -55,7 +55,6 @@
    if(busy)return;
    const s=api.session(),ctx=context();
    if(!s||!ctx?.active||!ctx.properties.length){api.notify('先に地図の記録と担当者・曜日の物件リストを選択してください。');return;}
-   if(api.recording()){api.notify('記録を終了してから同期してください。');return;}
    syncChecks(ctx);const targets=ctx.properties.filter(p=>checks.has(p.key)),skipped=ctx.properties.length-targets.length;
    if(!targets.length){api.notify('チェックされた物件がありません。同期する物件にチェックを入れてください。');return;}
    if([...$('permitProperties').querySelectorAll('.permit-property')].some(row=>{if(!checks.has(row.dataset.key))return false;const input=row.querySelector('.permit-order');return input&&!input.checkValidity();})){api.notify('収集順は1～99999の整数にしてください。');return;}
