@@ -5,7 +5,7 @@
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
  const query=new URLSearchParams(location.search);if(!gitVersion&&query.get('edition')!=='local'&&query.get('embedded')!=='1'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
- const defaults={seconds:60,radius:10,accuracy:5,moveSeconds:60,locateSeconds:0,endTime:'',pauseSeconds:0};
+ const defaults={seconds:60,radius:10,accuracy:5,moveSeconds:60,locateSeconds:0,endTime:'',pauseMinutes:0};
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
@@ -98,8 +98,10 @@
   if(settings.moveSeconds===undefined)settings.moveSeconds=defaults.moveSeconds;
   if(!Number.isInteger(settings.moveSeconds)||settings.moveSeconds<5||settings.moveSeconds>86400)throw Error('移動記録の間隔は5～86400秒にしてください');
   delete settings.moveMinutes;
-  if(settings.pauseSeconds===undefined)settings.pauseSeconds=defaults.pauseSeconds;
-  if(!Number.isInteger(settings.pauseSeconds)||settings.pauseSeconds<0||settings.pauseSeconds>86400)settings.pauseSeconds=defaults.pauseSeconds;
+  if(settings.pauseMinutes===undefined&&Number.isInteger(settings.pauseSeconds))settings.pauseMinutes=Math.round(settings.pauseSeconds/60);
+  if(settings.pauseMinutes===undefined)settings.pauseMinutes=defaults.pauseMinutes;
+  if(!Number.isInteger(settings.pauseMinutes)||settings.pauseMinutes<0||settings.pauseMinutes>1440)settings.pauseMinutes=defaults.pauseMinutes;
+  delete settings.pauseSeconds;
   if(settings.locateSeconds===undefined)settings.locateSeconds=defaults.locateSeconds;
   if(!Number.isInteger(settings.locateSeconds)||!(settings.locateSeconds===0||(settings.locateSeconds>=2&&settings.locateSeconds<=30)))settings.locateSeconds=defaults.locateSeconds;
   if(settings.endTime===undefined)settings.endTime=defaults.endTime;
@@ -272,11 +274,11 @@
  function autoFinish(){if(state==='running')pause();const s=session();if(!s)return;s.ended=Date.now();state='finished';detector=null;persist();render();fit();notify('設定した終了時刻になったため、記録を自動で終了しました。');}
  function checkEndTime(){if(state!=='running'&&state!=='paused')return;const et=data.settings.endTime;if(!et)return;const s=session();if(!s?.started)return;const[H,M]=et.split(':').map(Number);const target=new Date(s.started);target.setHours(H,M,0,0);if(target.getTime()<=s.started)target.setDate(target.getDate()+1);if(Date.now()>=target.getTime())autoFinish();}
  setInterval(checkEndTime,1000);
- function checkStillPause(){if(state!=='running'||travelSession())return;const sec=data.settings.pauseSeconds;if(!sec||!stillSince)return;if(Date.now()-stillSince>=sec*1000){stillSince=0;stillAnchor=null;pause();notify(`同じ場所に ${sec} 秒止まり続けたため、自動で一時停止しました。`);}}
+ function checkStillPause(){if(state!=='running'||travelSession())return;const min=data.settings.pauseMinutes;if(!min||!stillSince)return;if(Date.now()-stillSince>=min*60000){stillSince=0;stillAnchor=null;pause();notify(`同じ場所に ${min} 分止まり続けたため、自動で一時停止しました。`);}}
  setInterval(checkStillPause,1000);
  setInterval(tickTravel,1000);
- $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=$('pauseSecondsSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
- $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveSeconds:Number(f.elements.moveSeconds.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||''),pauseSeconds:Number(f.elements.pauseSeconds.value)};if(travelSession()&&state==='paused'){const s=session(),cur=s.travelSeconds??(s.travelMinutes?s.travelMinutes*60:null);if(cur!==data.settings.moveSeconds){s.travelSeconds=data.settings.moveSeconds;delete s.travelMinutes;const interval=travelInterval(s);s.nextTravelAtMs=(Math.floor(activeTimeMs(s)/interval)+1)*interval;}}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
+ $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=$('pauseMinutesSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveSeconds:Number(f.elements.moveSeconds.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||''),pauseMinutes:Number(f.elements.pauseMinutes.value)};if(travelSession()&&state==='paused'){const s=session(),cur=s.travelSeconds??(s.travelMinutes?s.travelMinutes*60:null);if(cur!==data.settings.moveSeconds){s.travelSeconds=data.settings.moveSeconds;delete s.travelMinutes;const interval=travelInterval(s);s.nextTravelAtMs=(Math.floor(activeTimeMs(s)/interval)+1)*interval;}}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
  $('editForm').onsubmit=e=>{e.preventDefault();const f=e.target,p=session()?.stops.find(p=>p.id===editId);if(!p)return;const next=Number(f.elements.order.value),old=p.order;const collision=session().stops.some(q=>q.id!==p.id&&q.order===next);
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
