@@ -17,13 +17,20 @@
   function applyPermitClosed(){document.body.classList.toggle('permit-closed',permitClosed);const b=$('permitToggle');if(b){b.textContent=permitClosed?'開く':'閉じる';b.setAttribute('aria-expanded',String(!permitClosed));}}
   function fixedNumbers(ctx){const map=new Map();const s=api.session();if(s&&ctx)for(const p of ctx.properties){const stop=s.stops.find(q=>q.propertyKey===p.key);if(stop)map.set(p.key,stop.order);}return map;}
   function initSelection(ctx){if(!ctx?.properties?.length)return;const sig=(api.session()?.id||'')+'|'+(ctx.filename||'')+'|'+(ctx.staff||[]).join(',')+'|'+(ctx.days||[]).join(',');if(sig!==checksSig){checksSig=sig;assignedSeq.clear();checks.clear();for(const key of fixedNumbers(ctx).keys())checks.add(key);return;}const keys=new Set(ctx.properties.map(p=>p.key));for(const key of[...checks])if(!keys.has(key))checks.delete(key);for(const key of[...assignedSeq.keys()])if(!keys.has(key))assignedSeq.delete(key);}
-  function effNumber(p,fixed){return fixed.get(p.key)??assignedSeq.get(p.key)??null;}
-  function nextNumber(fixed){const used=new Set([...fixed.values(),...assignedSeq.values()]);let n=1;while(used.has(n))n++;return n;}
-  function compactSeq(fixed){const used=new Set(fixed.values());const keys=[...assignedSeq.entries()].sort((a,b)=>a[1]-b[1]).map(e=>e[0]);let n=1;for(const k of keys){while(used.has(n))n++;assignedSeq.set(k,n);used.add(n);}}
-  function tryAssign(key,n){const ctx=context(),fixed=fixedNumbers(ctx);if(!Number.isInteger(n)||n<1){api.notify('番号は1以上の整数にしてください。');return false;}const total=ctx?.properties?.length||0;if(n>total){api.notify(`番号は ${total} までです。`);return false;}if([...fixed.values()].includes(n)){api.notify(`番号 ${n} は同期済みの物件で使われています。`);return false;}const old=assignedSeq.get(key)??null;if(old===n){checks.add(key);return true;}const holder=[...assignedSeq.entries()].find(([k,v])=>v===n&&k!==key);
-   if(!holder){assignedSeq.set(key,n);checks.add(key);return true;}
-   if(old!==null){assignedSeq.set(key,n);assignedSeq.set(holder[0],old);checks.add(key);return true;}
-   const trial=new Map(assignedSeq);for(const [k,v] of[...trial.entries()].filter(([,v])=>v>=n).sort((a,b)=>b[1]-a[1]))trial.set(k,v+1);const fixedVals=new Set(fixed.values());for(const v of trial.values())if(fixedVals.has(v)){api.notify('同期済みの物件の番号と重なるため、そこには入れられません。');return false;}trial.set(key,n);assignedSeq.clear();for(const [k,v] of trial)assignedSeq.set(k,v);checks.add(key);return true;}
+  function effNumber(p,fixed){return assignedSeq.get(p.key)??fixed.get(p.key)??null;}
+  function reservedNumbers(){const map=new Map();const s=api.session();if(s)for(const stop of s.stops)if(stop.propertyKey&&!checks.has(stop.propertyKey))map.set(stop.order,stop.propertyKey);return map;}
+  function nextNumber(fixed){const used=new Set([...fixed.values(),...assignedSeq.values(),...reservedNumbers().keys()]);let n=1;while(used.has(n))n++;return n;}
+  function compactSeq(fixed){const used=new Set([...fixed.values(),...reservedNumbers().keys()]);for(const [k,v] of assignedSeq)if(fixed.has(k))used.add(v);const keys=[...assignedSeq.entries()].filter(([k])=>!fixed.has(k)).sort((a,b)=>a[1]-b[1]).map(e=>e[0]);let n=1;for(const k of keys){while(used.has(n))n++;assignedSeq.set(k,n);used.add(n);}}
+  function tryAssign(key,n){const ctx=context(),fixed=fixedNumbers(ctx),s=api.session();if(!s||!ctx?.properties?.length)return false;if(!Number.isInteger(n)||n<1){api.notify('番号は1以上の整数にしてください。');return false;}const limit=Math.max(s.stops.length,1);if(n>limit){api.notify(`番号は ${limit} までです。`);return false;}const reserved=reservedNumbers();const mine=reserved.has(n)&&reserved.get(n)===key;if(reserved.has(n)&&!mine){const other=ctx.properties.find(p=>p.key===reserved.get(n));api.notify(`番号 ${n} は、チェックを外した物件「${other?.name||'（不明）'}」が使っています。`);return false;}
+   const eff=new Map();for(const p of ctx.properties)if(checks.has(p.key)){const v=effNumber(p,fixed);if(v!==null)eff.set(p.key,v);}
+   const old=eff.get(key)??null;
+   if(old!==null&&old!==n){if(n<old){for(const [k,v] of[...eff.entries()])if(v>=n&&v<old)eff.set(k,v+1);}else{for(const [k,v] of[...eff.entries()])if(v>old&&v<=n)eff.set(k,v-1);}}
+   if(old===null){const held=[...eff.values()].includes(n);if(held)for(const [k,v] of[...eff.entries()])if(v>=n)eff.set(k,v+1);}
+   if(old===null||old!==n)eff.set(key,n);
+   for(const [k,v] of eff){if(reserved.has(v)&&reserved.get(v)!==k){const other=ctx.properties.find(p=>p.key===reserved.get(v));api.notify(`番号 ${v} は、チェックを外した物件「${other?.name||'（不明）'}」が使っています。`);return false;}}
+   checks.add(key);
+   for(const p of ctx.properties){const v=eff.get(p.key);if(v===undefined)continue;if(fixed.get(p.key)===v)assignedSeq.delete(p.key);else assignedSeq.set(p.key,v);}
+   return true;}
   const active=()=>api.mode()==='permit';
   function read(){try{latest=checked(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(error){latest=null;}}
   const context=()=>checked(api.session()?.permitContext)||latest;
@@ -50,8 +57,8 @@
    for(const {p,num} of rows){
     const match=assigned.get(p.key),synced=!!(match&&num!==null&&match.order===num&&match.routeOrder===num&&match.name===p.name);
     const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
-    const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);if(assignedSeq.has(p.key)){assignedSeq.delete(p.key);compactSeq(f);}}render();};
-    const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s||fixed.has(p.key);badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
+    const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);assignedSeq.delete(p.key);compactSeq(f);}render();};
+    const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s;badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
     const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
    }
   }
