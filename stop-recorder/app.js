@@ -458,6 +458,6 @@
  if(!resetForNewDay()&&session()){state=mobile()||!session().ended?'paused':'finished';notify(state==='paused'?'閉じる前の記録を復元しました。「再開」で同じ記録に続けて記録できます。':'閉じる前の記録を復元しました。');}
  if(storageOK){let changed=false;for(const s of data.sessions){const before=s.stops.map(p=>p.order).join(',');makeSequential(s);if(before!==s.stops.map(p=>p.order).join(','))changed=true;}if(changed)persist();}
  if(session()?.kind==='travel')data.viewMode='travel';else if(session()&&data.viewMode==='travel')data.viewMode='commission';
- permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:switchRecordingMode,session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify});
+ permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:switchRecordingMode,session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify,focus:focusStop});
  initMap();render();fit();
 })();
