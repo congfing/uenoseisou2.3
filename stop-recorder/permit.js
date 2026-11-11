@@ -78,7 +78,7 @@
      if(!point.propertyKey||point.previousName===undefined)point.previousName=point.name;
      Object.assign(point,{propertyKey:property.key,propertyRegistration:property.registration,propertyStaff:property.staff,propertyDay:property.day,routeOrder:property.order,collectionCode:`${property.staff}${property.order}`,name:property.name,editedAt:Date.now()});
     }
-    const stored=JSON.parse(JSON.stringify(ctx));for(const q of stored.properties){const n=effNumber(q,fixed);if(n!==null)q.order=n;}stored.properties.sort((a,b)=>(a.order??Infinity)-(b.order??Infinity));s.permitContext=stored;s.permitSyncedAt=Date.now();
+    s.permitContext=JSON.parse(JSON.stringify(ctx));s.permitSyncedAt=Date.now();
     if(!api.save()){const restored=JSON.parse(before);for(const key of Object.keys(s))delete s[key];Object.assign(s,restored);api.render();return;}
     for(const t of targets)assignedSeq.delete(t.key);
     api.render();api.notify(`${targets.length}件を同期しました。${skipped>0?`チェックのない${skipped}件は同期していません。`:''}`);
