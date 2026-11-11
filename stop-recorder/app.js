@@ -131,7 +131,7 @@
  function updateControls(){
   $('start').textContent=state==='paused'?'再開':'開始';$('start').disabled=state==='running'||!storageOK;
   $('pause').disabled=state!=='running';$('finish').disabled=state!=='running'&&state!=='paused';
-  $('manual').disabled=state!=='running';$('resume').disabled=!session()||state==='running'||state==='paused';
+  $('manual').disabled=state!=='running';$('blackout').disabled=state!=='running';$('resume').disabled=!session()||state==='running'||state==='paused';
   $('resetRecording').disabled=state==='running'||!storageOK;
   $('person').disabled=$('date').disabled=state==='running';
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
@@ -141,11 +141,11 @@
   updateLocateTimer();
  }
  function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
- let locateTimer=null,locateTimerSec=0;
+ let locateTimer=null,locateTimerSec=0,blackout=false;
  function stopLocateTimer(){if(locateTimer!==null){clearInterval(locateTimer);locateTimer=null;locateTimerSec=0;}}
  function updateLocateTimer(){
   const sec=data.settings.locateSeconds||0;
-  const want=state==='running'&&sec>=2;
+  const want=state==='running'&&sec>=2&&!blackout;
   if(want&&(locateTimer===null||locateTimerSec!==sec)){stopLocateTimer();locateTimerSec=sec;locateTimer=setInterval(()=>{if(state==='running')locateNow();},sec*1000);}
   else if(!want)stopLocateTimer();
  }
@@ -198,7 +198,7 @@
   if(!persist()){s.stops=s.stops.filter(p=>p!==record);previous.forEach(([p,order])=>p.order=order);render();return;}
   selectedId=record.id;$('mapAddDialog').close();render();notify(`地点 ${record.order} を地図から登録しました。`);
  };
- function drawMap(){if(!map)return;markers.clearLayers();const points=ordered();if(points.length>1)L.polyline(points.map(p=>[p.lat,p.lng]),{color:'#6d7d76',weight:2,dashArray:'5 5'}).addTo(markers);
+ function drawMap(){if(!map||blackout)return;markers.clearLayers();const points=ordered();if(points.length>1)L.polyline(points.map(p=>[p.lat,p.lng]),{color:'#6d7d76',weight:2,dashArray:'5 5'}).addTo(markers);
   for(const p of points){const div=document.createElement('div');div.textContent=permit?.label(p)||String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>pointActions(p.id)).addTo(markers);}
  }
  function fit(){if(!map)return;const points=ordered();if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])),{padding:[35,35],maxZoom:17});}
@@ -427,6 +427,8 @@
   $('publishedDialog').showModal();
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
+ $('blackout').onclick=()=>{blackout=true;$('blackoutScreen').hidden=false;stopLocateTimer();};
+ $('blackoutScreen').onclick=()=>{blackout=false;$('blackoutScreen').hidden=true;render();};
  if($('panelToggle')){
   let panelClosed=false;
   try{panelClosed=localStorage.getItem('stop-recorder-panel-closed')==='1';}catch(e){}
