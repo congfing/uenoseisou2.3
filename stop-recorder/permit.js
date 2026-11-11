@@ -19,7 +19,8 @@
   function initSelection(ctx){if(!ctx?.properties?.length)return;const sig=(api.session()?.id||'')+'|'+(ctx.filename||'')+'|'+(ctx.staff||[]).join(',')+'|'+(ctx.days||[]).join(',');if(sig!==checksSig){checksSig=sig;assignedSeq.clear();checks.clear();for(const key of fixedNumbers(ctx).keys())checks.add(key);return;}const keys=new Set(ctx.properties.map(p=>p.key));for(const key of[...checks])if(!keys.has(key))checks.delete(key);for(const key of[...assignedSeq.keys()])if(!keys.has(key))assignedSeq.delete(key);}
   function effNumber(p,fixed){return fixed.get(p.key)??assignedSeq.get(p.key)??null;}
   function nextNumber(fixed){let m=0;for(const n of fixed.values())m=Math.max(m,n);for(const n of assignedSeq.values())m=Math.max(m,n);return m+1;}
-  function compactSeq(fixed){const base=Math.max(0,...fixed.values());const keys=[...assignedSeq.entries()].sort((a,b)=>a[1]-b[1]).map(e=>e[0]);keys.forEach((k,i)=>assignedSeq.set(k,base+i+1));}
+  function compactSeq(fixed){const used=new Set(fixed.values());const keys=[...assignedSeq.entries()].sort((a,b)=>a[1]-b[1]).map(e=>e[0]);let n=1;for(const k of keys){while(used.has(n))n++;assignedSeq.set(k,n);used.add(n);}}
+  function tryAssign(key,n){const fixed=fixedNumbers(context());if(!Number.isInteger(n)||n<1){api.notify('番号は1以上の整数にしてください。');return false;}if([...fixed.values()].includes(n)){api.notify(`番号 ${n} は同期済みの物件で使われています。`);return false;}const maxN=nextNumber(fixed)-1;if(n>maxN+1){api.notify(`番号は ${maxN+1} までです。`);return false;}const trial=new Map(assignedSeq);trial.delete(key);for(const [k,v] of[...trial.entries()].filter(([,v])=>v>=n).sort((a,b)=>b[1]-a[1]))trial.set(k,v+1);const fixedVals=new Set(fixed.values());for(const v of trial.values())if(fixedVals.has(v)){api.notify('同期済みの物件の番号と重なるため、そこには入れられません。');return false;}trial.set(key,n);assignedSeq.clear();for(const [k,v] of trial)assignedSeq.set(k,v);checks.add(key);return true;}
   const active=()=>api.mode()==='permit';
   function read(){try{latest=checked(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(error){latest=null;}}
   const context=()=>checked(api.session()?.permitContext)||latest;
@@ -47,7 +48,7 @@
     const match=assigned.get(p.key),synced=!!(match&&num!==null&&match.order===num&&match.routeOrder===num&&match.name===p.name);
     const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
     const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);if(assignedSeq.has(p.key)){assignedSeq.delete(p.key);compactSeq(f);}}render();};
-    const badge=document.createElement('span');badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番`:`${num} 番`);
+    const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s||fixed.has(p.key);badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
     const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
    }
   }
@@ -86,6 +87,9 @@
   }
   function label(point){return String(point.order);}
   $('syncPermit').onclick=sync;
+  let numKey=null;
+  if($('permitNumberForm'))$('permitNumberForm').onsubmit=e=>{e.preventDefault();const n=Number($('permitNumberInput').value),d=$('permitNumberDialog');if(d.open)d.close();const key=numKey;numKey=null;if(key!==null&&tryAssign(key,n))render();};
+  if($('permitNumberCancel'))$('permitNumberCancel').onclick=()=>{const d=$('permitNumberDialog');if(d.open)d.close();numKey=null;};
   let manualSeq=0;
   if($('permitAddProperty'))$('permitAddProperty').onclick=()=>{
    const s=api.session(),ctx=context(),name=($('permitNewName').value||'').trim();
