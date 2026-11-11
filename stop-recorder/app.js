@@ -433,7 +433,7 @@
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
  $('blackout').onclick=()=>{blackout=true;$('blackoutScreen').hidden=false;stopLocateTimer();};
- $('blackoutScreen').onclick=()=>{blackout=false;$('blackoutScreen').hidden=true;render();};
+ $('blackoutExit').onclick=()=>{blackout=false;$('blackoutScreen').hidden=true;render();};
  if($('panelToggle')){
   let panelClosed=false;
   try{panelClosed=localStorage.getItem('stop-recorder-panel-closed')==='1';}catch(e){}
