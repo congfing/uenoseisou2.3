@@ -5,7 +5,7 @@
  const gitVersion=location.hostname==='congfing.github.io'&&location.pathname.startsWith('/uenoseisou2.3/');
  const query=new URLSearchParams(location.search);if(!gitVersion&&query.get('edition')!=='local'&&query.get('embedded')!=='1'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
- const defaults={seconds:60,radius:10,accuracy:5,moveMinutes:1,locateSeconds:0,endTime:''};
+ const defaults={seconds:60,radius:10,accuracy:5,moveSeconds:60,locateSeconds:0,endTime:'',pauseSeconds:0};
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
@@ -21,7 +21,7 @@
  const travelView=()=>data.viewMode==='travel';
  const travelSession=()=>session()?.kind==='travel';
  const purposeName=()=>({commission:'委託用',permit:'許可物件用',travel:'移動記録用'}[data.viewMode]||'委託用');
- const travelInterval=s=>(s?.travelMinutes||data.settings.moveMinutes)*60000;
+ const travelInterval=s=>{const sec=s?.travelSeconds??(s?.travelMinutes?s.travelMinutes*60:data.settings.moveSeconds);return sec*1000;};
  const dated=d=>d?`${d}（${'日月火水木金土'[new Date(d+'T12:00:00').getDay()]}）`:'';
  const ordered=()=>[...(session()?.stops||[])].sort((a,b)=>a.order-b.order||a.arrival-b.arrival);
  function makeSequential(s){[...s.stops].sort((a,b)=>a.order-b.order||a.arrival-b.arrival).forEach((p,i)=>p.order=i+1);}
@@ -94,8 +94,12 @@
   if(!d||d.version!==1||!Array.isArray(d.sessions)||d.sessions.length>1000)throw Error('ファイル形式が違います');
   const settings=d.settings||{};
   if(!Number.isInteger(settings.seconds)||settings.seconds<5||settings.seconds>1800||!Number.isFinite(settings.radius)||settings.radius<10||settings.radius>200||!Number.isFinite(settings.accuracy)||settings.accuracy<5||settings.accuracy>200)throw Error('設定値が範囲外です');
-  if(settings.moveMinutes===undefined)settings.moveMinutes=defaults.moveMinutes;
-  if(!Number.isInteger(settings.moveMinutes)||settings.moveMinutes<1||settings.moveMinutes>1440)throw Error('移動記録の間隔は1～1440分にしてください');
+  if(settings.moveSeconds===undefined&&Number.isInteger(settings.moveMinutes))settings.moveSeconds=settings.moveMinutes*60;
+  if(settings.moveSeconds===undefined)settings.moveSeconds=defaults.moveSeconds;
+  if(!Number.isInteger(settings.moveSeconds)||settings.moveSeconds<5||settings.moveSeconds>86400)throw Error('移動記録の間隔は5～86400秒にしてください');
+  delete settings.moveMinutes;
+  if(settings.pauseSeconds===undefined)settings.pauseSeconds=defaults.pauseSeconds;
+  if(!Number.isInteger(settings.pauseSeconds)||settings.pauseSeconds<0||settings.pauseSeconds>86400)settings.pauseSeconds=defaults.pauseSeconds;
   if(settings.locateSeconds===undefined)settings.locateSeconds=defaults.locateSeconds;
   if(!Number.isInteger(settings.locateSeconds)||!(settings.locateSeconds===0||(settings.locateSeconds>=2&&settings.locateSeconds<=30)))settings.locateSeconds=defaults.locateSeconds;
   if(settings.endTime===undefined)settings.endTime=defaults.endTime;
@@ -105,6 +109,7 @@
    if(typeof s.id!=='string'||ids.has(s.id)||!/^\d{4}-\d{2}-\d{2}$/.test(s.date)||typeof s.person!=='string'||!Array.isArray(s.stops)||s.stops.length>50000)throw Error('記録の形式が違います');ids.add(s.id);
    if(s.kind!==undefined&&!['stop','travel'].includes(s.kind))throw Error('記録の種類が不正です');
    if(s.travelMinutes!==undefined&&(!Number.isInteger(s.travelMinutes)||s.travelMinutes<1||s.travelMinutes>1440))throw Error('記録間隔が不正です');
+   if(s.travelSeconds!==undefined&&(!Number.isInteger(s.travelSeconds)||s.travelSeconds<5||s.travelSeconds>86400))throw Error('記録間隔が不正です');
    if(s.nextTravelAtMs!==undefined&&(!Number.isFinite(s.nextTravelAtMs)||s.nextTravelAtMs<1))throw Error('次の記録時刻が不正です');
    const stops=new Set(),orders=new Set();
    for(const p of s.stops){if(typeof p.id!=='string'||stops.has(p.id)||!Number.isInteger(p.order)||p.order<1||p.order>99999||orders.has(p.order)||!Number.isFinite(p.lat)||Math.abs(p.lat)>90||!Number.isFinite(p.lng)||Math.abs(p.lng)>180||!Number.isFinite(p.arrival)||!Number.isFinite(p.last)||p.last<p.arrival||typeof p.name!=='string'||!Number.isFinite(p.accuracy)||p.accuracy<0)throw Error('地点の形式が違います');if(p.departure!==null&&(!Number.isFinite(p.departure)||p.departure<p.arrival))throw Error('終了日時が不正です');stops.add(p.id);orders.add(p.order);}
@@ -138,12 +143,14 @@
   $('person').disabled=$('date').disabled=state==='running';
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
-  $('threshold').textContent=travelView()?`記録間隔 ${session()?.travelMinutes||data.settings.moveMinutes}分`:'判定 '+duration(data.settings.seconds*1000);
+  $('threshold').textContent=travelView()?`記録間隔 ${travelInterval(session())/1000}秒`:'判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('fillAddresses').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
   updateLocateTimer();
  }
  function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
  let locateTimer=null,locateTimerSec=0,blackout=false;
+ let stillAnchor=null,stillSince=0;
+ const distanceM=(a,b)=>{const t=x=>x*Math.PI/180,dLat=t(b.lat-a.lat),dLng=t(b.lng-a.lng),h=Math.sin(dLat/2)**2+Math.cos(t(a.lat))*Math.cos(t(b.lat))*Math.sin(dLng/2)**2;return 2*6371000*Math.asin(Math.sqrt(h));};
  function stopLocateTimer(){if(locateTimer!==null){clearInterval(locateTimer);locateTimer=null;locateTimerSec=0;}}
  function updateLocateTimer(){
   const sec=data.settings.locateSeconds||0;
@@ -225,13 +232,14 @@
    if(markers)markers.clearLayers();
    if(map)map.setView([34.768,136.132],12);
    $('gps').textContent='GPS 更新待ち';$('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';
-   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,activeElapsedMs:0,elapsedTiming:'active',kind:travelView()?'travel':'stop',recordType:travelView()?'移動記録':'停車地点記録',stops:[]};if(s.kind==='travel'){s.travelMinutes=data.settings.moveMinutes;s.nextTravelAtMs=travelInterval(s);}data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
+   const s={id:id(),date,person:$('person').value.trim(),started:Date.now(),ended:null,activeElapsedMs:0,elapsedTiming:'active',kind:travelView()?'travel':'stop',recordType:travelView()?'移動記録':'停車地点記録',stops:[]};if(s.kind==='travel'){s.travelSeconds=data.settings.moveSeconds;s.nextTravelAtMs=travelInterval(s);}data.sessions.push(s);currentId=s.id;selectedId=null;fileNameOverride=null;
    if(!travelSession())detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);else detector=null;
   }
   if(state==='paused'&&session())session().ended=null;
   if(!detector&&!travelSession()){detector=new StopRecorderCore.StopDetector(data.settings,point=>{const s=session(),record={...point,id:id(),order:Math.max(0,...s.stops.map(p=>p.order))+1,name:''};s.stops.push(record);persist();render();return record;},candidateUpdate);const latest=session()?.stops.at(-1);if(latest)detector.reset({lat:latest.lat,lng:latest.lng});}
-  state='running';countingFrom=Date.now();notify('');if(!persist()){commitElapsed(true);state='paused';render();return;}render();const generation=++token;
+  stillAnchor=null;stillSince=0;state='running';countingFrom=Date.now();notify('');if(!persist()){commitElapsed(true);state='paused';render();return;}render();const generation=++token;
   watch=navigator.geolocation.watchPosition(position=>{if(generation!==token||state!=='running'||resetForNewDay())return;const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp};if(Date.now()-p.time>30000){$('gps').textContent='GPS 更新待ち';return;}lastPosition=p;
+   if(!travelSession()){if(!stillAnchor||distanceM(stillAnchor,p)>data.settings.radius){stillAnchor={lat:p.lat,lng:p.lng};stillSince=p.time;}}
    $('gps').textContent=`GPS ±${Math.round(p.accuracy)}m`;
    if(travelSession()){tickTravel();$('status').textContent='移動記録中';}else $('status').textContent=detector.feed(p);
    if(map){if(!currentDot){currentDot=L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:2,fillColor:'#237cad',fillOpacity:1}).addTo(map);if(!session().stops.length)map.setView([p.lat,p.lng],16);}else currentDot.setLatLng([p.lat,p.lng]);}
@@ -264,9 +272,11 @@
  function autoFinish(){if(state==='running')pause();const s=session();if(!s)return;s.ended=Date.now();state='finished';detector=null;persist();render();fit();notify('設定した終了時刻になったため、記録を自動で終了しました。');}
  function checkEndTime(){if(state!=='running'&&state!=='paused')return;const et=data.settings.endTime;if(!et)return;const s=session();if(!s?.started)return;const[H,M]=et.split(':').map(Number);const target=new Date(s.started);target.setHours(H,M,0,0);if(target.getTime()<=s.started)target.setDate(target.getDate()+1);if(Date.now()>=target.getTime())autoFinish();}
  setInterval(checkEndTime,1000);
+ function checkStillPause(){if(state!=='running'||travelSession())return;const sec=data.settings.pauseSeconds;if(!sec||!stillSince)return;if(Date.now()-stillSince>=sec*1000){stillSince=0;stillAnchor=null;pause();notify(`同じ場所に ${sec} 秒止まり続けたため、自動で一時停止しました。`);}}
+ setInterval(checkStillPause,1000);
  setInterval(tickTravel,1000);
- $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
- $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveMinutes:Number(f.elements.moveMinutes.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||'')};if(travelSession()&&state==='paused'&&session().travelMinutes!==data.settings.moveMinutes){session().travelMinutes=data.settings.moveMinutes;const interval=travelInterval(session());session().nextTravelAtMs=(Math.floor(activeTimeMs(session())/interval)+1)*interval;}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
+ $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=$('pauseSecondsSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveSeconds:Number(f.elements.moveSeconds.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||''),pauseSeconds:Number(f.elements.pauseSeconds.value)};if(travelSession()&&state==='paused'){const s=session(),cur=s.travelSeconds??(s.travelMinutes?s.travelMinutes*60:null);if(cur!==data.settings.moveSeconds){s.travelSeconds=data.settings.moveSeconds;delete s.travelMinutes;const interval=travelInterval(s);s.nextTravelAtMs=(Math.floor(activeTimeMs(s)/interval)+1)*interval;}}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
  $('editForm').onsubmit=e=>{e.preventDefault();const f=e.target,p=session()?.stops.find(p=>p.id===editId);if(!p)return;const next=Number(f.elements.order.value),old=p.order;const collision=session().stops.some(q=>q.id!==p.id&&q.order===next);
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
