@@ -365,7 +365,7 @@ $('file').addEventListener('change', ev => {
   reader.onerror = () => { $('err').textContent = 'ファイルを読み込めませんでした。'; };
   reader.readAsText(f);
 });
-const publishedTxtFiles = ['完成版_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_委託用_西山_南_2026-11-09（月）_開始083951_終了114533.txt','停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt'];
+const publishedTxtFiles = ['完成版_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_委託用_西山_南_2026-11-09（月）_開始083951_終了114533.txt','停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt','確定_許可物件用_西山_金属-_金属_2026-11-11（水）_開始083500_終了151846.txt'];
 publishedTxtFiles.forEach(filename => $('publishedTxt').append(new Option(filename, filename)));
 let txtLoadToken = 0;
 async function loadPublishedTxt(filename){
