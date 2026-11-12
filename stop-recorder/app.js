@@ -416,23 +416,12 @@
   }
   return lines.join('\n');
  }
- let pendingMailText='';
  $('mailBody').onclick=()=>{
   const text=locationMailText();
   if(!text){notify('送信する地点がありません。');return;}
-  pendingMailText=text;
-  $('mailText').value=text;
-  $('mailCopyStatus').textContent=`${text.split('\n').length-2}件の地点データです。「本文をコピーしてメールを開く」を押してください。`;
-  $('mailTextDialog').showModal();
- };
- $('openTextMail').onclick=async()=>{
   const s=session(),subject=`地点登録 ${s?.date||today()}${s?.person?`（${s.person}）`:''}`;
-  let copied=false;
-  try{await navigator.clipboard.writeText(pendingMailText);copied=true;}catch(e){}
-  $('mailTextDialog').close();
-  const short=pendingMailText.length<=1200;
-  location.href=`mailto:${mailTo()}?subject=${encodeURIComponent(subject)}${short?`&body=${encodeURIComponent(pendingMailText)}`:''}`;
-  notify(short?'メールを作成しました。本文に地点データが入っています。':copied?'本文をコピーしました。開いたメールに貼り付けて送信してください。':'メールを開きました。本文は「メール本文で送信」の欄からコピーしてください。');
+  location.href=`mailto:${mailTo()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+  notify('メールを作成しました。本文に地点データが入っています。');
  };
  $('selectTxtName').onclick=()=>{
   if(state==='running'){notify('一時停止してからTXTファイルを選択してください。');return;}
