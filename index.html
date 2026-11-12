@@ -638,57 +638,36 @@
   }
 
   /* 記録中の地点登録を小さな浮動画面で残す（ソフトを切り替えても記録を続ける） */
-  #recorderFloat {
-    position: absolute;
-    width: min(210px, 54vw);
-    height: min(320px, 54vh);
-    z-index: 40;
-    display: flex;
-    flex-direction: column;
-    background: var(--software-bg);
-    border: 2px solid var(--ink);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+  /* フレーム自体は frameLayer 内に置いたまま、大きさと位置だけ変える（要素を移すと iPhone で読み直しになり記録が止まるため） */
+  .software-frame.floating {
+    visibility: visible;
     pointer-events: auto;
+    transform: none;
+    z-index: 40;
+    border: 2px solid var(--ink);
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
   }
-  #recorderFloat[hidden] { display: none; }
   #recorderFloatBar {
-    flex: 0 0 auto;
+    position: absolute;
+    height: 30px;
+    z-index: 41;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
+    padding: 0 10px;
+    box-sizing: border-box;
     background: #1f2937;
     color: #ffffff;
     font-size: 12px;
     font-weight: 700;
+    border-radius: 12px 12px 0 0;
     cursor: grab;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
-  }
-  #recorderFloatBar button {
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  #recorderFloatBody { position: relative; flex: 1 1 auto; }
-  #recorderFloatBody .software-frame {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    border-radius: 0;
-    visibility: visible;
     pointer-events: auto;
-    transform: none;
-    z-index: 1;
   }
+  #recorderFloatBar[hidden] { display: none; }
 
   /* ソフトを切り替えるときのスライド（消して作り直すのではなく、横から出し入れする） */
   @keyframes uenoSlideFromRight {
@@ -1384,8 +1363,14 @@
       const appToClose = activeApp;
       closeSoftwareApp(appToClose);
     } else if (activeApp) {
+      const rec = recorderApp();
+      if (rec && activeApp.file === rec.file && recorderRunning) {
+        // 記録中の地点登録はカードへ移さず浮動画面で残す（移すと読み直しで止まるため）
+        floatRecorderFrame();
+        activeApp = null;
+      }
       // カードへ縮んでいく動きを見せてから縮小する
-      if (cards.has(activeApp.file)) minimizeWithZoom(activeApp);
+      else if (cards.has(activeApp.file)) minimizeWithZoom(activeApp);
       else closeSoftwareApp(activeApp);
     }
     currentFile.textContent = "index.html";
@@ -1555,12 +1540,14 @@
   });
 
   // ===== 記録中の地点登録を浮動画面で残す =====
-  // 地点登録が記録中の間は、別ソフトへ切り替えても画面を隠さず小さい浮動画面で残し、
-  // 記録が一時停止しないようにする。バーを持てば場所を動かせる。
+  // 地点登録が記録中の間は、別ソフトへ切り替えても画面を隠さず小さくして残し、
+  // 記録が一時停止しないようにする。フレーム要素自体は移動させない
+  // （iPhoneでは要素を移すと読み直しになり記録が止まるため、大きさと位置だけ変える）。
+  // 上のバーを持てば場所を動かせ、タップで全画面に戻る。
   const recorderApp = () => software.find((item) => item.locationRecorder) || null;
+  const FLOAT_BAR_H = 30;
   let recorderRunning = false;
-  let recorderFloat = null;
-  let recorderFloatBody = null;
+  let recorderFloatBar = null;
   let recorderFloatPos = null;
 
   window.addEventListener("message", (event) => {
@@ -1568,42 +1555,31 @@
     const data = event.data;
     if (!data || data.type !== "ueno-recording") return;
     recorderRunning = !!data.running;
+    if (!recorderRunning) hideRecorderFloat();
   });
 
-  function ensureRecorderFloat() {
-    if (recorderFloat) return recorderFloat;
-    const box = document.createElement("div");
-    box.id = "recorderFloat";
-    box.hidden = true;
+  function ensureRecorderFloatBar() {
+    if (recorderFloatBar) return recorderFloatBar;
     const bar = document.createElement("div");
     bar.id = "recorderFloatBar";
-    const label = document.createElement("span");
-    label.textContent = "地点登録（記録中）";
-    bar.append(label);
-    const body = document.createElement("div");
-    body.id = "recorderFloatBody";
-    box.append(bar, body);
-    frameLayer.appendChild(box);
-    recorderFloat = box;
-    recorderFloatBody = body;
+    bar.hidden = true;
+    bar.textContent = "地点登録（記録中）";
+    frameLayer.appendChild(bar);
+    recorderFloatBar = bar;
     let drag = null;
     bar.addEventListener("pointerdown", (e) => {
-      const rect = box.getBoundingClientRect();
-      drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top, sx: e.clientX, sy: e.clientY, moved: false };
+      drag = { sx: e.clientX, sy: e.clientY, ox: recorderFloatPos ? recorderFloatPos.x : 0, oy: recorderFloatPos ? recorderFloatPos.y : 0, moved: false };
       bar.setPointerCapture(e.pointerId);
     });
     bar.addEventListener("pointermove", (e) => {
-      if (!drag) return;
-      if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 6) drag.moved = true;
+      if (!drag || !recorderFloatPos) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+      if (!drag.moved) return;
       const ws = document.querySelector(".workspace").getBoundingClientRect();
-      const rect = box.getBoundingClientRect();
-      let x = e.clientX - ws.left - drag.dx;
-      let y = e.clientY - ws.top - drag.dy;
-      x = Math.min(Math.max(x, -rect.width + 64), ws.width - 64);
-      y = Math.min(Math.max(y, 0), ws.height - 32);
-      recorderFloatPos = { x, y };
-      box.style.left = x + "px";
-      box.style.top = y + "px";
+      recorderFloatPos.x = Math.min(Math.max(drag.ox + dx, -recorderFloatPos.w + 64), ws.width - 64);
+      recorderFloatPos.y = Math.min(Math.max(drag.oy + dy, 0), ws.height - FLOAT_BAR_H);
+      applyRecorderFloatPos();
     });
     const endDrag = (e) => {
       const wasTap = drag && !drag.moved;
@@ -1615,17 +1591,25 @@
     };
     bar.addEventListener("pointerup", endDrag);
     bar.addEventListener("pointercancel", endDrag);
-    return box;
+    return bar;
   }
 
-  function positionRecorderFloat(box) {
-    const ws = document.querySelector(".workspace").getBoundingClientRect();
-    const w = box.offsetWidth, h = box.offsetHeight;
-    if (!recorderFloatPos) recorderFloatPos = { x: Math.max(0, ws.width - w - 10), y: Math.max(0, ws.height - h - 10) };
-    const x = Math.min(Math.max(recorderFloatPos.x, -w + 64), ws.width - 64);
-    const y = Math.min(Math.max(recorderFloatPos.y, 0), ws.height - 32);
-    box.style.left = x + "px";
-    box.style.top = y + "px";
+  function applyRecorderFloatPos() {
+    const app = recorderApp();
+    if (!app || !recorderFloatPos) return;
+    const frame = frames.get(app.file);
+    const p = recorderFloatPos;
+    if (recorderFloatBar) {
+      recorderFloatBar.style.left = p.x + "px";
+      recorderFloatBar.style.top = p.y + "px";
+      recorderFloatBar.style.width = p.w + "px";
+    }
+    if (frame && frame.classList.contains("floating")) {
+      frame.style.left = p.x + "px";
+      frame.style.top = (p.y + FLOAT_BAR_H) + "px";
+      frame.style.width = p.w + "px";
+      frame.style.height = Math.max(60, p.h - FLOAT_BAR_H) + "px";
+    }
   }
 
   function floatRecorderFrame() {
@@ -1633,22 +1617,37 @@
     if (!app) return;
     const frame = frames.get(app.file);
     if (!frame) return;
-    const box = ensureRecorderFloat();
+    if (frame.parentElement !== frameLayer) return;
+    const bar = ensureRecorderFloatBar();
+    if (!recorderFloatPos) {
+      const ws = document.querySelector(".workspace").getBoundingClientRect();
+      const w = Math.min(210, Math.round(ws.width * 0.54));
+      const h = Math.min(320, Math.round(ws.height * 0.54));
+      recorderFloatPos = { x: Math.max(0, ws.width - w - 10), y: Math.max(0, ws.height - h - 10), w, h };
+    }
     frame.classList.remove("active");
+    frame.classList.add("floating");
     clearZoomStyle(frame);
-    frame.style.removeProperty("left");
-    frame.style.removeProperty("top");
     frame.style.removeProperty("--preview-width");
     frame.style.removeProperty("--preview-height");
     frame.style.removeProperty("--preview-scale");
     frame.style.visibility = "visible";
-    recorderFloatBody.appendChild(frame);
-    box.hidden = false;
-    positionRecorderFloat(box);
+    bar.hidden = false;
+    applyRecorderFloatPos();
   }
 
   function hideRecorderFloat() {
-    if (recorderFloat) recorderFloat.hidden = true;
+    if (recorderFloatBar) recorderFloatBar.hidden = true;
+    const app = recorderApp();
+    if (!app) return;
+    const frame = frames.get(app.file);
+    if (frame && frame.classList.contains("floating")) {
+      frame.classList.remove("floating");
+      frame.style.removeProperty("left");
+      frame.style.removeProperty("top");
+      frame.style.removeProperty("width");
+      frame.style.removeProperty("height");
+    }
   }
 
   // 前のソフトの片付け。記録中の地点登録だけは隠さず浮動画面で残す。
@@ -1679,9 +1678,9 @@
     const frame = frames.get(app.file) || createFrame(app);
     const previousFrame = previous ? frames.get(previous.file) : null;
     // 戻るときは、出ていく画面を上に残したいので新しい画面をその下に入れる。
-    const slideBack = slide === "back" && previousFrame && previousFrame.parentElement === frameLayer;
+    const slideBack = slide === "back" && previousFrame && previousFrame.parentElement === frameLayer && frame.parentElement !== frameLayer;
     if (slideBack) frameLayer.insertBefore(frame, previousFrame);
-    else frameLayer.appendChild(frame);
+    else if (frame.parentElement !== frameLayer) frameLayer.appendChild(frame);
     frame.style.removeProperty("left");
     frame.style.removeProperty("top");
     frame.style.removeProperty("visibility");
