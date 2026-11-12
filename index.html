@@ -1579,14 +1579,7 @@
     bar.id = "recorderFloatBar";
     const label = document.createElement("span");
     label.textContent = "地点登録（記録中）";
-    const openBtn = document.createElement("button");
-    openBtn.type = "button";
-    openBtn.textContent = "大きく開く";
-    openBtn.addEventListener("click", () => {
-      const app = recorderApp();
-      if (app) openSoftware(app);
-    });
-    bar.append(label, openBtn);
+    bar.append(label);
     const body = document.createElement("div");
     body.id = "recorderFloatBody";
     box.append(bar, body);
@@ -1595,13 +1588,13 @@
     recorderFloatBody = body;
     let drag = null;
     bar.addEventListener("pointerdown", (e) => {
-      if (e.target === openBtn) return;
       const rect = box.getBoundingClientRect();
-      drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+      drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top, sx: e.clientX, sy: e.clientY, moved: false };
       bar.setPointerCapture(e.pointerId);
     });
     bar.addEventListener("pointermove", (e) => {
       if (!drag) return;
+      if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 6) drag.moved = true;
       const ws = document.querySelector(".workspace").getBoundingClientRect();
       const rect = box.getBoundingClientRect();
       let x = e.clientX - ws.left - drag.dx;
@@ -1612,7 +1605,14 @@
       box.style.left = x + "px";
       box.style.top = y + "px";
     });
-    const endDrag = () => { drag = null; };
+    const endDrag = (e) => {
+      const wasTap = drag && !drag.moved;
+      drag = null;
+      if (wasTap && e.type === "pointerup") {
+        const app = recorderApp();
+        if (app) openSoftware(app);
+      }
+    };
     bar.addEventListener("pointerup", endDrag);
     bar.addEventListener("pointercancel", endDrag);
     return box;
