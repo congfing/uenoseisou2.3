@@ -59,7 +59,7 @@
     const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
     const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);assignedSeq.delete(p.key);compactSeq(f);}render();};
     const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s;badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
-    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで地図を拡大／選択中の地点に付ける';body.onclick=()=>{const sNow=api.session(),selStop=sNow?.stops.find(q=>q.id===api.selected()),mine=assigned.get(p.key);if(selStop&&mine===selStop){detachFrom(selStop);return;}if(selStop&&!mine){attachSelected(p,selStop);return;}if(!api.focus)return;const f=fixedNumbers(context()),num=effNumber(p,f)??nextNumber(f),stop=api.session()?.stops.find(q=>q.order===num);if(stop)api.focus(stop.id);else api.notify(`地点 ${num} はまだありません。`);};body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
+    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで地図を拡大／選択中の地点に付ける';body.onclick=()=>{const sNow=api.session(),selStop=sNow?.stops.find(q=>q.id===api.selected()),mine=assigned.get(p.key);if(selStop&&!mine){attachSelected(p,selStop);return;}if(mine){if(api.focus)api.focus(mine.id);return;}if(!api.focus)return;const f=fixedNumbers(context()),num=effNumber(p,f)??nextNumber(f),stop=api.session()?.stops.find(q=>q.order===num);if(stop)api.focus(stop.id);else api.notify(`地点 ${num} はまだありません。`);};body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
    }
   }
   function clearProperty(point){point.name=point.previousName||'';delete point.previousName;delete point.propertyKey;delete point.propertyRegistration;delete point.propertyStaff;delete point.propertyDay;delete point.routeOrder;delete point.collectionCode;}
@@ -161,6 +161,7 @@
   window.addEventListener('focus',()=>{read();render();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){read();render();}});
   const area=document.querySelector('.list-area');area.insertBefore($('permitPanel'),area.firstChild);
-  read();return {render,active,label,selection:context};
+  function detachPoint(id){const s=api.session(),point=s?.stops.find(q=>q.id===id);if(!point||!point.propertyKey)return false;detachFrom(point);return true;}
+  read();return {render,active,label,selection:context,detachPoint};
  }};
 })();
