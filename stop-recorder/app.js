@@ -15,6 +15,21 @@
  if(!storageOK||!data.sessions.length){const bak=loadBackup();if(bak){data=bak;storageOK=true;restoredFromBackup=true;try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}}
  if(!storageOK)notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');
  else if(restoredFromBackup)notify('一時保存から記録を復旧しました。');
+ let journalRestored=false;
+ try{
+  const prefix=KEY+'-s-',nowMs=Date.now(),jkeys=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(prefix))jkeys.push(k);}
+  for(const k of jkeys){
+   let s=null;try{s=JSON.parse(localStorage.getItem(k));}catch(e){}
+   if(!s||typeof s.id!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s.date||'')||!Array.isArray(s.stops)){try{localStorage.removeItem(k);}catch(e){}continue;}
+   const idx=data.sessions.findIndex(x=>x.id===s.id);
+   if(idx<0){
+    if(nowMs-new Date(s.date+'T12:00:00').getTime()>14*86400000){try{localStorage.removeItem(k);}catch(e){}continue;}
+    data.sessions.push(s);journalRestored=true;
+   }else if((data.sessions[idx].stops?.length||0)<s.stops.length){data.sessions[idx]=s;journalRestored=true;}
+  }
+  if(journalRestored&&storageOK){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}notify('一時保存から記録を復旧しました。');}
+ }catch(e){}
  let currentId=Object.hasOwn(data,'activeSessionId')?(data.sessions.some(s=>s.id===data.activeSessionId)?data.activeSessionId:null):data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
  if(currentId&&typeof data.activeFileName==='string')fileNameOverride=data.activeFileName;
  const id=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -128,7 +143,7 @@
   commitElapsed();
   data.activeSessionId=currentId;data.activeFileName=fileNameOverride||session()?.sourceFile||null;data.lastViewedDay=today();
   refreshTotalTime();
-  try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();if(Date.now()-lastBackup>=10000){lastBackup=Date.now();try{localStorage.setItem(KEY+'-bak',JSON.stringify(data));}catch(e){}}return true;}
+  try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();if(Date.now()-lastBackup>=10000){lastBackup=Date.now();try{localStorage.setItem(KEY+'-bak',JSON.stringify(data));}catch(e){}const cs=session();if(cs){try{localStorage.setItem(KEY+'-s-'+cs.id,JSON.stringify(cs));}catch(e){}}}return true;}
   catch(e){if(state==='running')pause(false);if(!storageWarned){storageWarned=true;notify('端末への保存に失敗しました。ファイル保存で記録を退避してください。');}return false;}
  }
  let pendingConfirm=false;
@@ -265,6 +280,7 @@
   if(!persist())return;
   const previous={currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state},previousSessions=data.sessions;
   data.sessions=data.sessions.filter(s=>s.id!==currentId);
+  try{localStorage.removeItem(KEY+'-s-'+currentId);}catch(e){}
   closeWatch();currentId=null;selectedId=null;detector=null;lastPosition=null;pendingMapPoint=null;fileNameOverride=null;state='idle';
   if(!persist()){data.sessions=previousSessions;({currentId,selectedId,detector,lastPosition,pendingMapPoint,fileNameOverride,state}=previous);render();return;}
   if(currentDot){currentDot.remove();currentDot=null;}if(markers)markers.clearLayers();if(map)map.setView([34.768,136.132],12);
@@ -298,7 +314,7 @@
  async function fillAddresses(){const s=session();if(!s||geocoding)return;const targets=ordered().filter(p=>!p.name&&!p.propertyKey&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));if(!targets.length){notify('住所を入れる地点がありません。名称が未設定の地点が対象です。');return;}if(!await ask(`${targets.length}件の地点について、座標から住所を調べて名称に入れますか？\n1件ずつ問い合わせるため時間がかかります（目安は1件あたり約1秒です）。\n名称が入力済みの地点と、許可物件の地点は対象外です。`))return;geocoding=true;const btn=$('fillAddresses'),original=btn.textContent;btn.disabled=true;let done=0,failed=0;try{for(const p of targets){btn.textContent=`住所検索中 ${done+failed+1}/${targets.length}`;try{const name=await lookupAddress(p.lat,p.lng);if(name){p.name=name;p.editedAt=Date.now();done++;}else failed++;}catch(error){failed++;}if(done+failed<targets.length)await new Promise(r=>setTimeout(r,1100));}}finally{geocoding=false;btn.textContent=original;btn.disabled=false;persist();render();notify(failed?`${done}件に住所を入れました。${failed}件は住所が分かりませんでした。`:`${done}件に住所を入れました。`);}}
  $('fillAddresses').onclick=fillAddresses;
  $('renumber').onclick=async()=>{if(!await ask('表示順のまま、1から連続した番号に整えますか？'))return;ordered().forEach((p,i)=>p.order=i+1);persist();render();};
- $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
+ $('deleteSession').onclick=async()=>{if(!await ask('この記録と含まれる地点をすべて削除しますか？ファイル保存したデータは残ります。'))return;data.sessions=data.sessions.filter(s=>s.id!==currentId);try{localStorage.removeItem(KEY+'-s-'+currentId);}catch(e){}currentId=data.sessions.at(-1)?.id||null;selectedId=null;state='idle';persist();render();};
  function newFileName(withTimes=true){
   const person=($('person').value.trim()||'担当者未設定').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,60);
   const date=$('date').value||session()?.date||today();
