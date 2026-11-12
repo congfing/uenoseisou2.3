@@ -41,7 +41,7 @@
    $('openPermitPicker').hidden=!active();document.querySelector('.identity').classList.toggle('permit-identity',active());
    $('permitPanel').hidden=!active();if(!active())return;
    const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected());
-   $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'}`:`地点 ${s?.stops.length||0}件`;
+   $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'} ― 物件名をタップで${selected.propertyKey?'付け替え':'この地点に付ける'}`:`地点 ${s?.stops.length||0}件`;
    if(ctx?.properties.length)initSelection(ctx);
    const total=ctx?.properties.length||0,checkedCount=total?ctx.properties.filter(p=>checks.has(p.key)).length:0,checkAll=$('permitCheckAll');
    checkAll.checked=total>0&&checkedCount===total;checkAll.indeterminate=checkedCount>0&&checkedCount<total;checkAll.disabled=!s||!total;
@@ -59,8 +59,31 @@
     const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
     const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);assignedSeq.delete(p.key);compactSeq(f);}render();};
     const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s;badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
-    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで地図を拡大';body.onclick=()=>{if(!api.focus)return;const f=fixedNumbers(context()),num=effNumber(p,f)??nextNumber(f),stop=api.session()?.stops.find(q=>q.order===num);if(stop)api.focus(stop.id);else api.notify(`地点 ${num} はまだありません。`);};body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
+    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで地図を拡大／選択中の地点に付ける';body.onclick=()=>{const sNow=api.session(),selStop=sNow?.stops.find(q=>q.id===api.selected()),mine=assigned.get(p.key);if(selStop&&mine===selStop){detachFrom(selStop);return;}if(selStop&&!mine){attachSelected(p,selStop);return;}if(!api.focus)return;const f=fixedNumbers(context()),num=effNumber(p,f)??nextNumber(f),stop=api.session()?.stops.find(q=>q.order===num);if(stop)api.focus(stop.id);else api.notify(`地点 ${num} はまだありません。`);};body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
    }
+  }
+  function clearProperty(point){point.name=point.previousName||'';delete point.previousName;delete point.propertyKey;delete point.propertyRegistration;delete point.propertyStaff;delete point.propertyDay;delete point.routeOrder;delete point.collectionCode;}
+  function attachSelected(property,point){
+   const s=api.session(),ctx=context();if(!s||!ctx)return;
+   const before=JSON.stringify(s.stops);
+   const holder=s.stops.find(q=>q.propertyKey===property.key);
+   if(holder&&holder!==point)clearProperty(holder);
+   const prevKey=point.propertyKey;
+   if(prevKey&&prevKey!==property.key){checks.delete(prevKey);assignedSeq.delete(prevKey);}
+   if(!point.propertyKey||point.previousName===undefined)point.previousName=point.name;
+   Object.assign(point,{propertyKey:property.key,propertyRegistration:property.registration,propertyStaff:property.staff,propertyDay:property.day,routeOrder:point.order,collectionCode:`${property.staff}${point.order}`,name:property.name,editedAt:Date.now()});
+   s.permitContext=JSON.parse(JSON.stringify(ctx));s.permitSyncedAt=Date.now();
+   checks.add(property.key);assignedSeq.delete(property.key);
+   if(!api.save()){s.stops=JSON.parse(before);api.render();api.notify('保存できませんでした。');return;}
+   api.render();api.notify(`「${property.name}」を地点 ${point.order} に付けました。`);
+  }
+  function detachFrom(point){
+   const s=api.session();if(!s||!point.propertyKey)return;
+   const before=JSON.stringify(s.stops),name=point.name,key=point.propertyKey;
+   clearProperty(point);point.editedAt=Date.now();
+   checks.delete(key);assignedSeq.delete(key);
+   if(!api.save()){s.stops=JSON.parse(before);api.render();api.notify('保存できませんでした。');return;}
+   api.render();api.notify(`地点 ${point.order} から「${name}」を外しました。`);
   }
   async function sync(){
    if(busy)return;
