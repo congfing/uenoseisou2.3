@@ -1547,6 +1547,7 @@
   const recorderApp = () => software.find((item) => item.locationRecorder) || null;
   const FLOAT_BAR_H = 30;
   let recorderRunning = false;
+  let recorderFloatPercent = 30;
   let recorderFloatBar = null;
   let recorderFloatPos = null;
 
@@ -1555,6 +1556,7 @@
     const data = event.data;
     if (!data || data.type !== "ueno-recording") return;
     recorderRunning = !!data.running;
+    if (Number.isInteger(data.floatPercent)) recorderFloatPercent = Math.min(30, Math.max(5, data.floatPercent));
     if (!recorderRunning) hideRecorderFloat();
   });
 
@@ -1619,11 +1621,16 @@
     if (!frame) return;
     if (frame.parentElement !== frameLayer) return;
     const bar = ensureRecorderFloatBar();
+    const ws = document.querySelector(".workspace").getBoundingClientRect();
+    const w = Math.round(ws.width * recorderFloatPercent / 100);
+    const h = Math.round(ws.height * recorderFloatPercent / 100);
     if (!recorderFloatPos) {
-      const ws = document.querySelector(".workspace").getBoundingClientRect();
-      const w = Math.min(210, Math.round(ws.width * 0.54));
-      const h = Math.min(320, Math.round(ws.height * 0.54));
       recorderFloatPos = { x: Math.max(0, ws.width - w - 10), y: Math.max(0, ws.height - h - 10), w, h };
+    } else {
+      recorderFloatPos.w = w;
+      recorderFloatPos.h = h;
+      recorderFloatPos.x = Math.min(Math.max(recorderFloatPos.x, -w + 64), ws.width - 64);
+      recorderFloatPos.y = Math.min(Math.max(recorderFloatPos.y, 0), ws.height - FLOAT_BAR_H);
     }
     frame.classList.remove("active");
     frame.classList.add("floating");
