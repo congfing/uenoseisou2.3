@@ -670,6 +670,7 @@
     user-select: none;
     -webkit-user-select: none;
     pointer-events: auto;
+    white-space: nowrap;
   }
   #recorderLogoBadge[hidden] {
     display: none;
@@ -680,6 +681,10 @@
     border-radius: 50%;
     background: #ff5f57;
     flex: 0 0 auto;
+    display: none;
+  }
+  #recorderLogoBadge.is-running .logo-dot {
+    display: block;
   }
   /* 記録中の地点登録を小さな浮動画面で残す（ソフトを切り替えても記録を続ける） */
   /* フレーム自体は frameLayer 内に置いたまま、大きさと位置だけ変える（要素を移すと iPhone で読み直しになり記録が止まるため） */
@@ -1623,6 +1628,7 @@
     const data = event.data;
     if (!data || data.type !== "ueno-recording") return;
     recorderRunning = !!data.running;
+    if (recorderLogoBadge) recorderLogoBadge.classList.toggle("is-running", recorderRunning);
     if (Number.isInteger(data.floatPercent)) recorderFloatPercent = Math.min(30, Math.max(5, data.floatPercent));
     if (!recorderRunning) hideRecorderFloat();
   });
@@ -1739,7 +1745,7 @@
     const dot = document.createElement("span");
     dot.className = "logo-dot";
     badge.appendChild(dot);
-    badge.appendChild(document.createTextNode("上野清掃2.3"));
+    badge.appendChild(document.createTextNode((recorderApp() && recorderApp().name) || "停車地点記録（テスト）"));
     frameLayer.appendChild(badge);
     recorderLogoBadge = badge;
     let drag = null;
@@ -1795,7 +1801,7 @@
     recorderLogoBadge.style.top = p.y + "px";
     if (frame && frame.classList.contains("logo-min")) {
       const ws = document.querySelector(".workspace").getBoundingClientRect();
-      const bw = recorderLogoBadge.offsetWidth || 118, bh = recorderLogoBadge.offsetHeight || 36;
+      const bw = recorderLogoBadge.offsetWidth || 168, bh = recorderLogoBadge.offsetHeight || 36;
       const s = Math.min((bw - 6) / ws.width, (bh - 6) / ws.height);
       frame.style.left = (p.x + 3) + "px";
       frame.style.top = (p.y + 3) + "px";
@@ -1803,7 +1809,7 @@
     }
   }
 
-  // 記録中の地点登録をロゴだけの表示にする。フレーム自体は描画し続けるので記録は止まらない。
+  // 地点登録をロゴだけの表示にする（記録中でなくても同じ）。フレーム自体は描画し続けるので記録は止まらない。
   function logoMinimizeRecorder() {
     const app = recorderApp();
     if (!app) return false;
@@ -1813,7 +1819,7 @@
     const badge = ensureRecorderLogoBadge();
     const ws = document.querySelector(".workspace").getBoundingClientRect();
     badge.hidden = false;
-    const bw = badge.offsetWidth || 118, bh = badge.offsetHeight || 36;
+    const bw = badge.offsetWidth || 168, bh = badge.offsetHeight || 36;
     if (!recorderLogoPos) {
       recorderLogoPos = { x: Math.max(0, ws.width - bw - 10), y: Math.max(0, ws.height - bh - 10) };
     }
@@ -1821,6 +1827,7 @@
     recorderLogoPos.y = Math.min(Math.max(recorderLogoPos.y, 0), Math.max(0, ws.height - bh));
     recorderLogoActive = true;
     recorderDismissed = false;
+    badge.classList.toggle("is-running", recorderRunning);
     frame.classList.remove("active");
     frame.classList.add("logo-min");
     clearZoomStyle(frame);
@@ -1846,7 +1853,12 @@
   // 前のソフトの片付け。記録中の地点登録だけは隠さず浮動画面で残す。
   function parkPrevious(app) {
     const rec = recorderApp();
-    if (rec && app.file === rec.file && recorderRunning) { if (!recorderLogoActive && !recorderDismissed) floatRecorderFrame(); return; }
+    if (rec && app.file === rec.file) {
+      // 地点登録はカードへ移さずロゴ最小化で残す（移すと読み直しになるため）。記録中でなくても同じ。
+      if (recorderLogoActive || recorderDismissed) return;
+      if (logoMinimizeRecorder()) return;
+      if (recorderRunning) { floatRecorderFrame(); return; }
+    }
     if (cards.has(app.file)) minimizeSoftware(app);
     else closeSoftwareApp(app);
   }
