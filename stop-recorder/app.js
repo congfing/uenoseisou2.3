@@ -9,8 +9,12 @@
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
- let data={version:1,settings:{...defaults},sessions:[]},storageOK=true;
- try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');}
+ let data={version:1,settings:{...defaults},sessions:[]},storageOK=true,restoredFromBackup=false,lastBackup=0;
+ function loadBackup(){try{const b=localStorage.getItem(KEY+'-bak');if(!b)return null;const d=validate(JSON.parse(b));return d.sessions.length?d:null;}catch(e){return null;}}
+ try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;}
+ if(!storageOK||!data.sessions.length){const bak=loadBackup();if(bak){data=bak;storageOK=true;restoredFromBackup=true;try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}}
+ if(!storageOK)notify('保存データを読み込めません。元のデータを上書きせず、ファイル読み込みから復旧してください。');
+ else if(restoredFromBackup)notify('一時保存から記録を復旧しました。');
  let currentId=Object.hasOwn(data,'activeSessionId')?(data.sessions.some(s=>s.id===data.activeSessionId)?data.activeSessionId:null):data.sessions.at(-1)?.id||null,state='idle',watch=null,detector=null,wake=null,selectedId=null,editId=null,lastPosition=null,lastPersist=0,token=0,map=null,markers=null,currentDot=null,storageWarned=false,pendingMapPoint=null;
  if(currentId&&typeof data.activeFileName==='string')fileNameOverride=data.activeFileName;
  const id=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -124,7 +128,7 @@
   commitElapsed();
   data.activeSessionId=currentId;data.activeFileName=fileNameOverride||session()?.sourceFile||null;data.lastViewedDay=today();
   refreshTotalTime();
-  try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();return true;}
+  try{localStorage.setItem(KEY,JSON.stringify(data));lastPersist=Date.now();if(Date.now()-lastBackup>=10000){lastBackup=Date.now();try{localStorage.setItem(KEY+'-bak',JSON.stringify(data));}catch(e){}}return true;}
   catch(e){if(state==='running')pause(false);if(!storageWarned){storageWarned=true;notify('端末への保存に失敗しました。ファイル保存で記録を退避してください。');}return false;}
  }
  let pendingConfirm=false;
