@@ -7,7 +7,7 @@
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:10,accuracy:5,moveSeconds:60,locateSeconds:0,endTime:'',pauseMinutes:0,floatPercent:30};
  const profileKeys=['seconds','radius','accuracy','locateSeconds','endTime','pauseMinutes'];
- const profileDefaults={commission:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0},permit:{seconds:45,radius:10,accuracy:8,locateSeconds:5,endTime:'12:30',pauseMinutes:10},travel:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0}};
+ const profileDefaults={commission:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0},permit:{seconds:45,radius:10,accuracy:8,locateSeconds:5,endTime:'',pauseMinutes:10},travel:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0}};
  function pickProfile(s){const o={};for(const k of profileKeys)o[k]=s?.[k];return o;}
  function validProfile(p,fallback){const o={...fallback};if(!p||typeof p!=='object')return o;
   if(Number.isInteger(p.seconds)&&p.seconds>=5&&p.seconds<=1800)o.seconds=p.seconds;
