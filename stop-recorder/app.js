@@ -403,6 +403,37 @@
   }catch(error){notify(error.name==='AbortError'?'保存をキャンセルしました。端末内の記録は残っています。':'保存できませんでした。'+error.message);}
  };
  $('emailFile').onclick=()=>shareRecord(true);
+ function locationMailText(){
+  const s=session();if(!s)return null;
+  const stops=(s.stops||[]).map((st,i)=>({st,i})).filter(x=>Number.isFinite(x.st.lat)&&Number.isFinite(x.st.lng)).sort((a,b)=>((a.st.order??a.i)-(b.st.order??b.i))).map(x=>x.st);
+  if(!stops.length)return null;
+  const course=s.permitContext?.staff?.[0]||'';
+  const lines=[`地点登録 ${s.date||today()}${s.person?`（${s.person}）`:''}`,`${course?course+' ':''}${stops.length}件`];
+  for(const st of stops){
+   let reg='-';
+   try{const k=JSON.parse(st.propertyKey||'null');if(Array.isArray(k)&&/^\d+$/.test(String(k[2])))reg=String(k[2]);}catch(e){}
+   lines.push(`${reg}\t${st.name||'(名称なし)'}\t${st.lat.toFixed(7)},${st.lng.toFixed(7)}`);
+  }
+  return lines.join('\n');
+ }
+ let pendingMailText='';
+ $('mailBody').onclick=()=>{
+  const text=locationMailText();
+  if(!text){notify('送信する地点がありません。');return;}
+  pendingMailText=text;
+  $('mailText').value=text;
+  $('mailCopyStatus').textContent=`${text.split('\n').length-2}件の地点データです。「本文をコピーしてメールを開く」を押してください。`;
+  $('mailTextDialog').showModal();
+ };
+ $('openTextMail').onclick=async()=>{
+  const s=session(),subject=`地点登録 ${s?.date||today()}${s?.person?`（${s.person}）`:''}`;
+  let copied=false;
+  try{await navigator.clipboard.writeText(pendingMailText);copied=true;}catch(e){}
+  $('mailTextDialog').close();
+  const short=pendingMailText.length<=1200;
+  location.href=`mailto:${mailTo()}?subject=${encodeURIComponent(subject)}${short?`&body=${encodeURIComponent(pendingMailText)}`:''}`;
+  notify(short?'メールを作成しました。本文に地点データが入っています。':copied?'本文をコピーしました。開いたメールに貼り付けて送信してください。':'メールを開きました。本文は「メール本文で送信」の欄からコピーしてください。');
+ };
  $('selectTxtName').onclick=()=>{
   if(state==='running'){notify('一時停止してからTXTファイルを選択してください。');return;}
   $('fileInput').click();
