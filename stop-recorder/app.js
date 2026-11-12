@@ -6,10 +6,28 @@
  const query=new URLSearchParams(location.search);if(!gitVersion&&query.get('edition')!=='local'&&query.get('embedded')!=='1'){window.top.location.replace(GIT_URL);return;}
  const $=id=>document.getElementById(id),KEY='stop-recorder-v1';
  const defaults={seconds:60,radius:10,accuracy:5,moveSeconds:60,locateSeconds:0,endTime:'',pauseMinutes:0,floatPercent:30};
+ const profileKeys=['seconds','radius','accuracy','locateSeconds','endTime','pauseMinutes'];
+ const profileDefaults={commission:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0},permit:{seconds:45,radius:10,accuracy:8,locateSeconds:5,endTime:'12:30',pauseMinutes:10},travel:{seconds:60,radius:10,accuracy:5,locateSeconds:0,endTime:'',pauseMinutes:0}};
+ function pickProfile(s){const o={};for(const k of profileKeys)o[k]=s?.[k];return o;}
+ function validProfile(p,fallback){const o={...fallback};if(!p||typeof p!=='object')return o;
+  if(Number.isInteger(p.seconds)&&p.seconds>=5&&p.seconds<=1800)o.seconds=p.seconds;
+  if(Number.isFinite(p.radius)&&p.radius>=10&&p.radius<=200)o.radius=p.radius;
+  if(Number.isFinite(p.accuracy)&&p.accuracy>=5&&p.accuracy<=200)o.accuracy=p.accuracy;
+  if(Number.isInteger(p.locateSeconds)&&(p.locateSeconds===0||(p.locateSeconds>=2&&p.locateSeconds<=30)))o.locateSeconds=p.locateSeconds;
+  if(typeof p.endTime==='string'&&(p.endTime===''||/^([01]\d|2[0-3]):[0-5]\d$/.test(p.endTime)))o.endTime=p.endTime;
+  if(Number.isInteger(p.pauseMinutes)&&p.pauseMinutes>=0&&p.pauseMinutes<=1440)o.pauseMinutes=p.pauseMinutes;
+  return o;}
+ function ensureProfiles(d){
+  const stored=(d.settingsProfiles&&typeof d.settingsProfiles==='object')?d.settingsProfiles:null;
+  const profiles={commission:validProfile(stored?.commission,profileDefaults.commission),permit:validProfile(stored?.permit,profileDefaults.permit),travel:validProfile(stored?.travel,profileDefaults.travel)};
+  if(!stored){const m=['commission','permit','travel'].includes(d.viewMode)?d.viewMode:'commission';profiles[m]=validProfile(pickProfile(d.settings),profiles[m]);}
+  d.settingsProfiles=profiles;return profiles;}
+ function captureProfile(mode){if(!data.settingsProfiles)ensureProfiles(data);if(profileDefaults[mode])data.settingsProfiles[mode]=pickProfile(data.settings);}
+ function applyProfile(mode){if(!data.settingsProfiles)ensureProfiles(data);const p=data.settingsProfiles[mode];if(p)Object.assign(data.settings,p);}
  let permit=null;
  let fileNameOverride=null;
  let countingFrom=null;
- let data={version:1,settings:{...defaults},sessions:[]},storageOK=true,restoredFromBackup=false,lastBackup=0;
+ let data={version:1,settings:{...defaults},settingsProfiles:JSON.parse(JSON.stringify(profileDefaults)),sessions:[]},storageOK=true,restoredFromBackup=false,lastBackup=0;
  function loadBackup(){try{const b=localStorage.getItem(KEY+'-bak');if(!b)return null;const d=validate(JSON.parse(b));return d.sessions.length?d:null;}catch(e){return null;}}
  try{const stored=localStorage.getItem(KEY);if(stored)data=validate(JSON.parse(stored));}catch(e){storageOK=false;}
  if(!storageOK||!data.sessions.length){const bak=loadBackup();if(bak){data=bak;storageOK=true;restoredFromBackup=true;try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}}
@@ -92,9 +110,11 @@
    if(state==='running')pause();
    if(!persist())return false;
   }
-  const previous={mode:data.viewMode,currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride};
+  ensureProfiles(data);
+  const previous={mode:data.viewMode,currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride,settings:{...data.settings},profiles:JSON.parse(JSON.stringify(data.settingsProfiles))};
   const destination=mode==='travel'?'travel':'stop',current=session()?.kind||(data.viewMode==='travel'?'travel':'stop');
   data.viewMode=mode;
+  captureProfile(previous.mode||'commission');applyProfile(mode);
   if(current!==destination){
    closeWatch();countingFrom=null;detector=null;lastPosition=null;selectedId=null;pendingMapPoint=null;
    const next=[...data.sessions].reverse().find(s=>(s.kind||'stop')===destination&&!s.backupOf);
@@ -104,7 +124,7 @@
    if(!next&&map)map.setView([34.768,136.132],12);
    $('candidate').textContent='停車時間 0:00';$('progressBar').style.width='0%';$('gps').textContent='GPS 未取得';
   }
-  if(!persist()){data.viewMode=previous.mode;({currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride}=previous);render();return false;}
+  if(!persist()){data.viewMode=previous.mode;Object.assign(data.settings,previous.settings);data.settingsProfiles=previous.profiles;({currentId,state,detector,lastPosition,selectedId,pendingMapPoint,fileNameOverride}=previous);render();return false;}
   setTimeout(()=>{map?.invalidateSize();fit();},0);return true;
  }
  function notify(text){$('message').hidden=!text;$('message').textContent=text;}
@@ -127,6 +147,7 @@
   if(typeof settings.endTime!=='string'||(settings.endTime!==''&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(settings.endTime)))settings.endTime=defaults.endTime;
   if(settings.floatPercent===undefined)settings.floatPercent=defaults.floatPercent;
   if(!Number.isInteger(settings.floatPercent)||settings.floatPercent<5||settings.floatPercent>30)settings.floatPercent=defaults.floatPercent;
+ ensureProfiles(d);
   const ids=new Set();
   for(const s of d.sessions){
    if(typeof s.id!=='string'||ids.has(s.id)||!/^\d{4}-\d{2}-\d{2}$/.test(s.date)||typeof s.person!=='string'||!Array.isArray(s.stops)||s.stops.length>50000)throw Error('記録の形式が違います');ids.add(s.id);
@@ -302,7 +323,7 @@
  setInterval(checkStillPause,1000);
  setInterval(tickTravel,1000);
  $('settingsButton').onclick=()=>{for(const k of Object.keys(defaults))$('settingsForm').elements[k].value=data.settings[k];$('stopSecondsSetting').hidden=$('stopRadiusSetting').hidden=travelView();$('travelIntervalSetting').hidden=!travelView();$('settingsDialog').showModal();};
- $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveSeconds:Number(f.elements.moveSeconds.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||''),pauseMinutes:Number(f.elements.pauseMinutes.value),floatPercent:Number(f.elements.floatPercent.value)};if(travelSession()&&state==='paused'){const s=session(),cur=s.travelSeconds??(s.travelMinutes?s.travelMinutes*60:null);if(cur!==data.settings.moveSeconds){s.travelSeconds=data.settings.moveSeconds;delete s.travelMinutes;const interval=travelInterval(s);s.nextTravelAtMs=(Math.floor(activeTimeMs(s)/interval)+1)*interval;}}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}persist();$('settingsDialog').close();updateControls();tickTravel();};
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const f=e.target;const lv=Number(f.elements.locateSeconds.value);data.settings={seconds:Number(f.elements.seconds.value),radius:Number(f.elements.radius.value),accuracy:Number(f.elements.accuracy.value),moveSeconds:Number(f.elements.moveSeconds.value),locateSeconds:(Number.isInteger(lv)&&(lv===0||(lv>=2&&lv<=30)))?lv:0,endTime:String(f.elements.endTime.value||''),pauseMinutes:Number(f.elements.pauseMinutes.value),floatPercent:Number(f.elements.floatPercent.value)};if(travelSession()&&state==='paused'){const s=session(),cur=s.travelSeconds??(s.travelMinutes?s.travelMinutes*60:null);if(cur!==data.settings.moveSeconds){s.travelSeconds=data.settings.moveSeconds;delete s.travelMinutes;const interval=travelInterval(s);s.nextTravelAtMs=(Math.floor(activeTimeMs(s)/interval)+1)*interval;}}if(detector){detector.settings=data.settings;detector.reset(lastPosition);}captureProfile(data.viewMode||'commission');persist();$('settingsDialog').close();updateControls();tickTravel();};
  function openEdit(id){const p=session().stops.find(p=>p.id===id);if(!p)return;editId=id;$('editForm').elements.order.max=session().stops.length;for(const k of ['order','name','lat','lng'])$('editForm').elements[k].value=p[k];$('editDialog').showModal();}
  $('editForm').onsubmit=e=>{e.preventDefault();const f=e.target,p=session()?.stops.find(p=>p.id===editId);if(!p)return;const next=Number(f.elements.order.value),old=p.order;const collision=session().stops.some(q=>q.id!==p.id&&q.order===next);
   if(collision)session().stops.forEach(q=>{if(q.id===p.id)return;if(next<old&&q.order>=next&&q.order<old)q.order++;else if(next>old&&q.order>old&&q.order<=next)q.order--;});
