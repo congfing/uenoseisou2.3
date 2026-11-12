@@ -637,6 +637,59 @@
     z-index: 20;
   }
 
+  /* 記録中の地点登録を小さな浮動画面で残す（ソフトを切り替えても記録を続ける） */
+  #recorderFloat {
+    position: absolute;
+    width: min(210px, 54vw);
+    height: min(320px, 54vh);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    background: var(--software-bg);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+  }
+  #recorderFloat[hidden] { display: none; }
+  #recorderFloatBar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #1f2937;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #recorderFloatBar button {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #recorderFloatBody { position: relative; flex: 1 1 auto; }
+  #recorderFloatBody .software-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    z-index: 1;
+  }
+
   /* ソフトを切り替えるときのスライド（消して作り直すのではなく、横から出し入れする） */
   @keyframes uenoSlideFromRight {
     from { transform: translate3d(100%, 0, 0); }
@@ -1304,6 +1357,8 @@
   }
 
   function closeSoftwareApp(app) {
+    const rec = recorderApp();
+    if (rec && app.file === rec.file) hideRecorderFloat();
     const frame = frames.get(app.file);
     if (frame) frame.remove();
     frames.delete(app.file);
@@ -1499,6 +1554,111 @@
     if (app) openSoftware(app, { slide: data.dir === "back" ? "back" : "forward" });
   });
 
+  // ===== 記録中の地点登録を浮動画面で残す =====
+  // 地点登録が記録中の間は、別ソフトへ切り替えても画面を隠さず小さい浮動画面で残し、
+  // 記録が一時停止しないようにする。バーを持てば場所を動かせる。
+  const recorderApp = () => software.find((item) => item.locationRecorder) || null;
+  let recorderRunning = false;
+  let recorderFloat = null;
+  let recorderFloatBody = null;
+  let recorderFloatPos = null;
+
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== "ueno-recording") return;
+    recorderRunning = !!data.running;
+  });
+
+  function ensureRecorderFloat() {
+    if (recorderFloat) return recorderFloat;
+    const box = document.createElement("div");
+    box.id = "recorderFloat";
+    box.hidden = true;
+    const bar = document.createElement("div");
+    bar.id = "recorderFloatBar";
+    const label = document.createElement("span");
+    label.textContent = "地点登録（記録中）";
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.textContent = "大きく開く";
+    openBtn.addEventListener("click", () => {
+      const app = recorderApp();
+      if (app) openSoftware(app);
+    });
+    bar.append(label, openBtn);
+    const body = document.createElement("div");
+    body.id = "recorderFloatBody";
+    box.append(bar, body);
+    frameLayer.appendChild(box);
+    recorderFloat = box;
+    recorderFloatBody = body;
+    let drag = null;
+    bar.addEventListener("pointerdown", (e) => {
+      if (e.target === openBtn) return;
+      const rect = box.getBoundingClientRect();
+      drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+      bar.setPointerCapture(e.pointerId);
+    });
+    bar.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const ws = document.querySelector(".workspace").getBoundingClientRect();
+      const rect = box.getBoundingClientRect();
+      let x = e.clientX - ws.left - drag.dx;
+      let y = e.clientY - ws.top - drag.dy;
+      x = Math.min(Math.max(x, -rect.width + 64), ws.width - 64);
+      y = Math.min(Math.max(y, 0), ws.height - 32);
+      recorderFloatPos = { x, y };
+      box.style.left = x + "px";
+      box.style.top = y + "px";
+    });
+    const endDrag = () => { drag = null; };
+    bar.addEventListener("pointerup", endDrag);
+    bar.addEventListener("pointercancel", endDrag);
+    return box;
+  }
+
+  function positionRecorderFloat(box) {
+    const ws = document.querySelector(".workspace").getBoundingClientRect();
+    const w = box.offsetWidth, h = box.offsetHeight;
+    if (!recorderFloatPos) recorderFloatPos = { x: Math.max(0, ws.width - w - 10), y: Math.max(0, ws.height - h - 10) };
+    const x = Math.min(Math.max(recorderFloatPos.x, -w + 64), ws.width - 64);
+    const y = Math.min(Math.max(recorderFloatPos.y, 0), ws.height - 32);
+    box.style.left = x + "px";
+    box.style.top = y + "px";
+  }
+
+  function floatRecorderFrame() {
+    const app = recorderApp();
+    if (!app) return;
+    const frame = frames.get(app.file);
+    if (!frame) return;
+    const box = ensureRecorderFloat();
+    frame.classList.remove("active");
+    clearZoomStyle(frame);
+    frame.style.removeProperty("left");
+    frame.style.removeProperty("top");
+    frame.style.removeProperty("--preview-width");
+    frame.style.removeProperty("--preview-height");
+    frame.style.removeProperty("--preview-scale");
+    frame.style.visibility = "visible";
+    recorderFloatBody.appendChild(frame);
+    box.hidden = false;
+    positionRecorderFloat(box);
+  }
+
+  function hideRecorderFloat() {
+    if (recorderFloat) recorderFloat.hidden = true;
+  }
+
+  // 前のソフトの片付け。記録中の地点登録だけは隠さず浮動画面で残す。
+  function parkPrevious(app) {
+    const rec = recorderApp();
+    if (rec && app.file === rec.file && recorderRunning) { floatRecorderFrame(); return; }
+    if (cards.has(app.file)) minimizeSoftware(app);
+    else closeSoftwareApp(app);
+  }
+
   const SLIDE_MS = 1000;
 
   function openSoftware(app, options) {
@@ -1512,11 +1672,9 @@
     const previous = activeApp && activeApp.file !== app.file ? activeApp : null;
     // スライドするときは、前のソフトを animation が終わってから片付ける。
     // （先に消すと背景が見えてしまうため）
-    if (previous && !slide) {
-      if (cards.has(previous.file)) minimizeSoftware(previous);
-      else closeSoftwareApp(previous);
-    }
+    if (previous && !slide) parkPrevious(previous);
     activeApp = app;
+    if (recorderApp() && app.file === recorderApp().file) hideRecorderFloat();
     currentZoom = savedZoom.get(app.file) || 100;
     const frame = frames.get(app.file) || createFrame(app);
     const previousFrame = previous ? frames.get(previous.file) : null;
@@ -1547,8 +1705,7 @@
       movingFrame.classList.add(movingClass);
       window.setTimeout(() => {
         // 先に片付けてからクラスを外す（一瞬元の位置に戻るのを防ぐ）
-        if (cards.has(previous.file)) minimizeSoftware(previous);
-        else closeSoftwareApp(previous);
+        parkPrevious(previous);
         activeApp = app; // 片付けで activeApp が消えるので戻す
         movingFrame.classList.remove("ueno-slide-forward", "ueno-slide-out-right");
       }, SLIDE_MS + 20);
@@ -1558,6 +1715,9 @@
     try {
       frame.contentWindow.postMessage({ type: "ueno-app-activated", file: app.file }, location.origin);
     } catch (error) {}
+    // 記録中の地点登録が裏に残っていたら、浮動画面で出し続ける
+    const recApp = recorderApp();
+    if (recApp && app.file !== recApp.file && recorderRunning) floatRecorderFrame();
   }
 
   function applyZoom(frame) {

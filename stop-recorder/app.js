@@ -128,6 +128,7 @@
  let pendingConfirm=false;
  function ask(text){if(pendingConfirm)return Promise.resolve(false);pendingConfirm=true;return new Promise(resolve=>{$('confirmText').textContent=text;const d=$('confirmDialog');const finish=v=>{pendingConfirm=false;d.close();resolve(v);};$('confirmCancel').onclick=()=>finish(false);$('confirmOK').onclick=()=>finish(true);d.oncancel=e=>{e.preventDefault();finish(false);};d.showModal();});}
  $('environmentLabel').textContent=gitVersion?'Git版':'Local版';
+ if(query.get('embedded')!=='1')$('openKeiryo').hidden=true;
  $('switchEnvironment').textContent=gitVersion?'Local版を開く':'Git版を開く';
  $('switchEnvironment').onclick=async()=>{
   const destination=gitVersion?'Local版':'Git版';
@@ -148,6 +149,7 @@
   $('threshold').textContent=travelView()?`記録間隔 ${travelInterval(session())/1000}秒`:'判定 '+duration(data.settings.seconds*1000);
   $('renumber').disabled=$('fillAddresses').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
   updateLocateTimer();
+  try{if(window.parent!==window)window.parent.postMessage({type:'ueno-recording',running:state==='running'},location.protocol==='file:'?'*':location.origin);}catch(e){}
  }
  function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
  let locateTimer=null,locateTimerSec=0,blackout=false;
@@ -445,6 +447,7 @@
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
  $('blackout').onclick=()=>{blackout=true;$('blackoutScreen').hidden=false;stopLocateTimer();};
+ $('openKeiryo').onclick=()=>{if(window.parent===window){notify('ランチャーから開いたときに使えます。');return;}window.parent.postMessage({type:'ueno-open-app',file:'index_3-20.html',dir:'forward'},location.protocol==='file:'?'*':location.origin);};
  $('blackoutExit').onclick=()=>{blackout=false;$('blackoutScreen').hidden=true;render();};
  if($('panelToggle')){
   let panelClosed=false;
