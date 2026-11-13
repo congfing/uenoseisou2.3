@@ -255,7 +255,7 @@
   selectedId=record.id;$('mapAddDialog').close();render();notify(`地点 ${record.order} を地図から登録しました。`);
  };
  function drawMap(){if(!map||blackout)return;markers.clearLayers();const points=ordered();if(points.length>1)L.polyline(points.map(p=>[p.lat,p.lng]),{color:'#6d7d76',weight:2,dashArray:'5 5'}).addTo(markers);
-  for(const p of points){const div=document.createElement('div');div.textContent=permit?.label(p)||String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':'')+(data.viewMode==='permit'?(p.propertyKey?' registered':' unregistered'):''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>pointActions(p.id)).addTo(markers);}
+  for(const p of points){const div=document.createElement('div');div.textContent=permit?.label(p)||String(p.order);const icon=L.divIcon({className:'pin'+(p.id===selectedId?' active':'')+(data.viewMode==='permit'?(p.propertyKey?' registered':' unregistered'):''),html:div,iconSize:[33,33],iconAnchor:[16,16]});L.marker([p.lat,p.lng],{icon,bubblingMouseEvents:false}).on('click',()=>{if(data.viewMode==='permit')focusStop(p.id);else pointActions(p.id);}).on('contextmenu',e=>{if(e.originalEvent)e.originalEvent.preventDefault();pointActions(p.id);}).addTo(markers);}
  }
  function fit(){if(!map)return;const points=ordered();if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])),{padding:[35,35],maxZoom:17});}
  function focusStop(id){const p=session()?.stops.find(p=>p.id===id);if(!p)return;selectedId=id;render();if(map)map.setView([p.lat,p.lng],17);$('list').querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});}

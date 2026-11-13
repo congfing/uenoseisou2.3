@@ -12,11 +12,11 @@
  }
  window.StopPermit={create(api){
   const $=id=>document.getElementById(id);
-  let latest=null,busy=false,checksSig=null,permitClosed=false;const checks=new Set();const assignedSeq=new Map();
+  let latest=null,busy=false,checksSig=null,permitClosed=false,pendingKey=null;const checks=new Set();const assignedSeq=new Map();
   try{permitClosed=localStorage.getItem('stop-recorder-permit-closed')==='1';}catch(error){}
   function applyPermitClosed(){document.body.classList.toggle('permit-closed',permitClosed);const b=$('permitToggle');if(b){b.textContent=permitClosed?'開く':'閉じる';b.setAttribute('aria-expanded',String(!permitClosed));}}
   function fixedNumbers(ctx){const map=new Map();const s=api.session();if(s&&ctx)for(const p of ctx.properties){const stop=s.stops.find(q=>q.propertyKey===p.key);if(stop)map.set(p.key,stop.order);}return map;}
-  function initSelection(ctx){if(!ctx?.properties?.length)return;const sig=(api.session()?.id||'')+'|'+(ctx.filename||'')+'|'+(ctx.staff||[]).join(',')+'|'+(ctx.days||[]).join(',');if(sig!==checksSig){checksSig=sig;assignedSeq.clear();checks.clear();for(const key of fixedNumbers(ctx).keys())checks.add(key);return;}const keys=new Set(ctx.properties.map(p=>p.key));for(const key of[...checks])if(!keys.has(key))checks.delete(key);for(const key of[...assignedSeq.keys()])if(!keys.has(key))assignedSeq.delete(key);}
+  function initSelection(ctx){if(!ctx?.properties?.length)return;const sig=(api.session()?.id||'')+'|'+(ctx.filename||'')+'|'+(ctx.staff||[]).join(',')+'|'+(ctx.days||[]).join(',');if(sig!==checksSig){checksSig=sig;assignedSeq.clear();checks.clear();pendingKey=null;for(const key of fixedNumbers(ctx).keys())checks.add(key);return;}const keys=new Set(ctx.properties.map(p=>p.key));for(const key of[...checks])if(!keys.has(key))checks.delete(key);for(const key of[...assignedSeq.keys()])if(!keys.has(key))assignedSeq.delete(key);if(pendingKey&&!keys.has(pendingKey))pendingKey=null;}
   function effNumber(p,fixed){return assignedSeq.get(p.key)??fixed.get(p.key)??null;}
   function reservedNumbers(){const map=new Map();const s=api.session();if(s)for(const stop of s.stops)if(stop.propertyKey&&!checks.has(stop.propertyKey))map.set(stop.order,stop.propertyKey);return map;}
   function nextNumber(fixed){const used=new Set([...fixed.values(),...assignedSeq.values(),...reservedNumbers().keys()]);let n=1;while(used.has(n))n++;return n;}
@@ -40,12 +40,12 @@
    document.querySelector('h1').textContent=api.mode()==='travel'?'移動記録（テスト）':'停車地点記録（テスト）';document.title=document.querySelector('h1').textContent;
    $('openPermitPicker').hidden=!active();document.querySelector('.identity').classList.toggle('permit-identity',active());
    $('permitPanel').hidden=!active();if(!active())return;
-   const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected());
-   $('permitSelection').textContent=selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'} ― 物件名をタップで${selected.propertyKey?'付け替え':'この地点に付ける'}`:`地点 ${s?.stops.length||0}件`;
+   const s=api.session(),ctx=context(),selected=s?.stops.find(p=>p.id===api.selected()),pendingProp=ctx?.properties.find(p=>p.key===pendingKey)||null;
+   $('permitSelection').textContent=pendingProp?(selected?`地点 ${label(selected)} に「${pendingProp.name}」 ― 「同期」で入力します`:`「${pendingProp.name}」を選択中 ― 地図で地点を選んでください`):selected?`選択地点 ${label(selected)}：${selected.name||'名称未設定'} ― 物件名をタップで選択`:`地点 ${s?.stops.length||0}件 ― 地点と物件名を選んで「同期」で入力`;
    if(ctx?.properties.length)initSelection(ctx);
    const total=ctx?.properties.length||0,checkedCount=total?ctx.properties.filter(p=>checks.has(p.key)).length:0,checkAll=$('permitCheckAll');
    checkAll.checked=total>0&&checkedCount===total;checkAll.indeterminate=checkedCount>0&&checkedCount<total;checkAll.disabled=!s||!total;
-   $('syncPermit').disabled=!s||!total||checkedCount===0;
+   $('syncPermit').disabled=!s||!total||(checkedCount===0&&!(pendingKey&&selected));
    const canAdd=!!s&&!!ctx?.active&&total>0;if($('permitAddProperty'))$('permitAddProperty').disabled=!canAdd;if($('permitNewName'))$('permitNewName').disabled=!canAdd;
    $('permitScope').textContent=ctx?`${(ctx.staff||[]).join('・')} ／ ${(ctx.days||[]).join('・')}　${ctx.properties.length}件`:'物件表の選択データなし';
    $('permitProperties').replaceChildren();
@@ -56,10 +56,10 @@
    const rows=ctx.properties.map(p=>({p,num:effNumber(p,fixed)})).sort((a,b)=>{const an=a.num??Infinity,bn=b.num??Infinity;if(an!==bn)return an-bn;return ctx.properties.indexOf(a.p)-ctx.properties.indexOf(b.p);});
    for(const {p,num} of rows){
     const match=assigned.get(p.key),synced=!!(match&&num!==null&&match.order===num&&match.routeOrder===num&&match.name===p.name);
-    const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'');row.dataset.key=p.key;
+    const row=document.createElement('div');row.className='permit-property'+(synced?' linked':'')+(p.key===pendingKey?' pending':'');row.dataset.key=p.key;
     const check=document.createElement('input');check.className='permit-check';check.type='checkbox';check.checked=checks.has(p.key);check.disabled=!s;check.setAttribute('aria-label',`${p.name}を同期対象にする`);check.onchange=()=>{const f=fixedNumbers(context());if(check.checked){checks.add(p.key);if(!f.has(p.key)&&!assignedSeq.has(p.key))assignedSeq.set(p.key,nextNumber(f));}else{checks.delete(p.key);assignedSeq.delete(p.key);compactSeq(f);}render();};
     const badge=document.createElement('button');badge.type='button';badge.className='permit-order-badge'+(num===null?' tentative':'');badge.textContent=String(num??next);badge.disabled=!s;badge.setAttribute('aria-label',num===null?`次にチェックすると ${next} 番。タップで番号を変更`:`${num} 番。タップで番号を変更`);badge.onclick=()=>{const c=context(),f=fixedNumbers(c);numKey=p.key;$('permitNumberText').textContent=`「${p.name}」を何番に入れますか？（次にチェックすると ${nextNumber(f)} 番です）`;$('permitNumberInput').value=effNumber(p,f)??nextNumber(f);$('permitNumberDialog').showModal();};
-    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで地図を拡大／選択中の地点に付ける';body.onclick=()=>{const sNow=api.session(),selStop=sNow?.stops.find(q=>q.id===api.selected()),mine=assigned.get(p.key);if(selStop&&!mine){attachSelected(p,selStop);return;}if(mine){if(api.focus)api.focus(mine.id);return;}if(!api.focus)return;const f=fixedNumbers(context()),num=effNumber(p,f)??nextNumber(f),stop=api.session()?.stops.find(q=>q.order===num);if(stop)api.focus(stop.id);else api.notify(`地点 ${num} はまだありません。`);};body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
+    const body=document.createElement('span'),name=document.createElement('span'),meta=document.createElement('small');name.textContent=p.name;meta.textContent=`${p.staff} ${p.day}${synced?' ／ 同期済み':''}`;body.className='permit-property-body';body.title='タップで選択（同期ボタンで入力）';body.onclick=()=>{pendingKey=p.key;const mine=assigned.get(p.key);if(mine&&api.focus)api.focus(mine.id);render();};;body.append(name,meta);row.append(check,badge,body);$('permitProperties').append(row);
    }
   }
   function clearProperty(point){point.name=point.previousName||'';delete point.previousName;delete point.propertyKey;delete point.propertyRegistration;delete point.propertyStaff;delete point.propertyDay;delete point.routeOrder;delete point.collectionCode;}
@@ -81,7 +81,7 @@
    const s=api.session();if(!s||!point.propertyKey)return;
    const before=JSON.stringify(s.stops),name=point.name,key=point.propertyKey;
    clearProperty(point);point.editedAt=Date.now();
-   checks.delete(key);assignedSeq.delete(key);
+   checks.delete(key);assignedSeq.delete(key);if(pendingKey===key)pendingKey=null;
    if(!api.save()){s.stops=JSON.parse(before);api.render();api.notify('保存できませんでした。');return;}
    api.render();api.notify(`地点 ${point.order} から「${name}」を外しました。`);
   }
@@ -89,6 +89,12 @@
    if(busy)return;
    const s=api.session(),ctx=context();
    if(!s||!ctx?.active||!ctx.properties.length){api.notify('先に地図の記録と担当者・曜日の物件リストを選択してください。');return;}
+   if(pendingKey){
+    const property=ctx.properties.find(p=>p.key===pendingKey),point=s.stops.find(q=>q.id===api.selected());
+    if(!property){pendingKey=null;api.notify('選択した物件がリストにありません。');return;}
+    if(!point){api.notify('先に地図（または一覧）で地点を選んでください。');return;}
+    pendingKey=null;attachSelected(property,point);return;
+   }
    initSelection(ctx);const fixed=fixedNumbers(ctx);const targets=ctx.properties.filter(p=>checks.has(p.key)).map(p=>({...p,order:effNumber(p,fixed)})),skipped=ctx.properties.length-targets.length;
    if(!targets.length){api.notify('チェックされた物件がありません。同期する物件にチェックを入れてください。');return;}
    const numbers=new Set(),points=new Map(s.stops.map(p=>[p.order,p])),problems=[];
