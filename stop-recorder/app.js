@@ -433,10 +433,12 @@
   if(!stops.length)return null;
   const course=s.permitContext?.staff?.[0]||'';
   const lines=[`地点登録 ${s.date||today()}${s.person?`（${s.person}）`:''}`,`${course?course+' ':''}${stops.length}件`];
-  for(const st of stops){
+  for(let idx=0;idx<stops.length;idx++){
+   const st=stops[idx];
+   const no=Number.isFinite(st.order)?st.order:idx+1;
    let reg='-';
    try{const k=JSON.parse(st.propertyKey||'null');if(Array.isArray(k)&&/^\d+$/.test(String(k[2])))reg=String(k[2]);}catch(e){}
-   lines.push(`${reg}\t${st.name||'(名称なし)'}\t${st.lat.toFixed(7)},${st.lng.toFixed(7)}`);
+   lines.push(`${no}\t${reg}\t${st.name||'(名称なし)'}\t${st.lat.toFixed(7)},${st.lng.toFixed(7)}`);
   }
   return lines.join('\n');
  }
