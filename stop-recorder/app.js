@@ -192,6 +192,7 @@
   $('renumber').disabled=$('fillAddresses').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
   updateLocateTimer();
   try{if(window.parent!==window)window.parent.postMessage({type:'ueno-recording',running:state==='running',floatPercent:data.settings.floatPercent},location.protocol==='file:'?'*':location.origin);}catch(e){}
+  updateBlackoutLabel();
  }
  function locateNow(){if(lastPosition&&map){map.setView([lastPosition.lat,lastPosition.lng],17);return true;}return false;}
  let locateTimer=null,locateTimerSec=0,blackout=false;
@@ -510,7 +511,8 @@
   $('publishedDialog').showModal();
  };
  $('fit').onclick=fit;$('locate').onclick=()=>{if(!locateNow())notify('現在地は開始後に取得します。');};
- $('blackout').onclick=()=>{blackout=true;$('blackoutScreen').hidden=false;stopLocateTimer();};
+ function updateBlackoutLabel(){if(blackout)$('blackoutExit').textContent=state==='running'?'地点記録中':'停止中';}
+ $('blackout').onclick=()=>{blackout=true;$('blackoutScreen').hidden=false;stopLocateTimer();updateBlackoutLabel();};
  $('openKeiryo').onclick=()=>{if(window.parent===window){notify('ランチャーから開いたときに使えます。');return;}window.parent.postMessage({type:'ueno-open-app',file:'index_3-20.html',dir:'forward'},location.protocol==='file:'?'*':location.origin);};
  $('blackoutExit').onclick=()=>{blackout=false;$('blackoutScreen').hidden=true;render();};
  if($('panelToggle')){
