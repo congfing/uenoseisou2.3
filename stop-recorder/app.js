@@ -189,7 +189,7 @@
   $('loadFile').disabled=state==='running';$('settingsButton').disabled=state==='running';
   $('status').textContent={idle:'待機中',running:'記録中',paused:'一時停止',finished:'終了'}[state];$('status').classList.toggle('running',state==='running');
   $('threshold').textContent=travelView()?`記録間隔 ${travelInterval(session())/1000}秒`:'判定 '+duration(data.settings.seconds*1000);
-  $('renumber').disabled=$('fillAddresses').disabled=$('deleteSession').disabled=!session()||state==='running'||state==='paused';
+  $('renumber').disabled=$('fillAddresses').disabled=!session()||state==='running';$('deleteSession').disabled=!session()||state==='running'||state==='paused';
   updateLocateTimer();
   try{if(window.parent!==window)window.parent.postMessage({type:'ueno-recording',running:state==='running',floatPercent:data.settings.floatPercent},location.protocol==='file:'?'*':location.origin);}catch(e){}
   updateBlackoutLabel();
