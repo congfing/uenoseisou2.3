@@ -215,7 +215,7 @@
   if(!s?.stops.length){const p=document.createElement('p');p.className='empty';p.textContent='記録地点はありません';list.append(p);}
   for(const stop of ordered()){
    const row=document.createElement('article');row.className='stop'+(selectedId===stop.id?' selected':'');row.dataset.id=stop.id;
-   const n=document.createElement('button');n.className='number';n.textContent=permit?.label(stop)||stop.order;n.title='地点の操作';n.onclick=()=>pointActions(stop.id);
+   const n=document.createElement('button');n.className='number';n.textContent=permit?.label(stop)||stop.order;n.title='地点を表示';n.onclick=()=>focusStop(stop.id);
    const body=document.createElement('div'),title=document.createElement('div'),meta=document.createElement('div');title.className='stop-title';title.textContent=stop.propertyName||stop.name||'名称未設定';meta.className='stop-meta';
    meta.textContent=stop.source==='map'?`地図から追加（停車時刻・GPS精度は未取得）\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}`:stop.source==='travel'?`記録時刻 ${time(stop.arrival)}${stop.manual?'（手動）':''}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`:`${time(stop.arrival)} ～ ${stop.departure?time(stop.departure):time(stop.last)}　停車 ${duration(stop.last-stop.arrival)}\n${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}　誤差 ${Math.round(stop.accuracy)}m`;const preLines=[];if(stop.propertyName&&stop.name)preLines.push(stop.name);if(stop.address)preLines.push(stop.address);if(preLines.length)meta.textContent=preLines.join('\n')+'\n'+meta.textContent;meta.style.whiteSpace='pre-line';body.append(title,meta);
    const actions=document.createElement('div');actions.className='stop-actions';
