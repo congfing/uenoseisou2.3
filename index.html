@@ -1865,6 +1865,18 @@
 
   const SLIDE_MS = 1000;
 
+  let frameShieldTimer = null;
+  // ロゴや浮動画面から地点登録を戻したとき、そのタップの残り（クリック）がフレーム内の
+  // 地図へ届いて誤タップにならないよう、復帰直後だけフレームの入力を受け付けない。
+  function shieldFrameInput(frame) {
+    frame.style.pointerEvents = "none";
+    if (frameShieldTimer) window.clearTimeout(frameShieldTimer);
+    frameShieldTimer = window.setTimeout(() => {
+      frameShieldTimer = null;
+      frame.style.pointerEvents = "";
+    }, 450);
+  }
+
   function openSoftware(app, options) {
     if (app.direct) {
       location.href = softwareRoot + encodeURI(app.file);
@@ -1878,6 +1890,8 @@
     // （先に消すと背景が見えてしまうため）
     if (previous && !slide) parkPrevious(previous);
     activeApp = app;
+    const recFrameBefore = recorderApp() && app.file === recorderApp().file ? frames.get(app.file) : null;
+    const recorderWasMinimized = !!(recFrameBefore && (recorderLogoActive || recorderDismissed || recFrameBefore.classList.contains("logo-min") || recFrameBefore.classList.contains("logo-gone") || recFrameBefore.classList.contains("floating")));
     if (recorderApp() && app.file === recorderApp().file) hideRecorderFloat();
     currentZoom = savedZoom.get(app.file) || 100;
     const frame = frames.get(app.file) || createFrame(app);
@@ -1890,6 +1904,7 @@
     frame.style.removeProperty("top");
     frame.style.removeProperty("visibility");
     frame.classList.add("active");
+    if (recorderWasMinimized) shieldFrameInput(frame);
     const appCard = cards.get(app.file);
     if (appCard) appCard.classList.add("active");
     applyZoom(frame);
