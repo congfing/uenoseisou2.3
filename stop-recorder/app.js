@@ -507,7 +507,7 @@
    notify(selected.ended?'TXTを開きました。保存名に開始・終了時刻を入れます。':'途中のTXTを開きました。「再開」で続けて記録できます。保存名に開始・終了時刻を入れます。');
   }catch(error){notify('ファイルを読み込めません：'+error.message);}
  }
- const publishedTxtFiles=['完成版_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_委託用_西山_南_2026-11-09（月）_開始083951_終了114533.txt','停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt','確定_許可物件用_西山_金属-_金属_2026-11-11（水）_開始083500_終了151846.txt','住所入り_許可物件用_川田(黒画面テスト)_2026-11-13（金）_開始103011_終了151623.txt','住所入り_許可物件用_西山伸一_2026-11-06（金）_開始111341_終了154636.txt','住所入り_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_許可物件用_西山_金属-_金属_2026-11-11（水）_開始083500_終了151846.txt'];
+ const publishedTxtFiles=['住所入り_委託用_西山_南_2026-11-09（月）_開始083951_終了114533.txt','停車地点記録_西山　南_2026-11-09（月）_開始083951_終了114533.txt','住所入り_許可物件用_川田(黒画面テスト)_2026-11-13（金）_開始103011_終了151623.txt','住所入り_許可物件用_西山伸一_2026-11-06（金）_開始111341_終了154636.txt','住所入り_許可物件用_西山_N-_火曜日_2026-11-10（火）_開始083446_終了143130.txt','住所入り_許可物件用_西山_金属-_金属_2026-11-11（水）_開始083500_終了151846.txt'];
  $('loadPublished').onclick=()=>{
   const list=$('publishedList');list.replaceChildren();
   for(const name of publishedTxtFiles){const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=async()=>{$('publishedDialog').close();try{const res=await fetch('../'+encodeURIComponent(name),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const blob=await res.blob();importTxtFile(new File([blob],name,{type:'text/plain'}));}catch(error){notify('GitのTXTを読み込めません：'+error.message);}};list.append(b);}
