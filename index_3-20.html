@@ -280,7 +280,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">📅 日付選択</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub">作業日を選択してください</div>
     <div class="card"><input type="date" id="dateInput" onchange="checkPastData(this.value)"></div>
@@ -300,7 +300,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">👤 担当者選択</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen2sub"></div>
     <div id="staffList"></div>
@@ -318,7 +318,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">🏢 物件項目編集<span class="count-badge" id="propCount"></span></div>
-      <button class="btn btn-secondary btn-sm" onclick="closePropertyListScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen3sub"></div>
     <div class="sort-hint" id="sortHint"></div>
@@ -340,7 +340,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">物件リスト２列<span class="count-badge" id="propCountA"></span></div>
-      <button class="btn btn-secondary btn-sm" onclick="closePropertyListScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen9sub"></div>
     <div class="property-list-a" id="propertyListA"></div>
@@ -355,7 +355,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" id="propEntryTitle" style="margin-bottom:0"></div>
-      <button class="btn btn-secondary btn-sm" onclick="closePropertyEntry()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub">各項目に数値を入力してください</div>
     <div id="inputFields"></div>
@@ -376,7 +376,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">✅ 確認・保存</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen5sub"></div>
     <div id="summaryContent"></div>
@@ -393,7 +393,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">📋 履歴</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub">過去の入力データを確認できます</div>
     <div id="historyList"></div>
@@ -405,7 +405,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">✉️ メール設定</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen7sub">送信先アドレスを最大4件登録できます</div>
 
@@ -441,7 +441,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">🔄 Excel 変換</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen8sub">履歴または保存テキストからExcelを作成します</div>
 
@@ -471,7 +471,7 @@
   <div style="padding-top:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="section-title" style="margin-bottom:0">⚙️ 設定</div>
-      <button class="btn btn-secondary btn-sm" onclick="closeCurrentTabScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div class="section-sub" id="screen0sub">物件の追加・担当者の管理</div>
 
@@ -528,7 +528,7 @@
       <div style="font-size:18px;font-weight:800;color:#000;display:flex;align-items:center;gap:6px">
         <span>🔢 メール列番号設定（本Sheet用）</span>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="closeColSettingScreen()" style="padding:6px 14px;font-size:13px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
+      <button class="btn btn-secondary" onclick="closeToHome()" style="padding:8px 16px;font-size:14px;font-weight:700;flex-shrink:0">✕ 閉じる</button>
     </div>
     <div style="font-size:12px;color:#000;margin-bottom:14px;line-height:1.5">
       メール本文に付与する列番号（[C列]など）を設定・変更します。
@@ -2473,6 +2473,14 @@ function embeddedReturnApp(){
 }
 function hasColviewReturn(){
   return !!(embeddedReturnApp() || colviewCloseTab || colviewReturnUrl);
+}
+function closeToHome(){
+  // 物件表から開かれた場合は物件表へ戻る。それ以外はランチャーのHomeへ戻る。
+  if(returnToColviewIfRequested()) return;
+  if(window.parent && window.parent !== window){
+    try { window.parent.postMessage({ type:'closeSoftware' }, '*'); return; } catch(e){}
+  }
+  location.href = 'index.html';
 }
 function returnToColviewIfRequested(){
   const panelApp = embeddedReturnApp();
