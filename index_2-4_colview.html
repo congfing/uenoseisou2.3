@@ -3174,14 +3174,15 @@ function sharedGeoStatus(registration){return window.sharedPropertyGeoStatus?.[S
 function updateGeoButtonState(btn, name) {
   const g = getGeo(name);
   const shared=sharedGeoStatus(btn.dataset.registration);
+  const sharedPoint=sharedGeoPoint(btn.dataset.registration);
   btn.disabled = false;
-  if (g||shared) {
+  if (g||shared||sharedPoint) {
     btn.textContent = '登録済み';
     btn.style.setProperty('color', '#c62828', 'important');
     btn.classList.add('registered');
     // 入力欄と同じ方法で指定しないと、環境によってグレーが反映されない。
     btn.style.setProperty('background-color', '#ffffff', 'important');
-    btn.title = shared?`共有の登録済み地点（${shared.at}）`: `${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`;
+    btn.title = shared?`共有の登録済み地点（${shared.at}）`: g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}（${g.at || ''}）押すと解除します`:'共有の登録済み地点';
   } else {
     btn.textContent = '地点登録';
     btn.style.removeProperty('color');
@@ -3468,7 +3469,7 @@ function geoRegisteredCount() {
   let done = 0;
   displayedAssignmentRows.forEach(item => {
     const nm = propertyCol >= 0 ? String(item.row[propertyCol] || '').trim() : '';
-    if (nm && (store[nm]||sharedGeoStatus(item.row[findHeaderIndex(['登録番号'])]))) done++;
+    if (nm && (store[nm]||sharedGeoStatus(item.row[findHeaderIndex(['登録番号'])])||sharedGeoPoint(item.row[findHeaderIndex(['登録番号'])]))) done++;
   });
   return { done, total };
 }
@@ -3477,6 +3478,7 @@ async function registerGeoPoint(btn, name) {
   if (!name) { showToast('物件名が取得できません'); return; }
   const shared=sharedGeoStatus(btn.dataset.registration);
   if(shared){alert(`この物件は登録済みです（${shared.at}）。\n重複登録を防ぐため、新たな地点登録は行いません。修正が必要な場合はお知らせください。`);return;}
+  if(sharedGeoPoint(btn.dataset.registration)){alert(`この物件は登録済みです。\n重複登録を防ぐため、新たな地点登録は行いません。修正が必要な場合はお知らせください。`);return;}
   // 登録済みをもう一度押したら解除（間違えて押したときのやり直し用）
   if (getGeo(name)) {
     if (!await propertyConfirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`)) return;
