@@ -14,8 +14,6 @@
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { overscroll-behavior-x: contain; margin:0; font-family:'Hiragino Sans','ヒラギノ角ゴ ProN','Meiryo','メイリオ',sans-serif; font-size:13px; font-weight:400; }
@@ -194,12 +192,9 @@
   }
   .geo-map-btn:active { font-weight:900; }
   /* 地図ダイアログ */
-  #geoMapDialog { width:min(700px,calc(100% - 24px)); max-height:90dvh; padding:0; border:1px solid #999; background:#fff; color:#000; }
+  #geoMapDialog { width:fit-content; max-width:calc(100% - 24px); max-height:90dvh; padding:0; border:1px solid #999; background:#fff; color:#000; }
   #geoMapDialog .geo-map-head { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #aaa; }
   #geoMapDialog h2 { margin:0; font-size:16px; flex:1; min-width:0; overflow-wrap:anywhere; }
-  #geoMap { height:52dvh; min-height:260px; background:#e8e8e8; }
-  .geo-map-wrap { position:relative; }
-  #geoMapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:13px; pointer-events:none; z-index:800; text-align:center; padding:0 12px; }
   #geoMapMeta { padding:10px 12px 0; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
   #geoMapDialog .geo-map-actions { display:flex; flex-wrap:wrap; gap:10px; padding:12px; }
   #geoMapDialog .geo-map-actions button, #geoMapDialog .geo-map-actions a {
@@ -3212,65 +3207,28 @@ function resolveGeoPoint(name, registration){
   return null;
 }
 
-let geoMapObj=null, geoMapMarker=null, geoTileLayer=null, geoLoadTimer=null;
 function openGeoMap(btn, name){
   const registration=btn.dataset.registration||'';
   const point=resolveGeoPoint(name, registration);
-  const shared=sharedGeoStatus(registration);
   const dlg=document.getElementById('geoMapDialog');
-  document.getElementById('geoMapTitle').textContent=name||'地図';
+  document.getElementById('geoMapTitle').textContent=name||'map';
   const meta=document.getElementById('geoMapMeta');
   const google=document.getElementById('geoMapGoogle');
-  const regBtn=document.getElementById('geoMapRegister');
-  const unregBtn=document.getElementById('geoMapUnregister');
-  const regPeer=btn.closest('tr')?.querySelector('.geo-register-btn')||null;
-  const loading=document.getElementById('geoMapLoading');
-  if(loading){ loading.textContent='地図を読み込み中…'; loading.style.display='flex'; }
-  if(geoLoadTimer){ clearTimeout(geoLoadTimer); geoLoadTimer=null; }
-  geoLoadTimer=setTimeout(()=>{ if(loading&&!dlg.querySelector('.leaflet-tile-loaded')){ loading.textContent='地図データを読み込めませんでした。通信状態を確認してください。'; loading.style.display='flex'; } }, 9000);
   if(point){
     meta.textContent=`${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}${point.acc?`（精度約${point.acc}m）`:''}${point.at?`　登録：${point.at}`:''}${point.source==='shared'?'　共有の登録地点':''}`;
-    google.style.display='';
     google.href=`https://www.google.com/maps?q=${point.lat},${point.lng}`;
+    google.style.display='';
+    // すぐにGoogleマップを開く。前の画面へ戻れるよう、ダイアログは残す。
+    window.open(google.href,'_blank');
   } else {
-    meta.textContent=shared?`共有で登録済み（${shared.at}）ですが、この端末に座標データがありません。`:'この物件は地点が未登録です。';
+    meta.textContent='この物件は地点が未登録です。';
     google.style.display='none';
   }
-  regBtn.style.display=(!point&&!shared&&regPeer)?'':'none';
-  unregBtn.style.display=(point&&point.source==='local')?'':'none';
-  regBtn.onclick=()=>{dlg.close();registerGeoPoint(regPeer,name);};
-  unregBtn.onclick=async()=>{
-    if(!await propertyConfirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`))return;
-    const store=loadGeoStore();delete store[name];saveGeoStore(store);
-    if(regPeer)updateGeoButtonState(regPeer,name);
-    dlg.close();
-    const c=geoRegisteredCount();
-    showToast(`${name} の地点登録を解除しました　${c.done}/${c.total}件`);
-  };
   document.getElementById('geoMapClose').onclick=()=>dlg.close();
   dlg.onclose=()=>{
     btn.style.display = resolveGeoPoint(name, registration) ? '' : 'none';
   };
   if(typeof dlg.showModal==='function'&&!dlg.open)dlg.showModal();
-  const renderGeoMap=()=>{
-    if(!window.L){ if(loading){ loading.textContent='地図を表示できませんでした（地図ライブラリ未読込）'; loading.style.display='flex'; } return; }
-    if(!geoMapObj){
-      geoMapObj=L.map('geoMap');
-      geoTileLayer=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
-      geoTileLayer.on('load',()=>{ if(loading)loading.style.display='none'; });
-      geoTileLayer.addTo(geoMapObj);
-    }
-    geoMapObj.invalidateSize();
-    if(geoMapMarker){geoMapObj.removeLayer(geoMapMarker);geoMapMarker=null;}
-    if(point){
-      geoMapObj.setView([point.lat,point.lng],16);
-      geoMapMarker=L.circleMarker([point.lat,point.lng],{radius:10,color:'#c62828',weight:3,fillColor:'#ff5252',fillOpacity:0.7}).addTo(geoMapObj);
-    } else {
-      geoMapObj.setView([34.768,136.132],12);
-    }
-  };
-  requestAnimationFrame(()=>setTimeout(renderGeoMap,60));
-  setTimeout(()=>{if(geoMapObj)geoMapObj.invalidateSize();},400);
 }
 
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
@@ -4577,14 +4535,11 @@ window._colviewCtx = {
 </script>
 
 <dialog id="geoMapDialog">
-  <div class="geo-map-head"><h2 id="geoMapTitle">地図</h2></div>
-  <div class="geo-map-wrap"><div id="geoMap"></div><div id="geoMapLoading">地図を読み込み中…</div></div>
+  <div class="geo-map-head"><h2 id="geoMapTitle">map</h2></div>
   <div id="geoMapMeta"></div>
   <div class="geo-map-actions">
     <a id="geoMapGoogle" href="#" target="_blank" rel="noopener">Googleマップで開く</a>
-    <button type="button" id="geoMapRegister">現在地を登録</button>
-    <button type="button" id="geoMapUnregister">登録を解除</button>
-    <button type="button" id="geoMapClose">閉じる</button>
+    <button type="button" id="geoMapClose">戻る</button>
   </div>
 </dialog>
 
