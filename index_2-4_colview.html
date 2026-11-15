@@ -4198,6 +4198,20 @@ document.getElementById('sdlgCancel').addEventListener('click', () => {
 async function openLastUsedFile() {
   if (location.port === '9300') {
     try {
+      // 最初に開くファイルが古くならないよう、まずGitHubの最新を取りにいく。
+      const gh = await fetch(GITHUB_RAW_BASE + encodeURIComponent(DEFAULT_GITHUB_XLSX) + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!gh.ok) throw new Error('HTTP ' + gh.status);
+      const ghBuf = await gh.arrayBuffer();
+      loadWorkbookData(ghBuf, DEFAULT_GITHUB_XLSX, 'GitHub: ' + GITHUB_REPO_LABEL);
+      try {
+        localStorage.setItem(LAST_FILE_SOURCE_KEY, JSON.stringify({ type:'git', filename:DEFAULT_GITHUB_XLSX }));
+      } catch (e) {}
+      fetchGitHubFileList(false);
+      return;
+    } catch (e) {
+      console.warn('GitHubの最新物件表を取得できませんでした。ローカルサーバーから読み込みます:', e);
+    }
+    try {
       const response = await fetch(DEFAULT_GITHUB_XLSX + '?t=' + Date.now(), { cache: 'no-store' });
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const buf = await response.arrayBuffer();
