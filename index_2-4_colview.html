@@ -3709,12 +3709,12 @@ function renderTable() {
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
   htr.appendChild(thN);
   if (assignmentFilter.active) {
-    ['計量', '地区名', '地図', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
+    ['計量', '地区名', 'map', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
       if (label === '計量') th.className = 'keiryou-quick-cell';
-      if (label === '地図') th.className = 'geo-map-cell';
+      if (label === 'map') th.className = 'geo-map-cell';
       if (label === '物件名') th.className = 'property-name-cell';
       if (label === '収集順') th.className = 'collection-order-cell';
       if (label === '収集時間') th.className = 'collection-time-cell';
@@ -3739,7 +3739,7 @@ function renderTable() {
       htr.appendChild(th);
       if (currentSheetName !== '土曜日許可物件表（休出用）' && ['地区', '地区名'].includes(String(headers[ci] || '').trim())) {
         const mth = document.createElement('th');
-        mth.textContent = '地図';
+        mth.textContent = 'map';
         mth.style.cursor = 'default';
         mth.className = 'geo-map-cell';
         htr.appendChild(mth);
@@ -3800,7 +3800,7 @@ function renderTable() {
       const mapBtn = document.createElement('button');
       mapBtn.type = 'button';
       mapBtn.className = 'geo-map-btn';
-      mapBtn.textContent = '地図';
+      mapBtn.textContent = 'map';
       const mapRegistrationCol = findHeaderIndex(['登録番号']);
       if (mapRegistrationCol >= 0) mapBtn.dataset.registration = String(row[mapRegistrationCol] ?? '');
       mapBtn.setAttribute('aria-label', `${tdProperty.textContent}の地図`);
@@ -3919,7 +3919,7 @@ function renderTable() {
           const mapBtn = document.createElement('button');
           mapBtn.type = 'button';
           mapBtn.className = 'geo-map-btn';
-          mapBtn.textContent = '地図';
+          mapBtn.textContent = 'map';
           const nPropCol = findHeaderIndex(['契約物件', '物件名', '名前']);
           const nRegCol = findHeaderIndex(['登録番号']);
           const nName = nPropCol >= 0 ? String(row[nPropCol] || '').trim() : '';
