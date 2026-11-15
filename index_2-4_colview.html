@@ -3193,7 +3193,10 @@ function updateGeoButtonState(btn, name) {
     btn.title = 'ここで押すと現在地をこの物件の座標として登録します';
   }
   const mapPeer = btn.closest('tr')?.querySelector('.geo-map-btn');
-  if (mapPeer) mapPeer.style.color = resolveGeoPoint(name, btn.dataset.registration || '') ? '#1a9e4b' : '';
+  if (mapPeer) {
+    if (resolveGeoPoint(name, btn.dataset.registration || '')) mapPeer.style.setProperty('color', '#1a9e4b', 'important');
+    else mapPeer.style.removeProperty('color');
+  }
 }
 
 function sharedGeoPoint(registration){return window.sharedPropertyGeoPoints?.[String(registration)]||null;}
@@ -3240,7 +3243,10 @@ function openGeoMap(btn, name){
     showToast(`${name} の地点登録を解除しました　${c.done}/${c.total}件`);
   };
   document.getElementById('geoMapClose').onclick=()=>dlg.close();
-  dlg.onclose=()=>{btn.style.color=resolveGeoPoint(name, registration)?'#1a9e4b':'';};
+  dlg.onclose=()=>{
+    if (resolveGeoPoint(name, registration)) btn.style.setProperty('color', '#1a9e4b', 'important');
+    else btn.style.removeProperty('color');
+  };
   if(typeof dlg.showModal==='function'&&!dlg.open)dlg.showModal();
   const renderGeoMap=()=>{
     if(!window.L)return;
@@ -3800,7 +3806,7 @@ function renderTable() {
       const mapRegistrationCol = findHeaderIndex(['登録番号']);
       if (mapRegistrationCol >= 0) mapBtn.dataset.registration = String(row[mapRegistrationCol] ?? '');
       mapBtn.setAttribute('aria-label', `${tdProperty.textContent}の地図`);
-      if (resolveGeoPoint(tdProperty.textContent, mapBtn.dataset.registration || '')) mapBtn.style.color = '#1a9e4b';
+      if (resolveGeoPoint(tdProperty.textContent, mapBtn.dataset.registration || '')) mapBtn.style.setProperty('color', '#1a9e4b', 'important');
       mapBtn.addEventListener('click', () => openGeoMap(mapBtn, tdProperty.textContent));
       tdMap.appendChild(mapBtn);
       const tdKeiryou = document.createElement('td');
@@ -3921,7 +3927,7 @@ function renderTable() {
           const nName = nPropCol >= 0 ? String(row[nPropCol] || '').trim() : '';
           if (nRegCol >= 0) mapBtn.dataset.registration = String(row[nRegCol] ?? '');
           mapBtn.setAttribute('aria-label', `${nName}の地図`);
-          if (resolveGeoPoint(nName, mapBtn.dataset.registration || '')) mapBtn.style.color = '#1a9e4b';
+          if (resolveGeoPoint(nName, mapBtn.dataset.registration || '')) mapBtn.style.setProperty('color', '#1a9e4b', 'important');
           mapBtn.addEventListener('click', () => openGeoMap(mapBtn, nName));
           tdMap.appendChild(mapBtn);
           tr.appendChild(tdMap);
