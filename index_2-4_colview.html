@@ -197,6 +197,9 @@
   #appShrink.shrunk { position:fixed; top:10px; left:10px; z-index:960; width:100vw; height:100vh; overflow:hidden; transform:scale(0.32); transform-origin:top left; background:#fff; }
   #appShrinkFrame { position:fixed; top:10px; left:10px; width:32vw; height:32vh; z-index:970; border:2px solid #222; box-sizing:border-box; cursor:pointer; }
   #appShrinkFrame .shrink-hint { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; text-align:center; padding:4px 0; }
+  /* ランチャーのテーマ注入（全要素の背景を!importantで上書き）に勝つため、戻る枠は透明を!importantで指定する */
+  #appShrinkFrame { background:transparent !important; }
+  #appShrinkFrame .shrink-hint { background:rgba(0,0,0,0.65) !important; color:#fff !important; }
   body.map-open { overflow:hidden; }
   /* 計量物件だけに出る、計量データ入力（3-20）を開くボタン */
   .keiryou-open-btn {
