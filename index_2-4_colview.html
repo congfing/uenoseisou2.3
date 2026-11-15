@@ -191,13 +191,6 @@
     white-space:nowrap;
   }
   .geo-map-btn:active { font-weight:900; }
-  /* 地図表示中は物件表の画面を縮小し、タップで戻る */
-  #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
-  #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
-  #appShrink.shrunk { position:fixed; top:10px; left:10px; z-index:960; width:100vw; height:100vh; overflow:hidden; transform:scale(0.32); transform-origin:top left; background:#fff; }
-  #appShrinkFrame { position:fixed; top:10px; left:10px; width:32vw; height:32vh; z-index:970; border:2px solid #222; box-sizing:border-box; cursor:pointer; }
-  #appShrinkFrame .shrink-hint { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; text-align:center; padding:4px 0; }
-  body.map-open { overflow:hidden; }
   /* 計量物件だけに出る、計量データ入力（3-20）を開くボタン */
   .keiryou-open-btn {
     padding:5px 8px; border:1px solid #14558f; border-radius:4px;
@@ -3206,35 +3199,12 @@ function resolveGeoPoint(name, registration){
   return null;
 }
 
-// 物件表の主要部分を1つの包みに入れる（地図表示中の縮小表示のため）
-const appShrinkEl = document.createElement('div');
-appShrinkEl.id = 'appShrink';
-{
-  const headerEl = document.getElementById('app-header');
-  if (headerEl) headerEl.parentNode.insertBefore(appShrinkEl, headerEl);
-  ['app-header', 'toolbar', 'tableWrapper'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) appShrinkEl.appendChild(el);
-  });
-}
-
 function openGeoMap(btn, name){
   const registration=btn.dataset.registration||'';
   const point=resolveGeoPoint(name, registration);
   if(!point) return;
-  // Googleマップを画面いっぱいに開き、物件表は小さく縮小して残す。縮小した物件表をタップすると戻る。
-  document.getElementById('gmapFrame').src=`https://www.google.com/maps?q=${point.lat},${point.lng}&z=17&output=embed`;
-  document.getElementById('gmapLayer').hidden=false;
-  appShrinkEl.classList.add('shrunk');
-  document.getElementById('appShrinkFrame').hidden=false;
-  document.body.classList.add('map-open');
-}
-function closeGeoMap(){
-  document.getElementById('gmapLayer').hidden=true;
-  document.getElementById('gmapFrame').src='about:blank';
-  appShrinkEl.classList.remove('shrunk');
-  document.getElementById('appShrinkFrame').hidden=true;
-  document.body.classList.remove('map-open');
+  // Googleマップはブラウザーのタブで開く。戻るときはブラウザーのタブを切り替える。
+  window.open(`https://www.google.com/maps?q=${point.lat},${point.lng}`, '_blank');
 }
 
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
@@ -4555,8 +4525,6 @@ window._colviewCtx = {
 })();
 </script>
 
-<div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ"></iframe></div>
-<div id="appShrinkFrame" hidden onclick="closeGeoMap()"><div class="shrink-hint">タップで戻る</div></div>
 
 <script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
 <script>document.write('<script src="property-geo-points.js?ts=' + Date.now() + '"><\/script>');</script>
