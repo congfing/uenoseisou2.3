@@ -463,6 +463,7 @@
   if(window.parent!==window){window.parent.postMessage({type:'closeSoftware'},location.origin==='null'?'*':location.origin);return;}
   window.close();notify('記録を保存して終了しました。このタブを閉じてください。');
  };
+ $('closeAppTop').onclick=()=>$('closeApp').click();
  $('pasteMail').onclick=()=>{$('pasteText').value='';$('pasteDialog').showModal();};
  $('pasteForm').onsubmit=async e=>{e.preventDefault();if(state==='running'||state==='paused'){notify('記録を終了してから読み込んでください。');return;}try{
   const text=$('pasteText').value;if(text.length>20000000)throw Error('本文が大きすぎます');
