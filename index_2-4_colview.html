@@ -14,6 +14,8 @@
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { overscroll-behavior-x: contain; margin:0; font-family:'Hiragino Sans','ヒラギノ角ゴ ProN','Meiryo','メイリオ',sans-serif; font-size:13px; font-weight:400; }
@@ -183,6 +185,24 @@
   }
   .geo-register-btn:active { font-weight:900; }
   .geo-register-btn.registered { background:#d9d9d9 !important; }
+  /* 地図列 */
+  .geo-map-cell { text-align:center; }
+  .geo-map-btn {
+    padding:5px 8px; border:1px solid #222; border-radius:4px;
+    background:#fff; color:#111; font:inherit; font-weight:700; cursor:pointer;
+    white-space:nowrap;
+  }
+  .geo-map-btn:active { font-weight:900; }
+  /* 地図ダイアログ */
+  #geoMapDialog { width:min(700px,calc(100% - 24px)); max-height:90dvh; padding:0; border:1px solid #999; background:#fff; color:#000; }
+  #geoMapDialog .geo-map-head { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #aaa; }
+  #geoMapDialog h2 { margin:0; font-size:16px; flex:1; min-width:0; overflow-wrap:anywhere; }
+  #geoMap { height:52dvh; min-height:260px; background:#e8e8e8; }
+  #geoMapMeta { padding:10px 12px 0; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+  #geoMapDialog .geo-map-actions { display:flex; flex-wrap:wrap; gap:10px; padding:12px; }
+  #geoMapDialog .geo-map-actions button, #geoMapDialog .geo-map-actions a {
+    padding:8px 12px; min-height:42px; border:1px solid #000; border-radius:4px; font:inherit; background:#fff; color:#000; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center;
+  }
   /* 計量物件だけに出る、計量データ入力（3-20）を開くボタン */
   .keiryou-open-btn {
     padding:5px 8px; border:1px solid #14558f; border-radius:4px;
@@ -491,6 +511,7 @@
     .collection-order-input { width:52px; min-width:52px; }
     .collection-order-change,
     .geo-register-btn,
+    .geo-map-btn,
     .keiryou-open-btn { padding:5px 7px; font-size:12px; }
     #dataTable th.keiryou-quick-cell,
     #dataTable td.keiryou-quick-cell {
@@ -3173,6 +3194,68 @@ function updateGeoButtonState(btn, name) {
   }
 }
 
+function sharedGeoPoint(registration){return window.sharedPropertyGeoPoints?.[String(registration)]||null;}
+function resolveGeoPoint(name, registration){
+  const g=getGeo(name);
+  if(g&&Number.isFinite(g.lat)&&Number.isFinite(g.lng))return {lat:g.lat,lng:g.lng,acc:g.acc,at:g.at,source:'local'};
+  const p=sharedGeoPoint(registration);
+  if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){
+    const st=sharedGeoStatus(registration);
+    return {lat:p.lat,lng:p.lng,acc:null,at:st?st.at:'',source:'shared'};
+  }
+  return null;
+}
+
+let geoMapObj=null, geoMapMarker=null;
+function openGeoMap(btn, name){
+  const registration=btn.dataset.registration||'';
+  const point=resolveGeoPoint(name, registration);
+  const shared=sharedGeoStatus(registration);
+  const dlg=document.getElementById('geoMapDialog');
+  document.getElementById('geoMapTitle').textContent=name||'地図';
+  const meta=document.getElementById('geoMapMeta');
+  const google=document.getElementById('geoMapGoogle');
+  const regBtn=document.getElementById('geoMapRegister');
+  const unregBtn=document.getElementById('geoMapUnregister');
+  const regPeer=btn.closest('tr')?.querySelector('.geo-register-btn')||null;
+  if(point){
+    meta.textContent=`${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}${point.acc?`（精度約${point.acc}m）`:''}${point.at?`　登録：${point.at}`:''}${point.source==='shared'?'　共有の登録地点':''}`;
+    google.style.display='';
+    google.href=`https://www.google.com/maps?q=${point.lat},${point.lng}`;
+  } else {
+    meta.textContent=shared?`共有で登録済み（${shared.at}）ですが、この端末に座標データがありません。`:'この物件は地点が未登録です。';
+    google.style.display='none';
+  }
+  regBtn.style.display=(!point&&!shared&&regPeer)?'':'none';
+  unregBtn.style.display=(point&&point.source==='local')?'':'none';
+  regBtn.onclick=()=>{dlg.close();registerGeoPoint(regPeer,name);};
+  unregBtn.onclick=async()=>{
+    if(!await propertyConfirm(`${name} の地点登録を解除しますか？\n（解除後、正しい場所でもう一度押してください）`))return;
+    const store=loadGeoStore();delete store[name];saveGeoStore(store);
+    if(regPeer)updateGeoButtonState(regPeer,name);
+    dlg.close();
+    const c=geoRegisteredCount();
+    showToast(`${name} の地点登録を解除しました　${c.done}/${c.total}件`);
+  };
+  document.getElementById('geoMapClose').onclick=()=>dlg.close();
+  if(typeof dlg.showModal==='function'&&!dlg.open)dlg.showModal();
+  requestAnimationFrame(()=>{
+    if(!window.L)return;
+    if(!geoMapObj){
+      geoMapObj=L.map('geoMap');
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(geoMapObj);
+    }
+    geoMapObj.invalidateSize();
+    if(geoMapMarker){geoMapObj.removeLayer(geoMapMarker);geoMapMarker=null;}
+    if(point){
+      geoMapObj.setView([point.lat,point.lng],16);
+      geoMapMarker=L.circleMarker([point.lat,point.lng],{radius:10,color:'#c62828',weight:3,fillColor:'#ff5252',fillOpacity:0.7}).addTo(geoMapObj);
+    } else {
+      geoMapObj.setView([34.768,136.132],12);
+    }
+  });
+}
+
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
 function hasUncommittedCollectionOrders() {
   const keys = new Set([
@@ -3617,11 +3700,12 @@ function renderTable() {
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
   htr.appendChild(thN);
   if (assignmentFilter.active) {
-    ['計量', '地区名', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
+    ['計量', '地区名', '地図', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
       if (label === '計量') th.className = 'keiryou-quick-cell';
+      if (label === '地図') th.className = 'geo-map-cell';
       if (label === '物件名') th.className = 'property-name-cell';
       if (label === '収集順') th.className = 'collection-order-cell';
       if (label === '収集時間') th.className = 'collection-time-cell';
@@ -3644,6 +3728,13 @@ function renderTable() {
       if (sortState.col===ci) th.classList.add(sortState.dir===1?'sorted-asc':'sorted-desc');
       th.addEventListener('click', e => { e.stopPropagation(); showFilterPopup(ci, th); });
       htr.appendChild(th);
+      if (currentSheetName !== '土曜日許可物件表（休出用）' && ['地区', '地区名'].includes(String(headers[ci] || '').trim())) {
+        const mth = document.createElement('th');
+        mth.textContent = '地図';
+        mth.style.cursor = 'default';
+        mth.className = 'geo-map-cell';
+        htr.appendChild(mth);
+      }
     });
   }
   if (!assignmentFilter.active && currentSheetName === '土曜日許可物件表（休出用）') {
@@ -3674,7 +3765,7 @@ function renderTable() {
         const groupRow = document.createElement('tr');
         groupRow.className = 'assignment-group-row';
         const groupCell = document.createElement('td');
-        groupCell.colSpan = 7;
+        groupCell.colSpan = 8;
         groupCell.textContent = `${item.staff} / ${item.day}`;
         groupRow.appendChild(groupCell);
         tableBody.appendChild(groupRow);
@@ -3695,6 +3786,17 @@ function renderTable() {
       const tdProperty = document.createElement('td');
       tdProperty.className = 'property-name-cell';
       tdProperty.textContent = propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '';
+      const tdMap = document.createElement('td');
+      tdMap.className = 'geo-map-cell';
+      const mapBtn = document.createElement('button');
+      mapBtn.type = 'button';
+      mapBtn.className = 'geo-map-btn';
+      mapBtn.textContent = '地図';
+      const mapRegistrationCol = findHeaderIndex(['登録番号']);
+      if (mapRegistrationCol >= 0) mapBtn.dataset.registration = String(row[mapRegistrationCol] ?? '');
+      mapBtn.setAttribute('aria-label', `${tdProperty.textContent}の地図`);
+      mapBtn.addEventListener('click', () => openGeoMap(mapBtn, tdProperty.textContent));
+      tdMap.appendChild(mapBtn);
       const tdKeiryou = document.createElement('td');
       tdKeiryou.className = 'keiryou-quick-cell';
       const tdOrder = document.createElement('td');
@@ -3771,7 +3873,7 @@ function renderTable() {
       const tdAssignment = document.createElement('td');
       tdAssignment.className = 'assignment-info-cell';
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
-      tr.append(tdKeiryou, tdDistrict, tdProperty, tdOrder, tdCollectionTime, tdAssignment);
+      tr.append(tdKeiryou, tdDistrict, tdMap, tdProperty, tdOrder, tdCollectionTime, tdAssignment);
     } else {
       visArr.forEach(ci => {
         const td = document.createElement('td');
@@ -3801,6 +3903,22 @@ function renderTable() {
           td.textContent = cell;
         }
         tr.appendChild(td);
+        if (currentSheetName !== '土曜日許可物件表（休出用）' && ['地区', '地区名'].includes(header)) {
+          const tdMap = document.createElement('td');
+          tdMap.className = 'geo-map-cell';
+          const mapBtn = document.createElement('button');
+          mapBtn.type = 'button';
+          mapBtn.className = 'geo-map-btn';
+          mapBtn.textContent = '地図';
+          const nPropCol = findHeaderIndex(['契約物件', '物件名', '名前']);
+          const nRegCol = findHeaderIndex(['登録番号']);
+          const nName = nPropCol >= 0 ? String(row[nPropCol] || '').trim() : '';
+          if (nRegCol >= 0) mapBtn.dataset.registration = String(row[nRegCol] ?? '');
+          mapBtn.setAttribute('aria-label', `${nName}の地図`);
+          mapBtn.addEventListener('click', () => openGeoMap(mapBtn, nName));
+          tdMap.appendChild(mapBtn);
+          tr.appendChild(tdMap);
+        }
       });
     }
     const renderedCells = [...tr.querySelectorAll('td')];
@@ -4439,7 +4557,20 @@ window._colviewCtx = {
 })();
 </script>
 
+<dialog id="geoMapDialog">
+  <div class="geo-map-head"><h2 id="geoMapTitle">地図</h2></div>
+  <div id="geoMap"></div>
+  <div id="geoMapMeta"></div>
+  <div class="geo-map-actions">
+    <a id="geoMapGoogle" href="#" target="_blank" rel="noopener">Googleマップで開く</a>
+    <button type="button" id="geoMapRegister">現在地を登録</button>
+    <button type="button" id="geoMapUnregister">登録を解除</button>
+    <button type="button" id="geoMapClose">閉じる</button>
+  </div>
+</dialog>
+
 <script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
+<script>document.write('<script src="property-geo-points.js?ts=' + Date.now() + '"><\/script>');</script>
 <script>document.write('<script src="property-confirm-panel.js?ts=' + Date.now() + '"><\/script>');</script>
 <script>document.write('<script src="property-table-editor.js?ts=' + Date.now() + '"><\/script>');</script>
 <script>document.write('<script src="property-geo-history.js?ts=' + Date.now() + '"><\/script>');</script>
