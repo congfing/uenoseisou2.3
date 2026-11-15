@@ -191,8 +191,12 @@
     white-space:nowrap;
   }
   .geo-map-btn:active { font-weight:900; }
-  /* 列名(map/navi)は切替ボタンなので細い四角の枠を付ける。ランチャーのテーマ注入より優先させるため !important */
-  th.geo-map-head { border:1px solid #222 !important; border-radius:0 !important; }
+  /* 列名(map/navi)は切替ボタン。表のセル枠と同化しないよう、セル内側に細い四角の枠を描く */
+  .geo-map-head-box {
+    display:inline-block; padding:2px 12px; font-weight:600;
+    background:#fff !important; color:#111 !important;
+    border:1px solid #111 !important; border-radius:0 !important;
+  }
   /* 地図表示中は物件表の画面を縮小し、タップで戻る */
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
   #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
@@ -3233,7 +3237,7 @@ appShrinkEl.id = 'appShrink';
 // 列名（map/navi）をタップするたびに切り替わり、全物件のボタンも一斉に変わる。状態は端末に保存する。
 let geoColumnMode = localStorage.getItem('colview_geo_column_mode') === 'navi' ? 'navi' : 'map';
 function applyGeoColumnMode(){
-  document.querySelectorAll('th.geo-map-head').forEach(th => { th.textContent = geoColumnMode; });
+  document.querySelectorAll('.geo-map-head-box').forEach(b => { b.textContent = geoColumnMode; });
   document.querySelectorAll('.geo-map-btn').forEach(b => { b.textContent = geoColumnMode; });
 }
 function toggleGeoColumnMode(){
@@ -3243,9 +3247,13 @@ function toggleGeoColumnMode(){
 }
 function wireGeoHead(th){
   th.classList.add('geo-map-head');
-  th.textContent = geoColumnMode;
   th.style.cursor = 'pointer';
   th.title = 'タップで map / navi を切り替え';
+  const box = document.createElement('span');
+  box.className = 'geo-map-head-box';
+  box.textContent = geoColumnMode;
+  th.textContent = '';
+  th.appendChild(box);
   th.addEventListener('click', e => { e.stopPropagation(); toggleGeoColumnMode(); });
 }
 
