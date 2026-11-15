@@ -194,6 +194,11 @@
   /* 地図表示中は物件表の画面を縮小し、タップで戻る */
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
   #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
+  #gmapNaviStart {
+    position:absolute; left:50%; transform:translateX(-50%); bottom:18px; z-index:5;
+    display:inline-block; padding:10px 22px; font-size:15px; color:#111; background:#fff;
+    border:1px solid #222; border-radius:4px; text-decoration:none;
+  }
   #appShrink.shrunk { position:fixed; top:10px; left:10px; z-index:960; width:100vw; height:100vh; overflow:hidden; transform:scale(0.32); transform-origin:top left; background:#fff; }
   #appShrinkFrame { position:fixed; top:10px; left:10px; width:32vw; height:32vh; z-index:970; border:2px solid #222; box-sizing:border-box; cursor:pointer; touch-action:none; }
   #appShrinkFrame .shrink-hint { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; text-align:center; padding:4px 0; }
@@ -3242,9 +3247,12 @@ function wireGeoHead(th){
   th.addEventListener('click', e => { e.stopPropagation(); toggleGeoColumnMode(); });
 }
 
-function showGeoFrame(src){
+function showGeoFrame(src, point){
   // Googleマップを画面いっぱいに開き、物件表は小さく縮小して残す。縮小した物件表をタップすると戻る。
   document.getElementById('gmapFrame').src=src;
+  // 「案内を開始」: Googleマップ（アプリ）でその物件への案内を開く
+  const naviStart=document.getElementById('gmapNaviStart');
+  if (naviStart && point) naviStart.href=`https://www.google.co.jp/maps/dir/?api=1&destination=${point.lat},${point.lng}&travelmode=driving`;
   document.getElementById('gmapLayer').hidden=false;
   appShrinkEl.classList.add('shrunk');
   document.getElementById('appShrinkFrame').hidden=false;
@@ -3257,7 +3265,7 @@ function openGeoMap(btn, name){
   const registration=btn.dataset.registration||'';
   const point=resolveGeoPoint(name, registration);
   if(!point) return;
-  showGeoFrame(`https://www.google.com/maps?q=${point.lat},${point.lng}&z=17&output=embed`);
+  showGeoFrame(`https://www.google.com/maps?q=${point.lat},${point.lng}&z=17&output=embed`, point);
 }
 function openGeoNavi(btn, name){
   const registration=btn.dataset.registration||'';
@@ -3266,7 +3274,7 @@ function openGeoNavi(btn, name){
   const show=(origin)=>{
     showGeoFrame(origin
       ? `https://maps.google.com/maps?saddr=${origin.lat},${origin.lng}&daddr=${point.lat},${point.lng}&output=embed`
-      : `https://maps.google.com/maps?daddr=${point.lat},${point.lng}&output=embed`);
+      : `https://maps.google.com/maps?daddr=${point.lat},${point.lng}&output=embed`, point);
   };
   // 現在地が取れれば出発地に指定する。取れなければ目的地だけ渡し、Google側の現在地に任せる。
   if (navigator.geolocation) {
@@ -4691,7 +4699,7 @@ window._colviewCtx = {
 })();
 </script>
 
-<div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ" allow="geolocation"></iframe></div>
+<div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ" allow="geolocation"></iframe><a id="gmapNaviStart" href="#" target="_blank" rel="noopener">案内を開始</a></div>
 <div id="appShrinkFrame" hidden><div class="shrink-hint">タップで戻る</div><div id="appShrinkHandle" title="ドラッグで大きさ変更">◢</div></div>
 
 <script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
