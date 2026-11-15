@@ -191,12 +191,7 @@
     white-space:nowrap;
   }
   .geo-map-btn:active { font-weight:900; }
-  /* 列名(map/navi)は切替ボタン。表のセル枠と同化しないよう、セル内側に細い四角の枠を描く */
-  .geo-map-head-box {
-    display:inline-block; padding:5px 8px; font-weight:400; white-space:nowrap;
-    background:#fff !important; color:#111 !important;
-    border:1px solid #222 !important; border-radius:4px;
-  }
+  /* 列名(map/navi)は切替ボタン。各物件のmapボタンと同じ部品・同じクラスで作り、色はランチャーのテーマ設定に従う（ソフト側では決めない） */
   /* 地図表示中は物件表の画面を縮小し、タップで戻る */
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
   #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
@@ -3237,7 +3232,6 @@ appShrinkEl.id = 'appShrink';
 // 列名（map/navi）をタップするたびに切り替わり、全物件のボタンも一斉に変わる。状態は端末に保存する。
 let geoColumnMode = localStorage.getItem('colview_geo_column_mode') === 'navi' ? 'navi' : 'map';
 function applyGeoColumnMode(){
-  document.querySelectorAll('.geo-map-head-box').forEach(b => { b.textContent = geoColumnMode; });
   document.querySelectorAll('.geo-map-btn').forEach(b => { b.textContent = geoColumnMode; });
 }
 function toggleGeoColumnMode(){
@@ -3249,9 +3243,11 @@ function wireGeoHead(th){
   th.classList.add('geo-map-head');
   th.style.cursor = 'pointer';
   th.title = 'タップで map / navi を切り替え';
-  const box = document.createElement('span');
-  box.className = 'geo-map-head-box';
+  const box = document.createElement('button');
+  box.type = 'button';
+  box.className = 'geo-map-btn';
   box.textContent = geoColumnMode;
+  box.addEventListener('click', e => { e.stopPropagation(); toggleGeoColumnMode(); });
   th.textContent = '';
   th.appendChild(box);
   th.addEventListener('click', e => { e.stopPropagation(); toggleGeoColumnMode(); });
