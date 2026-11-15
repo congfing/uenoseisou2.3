@@ -259,8 +259,11 @@
 <body>
 
 <div id="app-header">
+  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+    <h1 id="headerTitle">計量データ入力</h1>
+    <button class="btn btn-secondary" onclick="closeToHome()" style="padding:6px 14px;font-size:14px;font-weight:700;width:auto;flex-shrink:0">✕ 閉じる</button>
+  </div>
   <div id="headerDateLabel" style="font-size:12px;color:#555;white-space:nowrap;"></div>
-  <button class="btn btn-secondary" onclick="closeToHome()" style="padding:6px 14px;font-size:14px;font-weight:700;width:auto;flex-shrink:0">✕ 閉じる</button>
 </div>
 <div id="nav-tabs-bar">
   <div class="nav-tabs">
@@ -1391,6 +1394,8 @@ function updateNav(n){
   state.currentScreen=n;
   const backBtn=document.getElementById('backBtn');
   if(backBtn) backBtn.style.display='flex';
+  const titles={0:'設定',1:'計量データ入力',2:'担当者選択',3:'物件項目編集',4:'データ入力',5:'確認・保存',6:'履歴',7:'メール設定',8:'変換',9:'物件リスト２列'};
+  document.getElementById('headerTitle').textContent=titles[n]||'';
   const dl=document.getElementById('headerDateLabel');
   dl.textContent=(state.date&&state.dayName)?`${state.date}（${state.dayName}曜）`:'';
   // tabs active
