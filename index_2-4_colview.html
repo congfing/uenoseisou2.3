@@ -195,7 +195,7 @@
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
   #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
   #appShrink.shrunk { position:fixed; top:10px; left:10px; z-index:960; width:100vw; height:100vh; overflow:hidden; transform:scale(0.32); transform-origin:top left; background:#fff; }
-  #appShrinkFrame { position:fixed; top:10px; left:10px; width:32vw; height:32vh; z-index:970; border:2px solid #222; box-sizing:border-box; cursor:pointer; }
+  #appShrinkFrame { position:fixed; top:10px; left:10px; width:32vw; height:32vh; z-index:970; border:2px solid #222; box-sizing:border-box; cursor:pointer; touch-action:none; }
   #appShrinkFrame .shrink-hint { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); color:#fff; font-size:12px; text-align:center; padding:4px 0; }
   /* ランチャーのテーマ注入（全要素の背景を!importantで上書き）に勝つため、戻る枠は透明を!importantで指定する */
   #appShrinkFrame { background:transparent !important; }
@@ -3231,7 +3231,9 @@ function openGeoMap(btn, name){
   document.getElementById('gmapLayer').hidden=false;
   appShrinkEl.classList.add('shrunk');
   document.getElementById('appShrinkFrame').hidden=false;
+  wireShrinkControls();
   applyShrinkScale(shrinkScale);
+  applyShrinkPos();
   document.body.classList.add('map-open');
 }
 function closeGeoMap(){
@@ -3243,42 +3245,83 @@ function closeGeoMap(){
   document.body.classList.remove('map-open');
 }
 
-// 縮小表示の大きさ: 右下の角をドラッグで変更し、端末に保存する
+// 縮小表示の大きさと位置: 枠を引くと移動、右下の角を引くと大きさ変更。どちらも端末に保存する。
+// 枠のHTMLはこのスクリプトより後にあるため、操作の結線は地図を初めて開くときに行う。
 let shrinkScale = parseFloat(localStorage.getItem('colview_map_shrink_scale') || '0.32');
 if (!(shrinkScale >= 0.15 && shrinkScale <= 0.6)) shrinkScale = 0.32;
+let shrinkPos = { x: 10, y: 10 };
+try {
+  const savedPos = JSON.parse(localStorage.getItem('colview_map_shrink_pos') || 'null');
+  if (savedPos && Number.isFinite(savedPos.x) && Number.isFinite(savedPos.y)) shrinkPos = savedPos;
+} catch (e) {}
 function applyShrinkScale(s){
   shrinkScale = Math.min(0.6, Math.max(0.15, s));
   const frame = document.getElementById('appShrinkFrame');
   if (frame){ frame.style.width = (shrinkScale * 100) + 'vw'; frame.style.height = (shrinkScale * 100) + 'vh'; }
   appShrinkEl.style.transform = 'scale(' + shrinkScale + ')';
 }
-(function(){
+function applyShrinkPos(){
+  const x = Math.max(0, Math.min(shrinkPos.x, window.innerWidth - 60));
+  const y = Math.max(0, Math.min(shrinkPos.y, window.innerHeight - 50));
+  shrinkPos = { x, y };
+  const frame = document.getElementById('appShrinkFrame');
+  if (frame){ frame.style.left = x + 'px'; frame.style.top = y + 'px'; }
+  appShrinkEl.style.left = x + 'px';
+  appShrinkEl.style.top = y + 'px';
+}
+let shrinkControlsWired = false;
+function wireShrinkControls(){
+  if (shrinkControlsWired) return;
+  const frame = document.getElementById('appShrinkFrame');
   const handle = document.getElementById('appShrinkHandle');
-  if (!handle) return;
-  let drag = null;
+  if (!frame || !handle) return;
+  shrinkControlsWired = true;
+  let move = null;
+  frame.addEventListener('pointerdown', e => {
+    move = { x: e.clientX, y: e.clientY, left: shrinkPos.x, top: shrinkPos.y, moved: false };
+    try { frame.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  frame.addEventListener('pointermove', e => {
+    if (!move) return;
+    const dx = e.clientX - move.x, dy = e.clientY - move.y;
+    if (Math.abs(dx) + Math.abs(dy) > 5) move.moved = true;
+    if (move.moved){
+      shrinkPos = { x: move.left + dx, y: move.top + dy };
+      applyShrinkPos();
+    }
+  });
+  frame.addEventListener('pointerup', () => {
+    if (!move) return;
+    const wasMoved = move.moved;
+    move = null;
+    if (wasMoved){
+      localStorage.setItem('colview_map_shrink_pos', JSON.stringify(shrinkPos));
+    } else {
+      closeGeoMap();
+    }
+  });
+  frame.addEventListener('pointercancel', () => { move = null; });
+  let resize = null;
   handle.addEventListener('pointerdown', e => {
     e.preventDefault(); e.stopPropagation();
-    drag = { x: e.clientX, s: shrinkScale, moved: false };
+    resize = { x: e.clientX, s: shrinkScale, moved: false };
     try { handle.setPointerCapture(e.pointerId); } catch (err) {}
   });
   handle.addEventListener('pointermove', e => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x;
-    if (Math.abs(dx) > 4) drag.moved = true;
-    applyShrinkScale(drag.s + dx / window.innerWidth);
+    if (!resize) return;
+    const dx = e.clientX - resize.x;
+    if (Math.abs(dx) > 4) resize.moved = true;
+    applyShrinkScale(resize.s + dx / window.innerWidth);
   });
-  const end = () => {
-    if (!drag) return;
-    if (drag.moved){
-      window.__shrinkDragged = Date.now();
-      localStorage.setItem('colview_map_shrink_scale', String(shrinkScale));
-    }
-    drag = null;
+  const resizeEnd = () => {
+    if (!resize) return;
+    if (resize.moved) localStorage.setItem('colview_map_shrink_scale', String(shrinkScale));
+    resize = null;
   };
-  handle.addEventListener('pointerup', end);
-  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('pointerup', resizeEnd);
+  handle.addEventListener('pointercancel', () => { resize = null; });
   handle.addEventListener('click', e => { e.stopPropagation(); });
-})();
+}
 
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
 function hasUncommittedCollectionOrders() {
@@ -4599,7 +4642,7 @@ window._colviewCtx = {
 </script>
 
 <div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ"></iframe></div>
-<div id="appShrinkFrame" hidden onclick="closeGeoMap()"><div class="shrink-hint">タップで戻る</div><div id="appShrinkHandle" title="ドラッグで大きさ変更">◢</div></div>
+<div id="appShrinkFrame" hidden><div class="shrink-hint">タップで戻る</div><div id="appShrinkHandle" title="ドラッグで大きさ変更">◢</div></div>
 
 <script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
 <script>document.write('<script src="property-geo-points.js?ts=' + Date.now() + '"><\/script>');</script>
