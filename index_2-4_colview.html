@@ -3242,7 +3242,7 @@ function openGeoMap(btn, name){
   document.getElementById('geoMapClose').onclick=()=>dlg.close();
   dlg.onclose=()=>{btn.style.color=resolveGeoPoint(name, registration)?'#1a9e4b':'';};
   if(typeof dlg.showModal==='function'&&!dlg.open)dlg.showModal();
-  requestAnimationFrame(()=>{
+  const renderGeoMap=()=>{
     if(!window.L)return;
     if(!geoMapObj){
       geoMapObj=L.map('geoMap');
@@ -3256,7 +3256,9 @@ function openGeoMap(btn, name){
     } else {
       geoMapObj.setView([34.768,136.132],12);
     }
-  });
+  };
+  requestAnimationFrame(()=>setTimeout(renderGeoMap,60));
+  setTimeout(()=>{if(geoMapObj)geoMapObj.invalidateSize();},400);
 }
 
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
