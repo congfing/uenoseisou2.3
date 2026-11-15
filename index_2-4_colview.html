@@ -3204,7 +3204,7 @@ function openGeoMap(btn, name){
   const point=resolveGeoPoint(name, registration);
   if(!point) return;
   // Googleマップはブラウザーのタブで開く。戻るときはブラウザーのタブを切り替える。
-  window.open(`https://www.google.com/maps?q=${point.lat},${point.lng}`, '_blank');
+  window.open(`https://www.google.co.jp/maps?q=${point.lat},${point.lng}`, '_blank');
 }
 
 /* ===== 計量データ入力（3-20）を物件指定で開く ===== */
