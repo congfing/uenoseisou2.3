@@ -188,6 +188,7 @@
   /* 地図列 */
   .geo-map-cell { text-align:center; }
   .geo-map-btn {
+    display:inline-block;
     padding:5px 4px; border:none; border-radius:0;
     background:transparent; color:inherit; font:inherit; font-weight:400; cursor:pointer;
     white-space:nowrap;
@@ -199,7 +200,7 @@
   #geoMap { height:52dvh; min-height:260px; background:#e8e8e8; }
   #geoMapMeta { padding:10px 12px 0; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
   #geoMapDialog .geo-map-actions { display:flex; flex-wrap:wrap; gap:10px; padding:12px; }
-  #geoMapDialog .geo-map-actions button, #geoMapDialog .geo-map-actions a {
+  #geoMapDialog .geo-map-actions button, #geoMapDialog .geo-map-actions a, #geoMapDialog .geo-map-actions .geo-map-action {
     padding:8px 10px; min-height:42px; border:none; border-radius:0; font:inherit; background:transparent; color:#000; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center;
   }
   /* 計量物件だけに出る、計量データ入力（3-20）を開くボタン */
@@ -3787,9 +3788,9 @@ function renderTable() {
       tdProperty.textContent = propertyCol >= 0 ? String(row[propertyCol] || '').trim() : '';
       const tdMap = document.createElement('td');
       tdMap.className = 'geo-map-cell';
-      const mapBtn = document.createElement('button');
-      mapBtn.type = 'button';
+      const mapBtn = document.createElement('span');
       mapBtn.className = 'geo-map-btn';
+      mapBtn.setAttribute('role', 'button');
       mapBtn.textContent = '地図';
       const mapRegistrationCol = findHeaderIndex(['登録番号']);
       if (mapRegistrationCol >= 0) mapBtn.dataset.registration = String(row[mapRegistrationCol] ?? '');
@@ -3905,9 +3906,9 @@ function renderTable() {
         if (currentSheetName !== '土曜日許可物件表（休出用）' && ['地区', '地区名'].includes(header)) {
           const tdMap = document.createElement('td');
           tdMap.className = 'geo-map-cell';
-          const mapBtn = document.createElement('button');
-          mapBtn.type = 'button';
+          const mapBtn = document.createElement('span');
           mapBtn.className = 'geo-map-btn';
+          mapBtn.setAttribute('role', 'button');
           mapBtn.textContent = '地図';
           const nPropCol = findHeaderIndex(['契約物件', '物件名', '名前']);
           const nRegCol = findHeaderIndex(['登録番号']);
@@ -4562,9 +4563,9 @@ window._colviewCtx = {
   <div id="geoMapMeta"></div>
   <div class="geo-map-actions">
     <a id="geoMapGoogle" href="#" target="_blank" rel="noopener">Googleマップで開く</a>
-    <button type="button" id="geoMapRegister">現在地を登録</button>
-    <button type="button" id="geoMapUnregister">登録を解除</button>
-    <button type="button" id="geoMapClose">閉じる</button>
+    <span id="geoMapRegister" class="geo-map-action" role="button">現在地を登録</span>
+    <span id="geoMapUnregister" class="geo-map-action" role="button">登録を解除</span>
+    <span id="geoMapClose" class="geo-map-action" role="button">閉じる</span>
   </div>
 </dialog>
 
