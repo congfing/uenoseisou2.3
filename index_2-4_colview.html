@@ -191,6 +191,8 @@
     white-space:nowrap;
   }
   .geo-map-btn:active { font-weight:900; }
+  /* 列名(map/navi)は切替ボタンなので細い四角の枠を付ける。ランチャーのテーマ注入より優先させるため !important */
+  th.geo-map-head { border:1px solid #222 !important; border-radius:0 !important; }
   /* 地図表示中は物件表の画面を縮小し、タップで戻る */
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
   #gmapLayer iframe { width:100%; height:100%; border:0; display:block; }
