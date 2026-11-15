@@ -3222,12 +3222,29 @@ appShrinkEl.id = 'appShrink';
   });
 }
 
-function openGeoMap(btn, name){
-  const registration=btn.dataset.registration||'';
-  const point=resolveGeoPoint(name, registration);
-  if(!point) return;
+// map列の表示モード: 'map'=地点表示 / 'navi'=現在地からその物件までのルート表示。
+// 列名（map/navi）をタップするたびに切り替わり、全物件のボタンも一斉に変わる。状態は端末に保存する。
+let geoColumnMode = localStorage.getItem('colview_geo_column_mode') === 'navi' ? 'navi' : 'map';
+function applyGeoColumnMode(){
+  document.querySelectorAll('th.geo-map-head').forEach(th => { th.textContent = geoColumnMode; });
+  document.querySelectorAll('.geo-map-btn').forEach(b => { b.textContent = geoColumnMode; });
+}
+function toggleGeoColumnMode(){
+  geoColumnMode = geoColumnMode === 'map' ? 'navi' : 'map';
+  localStorage.setItem('colview_geo_column_mode', geoColumnMode);
+  applyGeoColumnMode();
+}
+function wireGeoHead(th){
+  th.classList.add('geo-map-head');
+  th.textContent = geoColumnMode;
+  th.style.cursor = 'pointer';
+  th.title = 'タップで map / navi を切り替え';
+  th.addEventListener('click', e => { e.stopPropagation(); toggleGeoColumnMode(); });
+}
+
+function showGeoFrame(src){
   // Googleマップを画面いっぱいに開き、物件表は小さく縮小して残す。縮小した物件表をタップすると戻る。
-  document.getElementById('gmapFrame').src=`https://www.google.com/maps?q=${point.lat},${point.lng}&z=17&output=embed`;
+  document.getElementById('gmapFrame').src=src;
   document.getElementById('gmapLayer').hidden=false;
   appShrinkEl.classList.add('shrunk');
   document.getElementById('appShrinkFrame').hidden=false;
@@ -3235,6 +3252,35 @@ function openGeoMap(btn, name){
   applyShrinkScale(shrinkScale);
   applyShrinkPos();
   document.body.classList.add('map-open');
+}
+function openGeoMap(btn, name){
+  const registration=btn.dataset.registration||'';
+  const point=resolveGeoPoint(name, registration);
+  if(!point) return;
+  showGeoFrame(`https://www.google.com/maps?q=${point.lat},${point.lng}&z=17&output=embed`);
+}
+function openGeoNavi(btn, name){
+  const registration=btn.dataset.registration||'';
+  const point=resolveGeoPoint(name, registration);
+  if(!point) return;
+  const show=(origin)=>{
+    showGeoFrame(origin
+      ? `https://maps.google.com/maps?saddr=${origin.lat},${origin.lng}&daddr=${point.lat},${point.lng}&output=embed`
+      : `https://maps.google.com/maps?daddr=${point.lat},${point.lng}&output=embed`);
+  };
+  // 現在地が取れれば出発地に指定する。取れなければ目的地だけ渡し、Google側の現在地に任せる。
+  if (navigator.geolocation) {
+    let done=false;
+    const timer=setTimeout(()=>{ if(!done){ done=true; show(null); } }, 6000);
+    navigator.geolocation.getCurrentPosition(
+      pos=>{ if(!done){ done=true; clearTimeout(timer); show({lat:pos.coords.latitude, lng:pos.coords.longitude}); } },
+      ()=>{ if(!done){ done=true; clearTimeout(timer); show(null); } },
+      {timeout:5000, maximumAge:60000});
+  } else show(null);
+}
+function openGeoCell(btn, name){
+  if (geoColumnMode === 'navi') openGeoNavi(btn, name);
+  else openGeoMap(btn, name);
 }
 function closeGeoMap(){
   if (window.__shrinkDragged && Date.now() - window.__shrinkDragged < 400) return;
@@ -3777,7 +3823,7 @@ function renderTable() {
       th.textContent = label;
       th.style.cursor = 'default';
       if (label === '計量') th.className = 'keiryou-quick-cell';
-      if (label === 'map') th.className = 'geo-map-cell';
+      if (label === 'map') { th.className = 'geo-map-cell'; wireGeoHead(th); }
       if (label === '物件名') th.className = 'property-name-cell';
       if (label === '収集順') th.className = 'collection-order-cell';
       if (label === '収集時間') th.className = 'collection-time-cell';
@@ -3802,9 +3848,9 @@ function renderTable() {
       htr.appendChild(th);
       if (currentSheetName !== '土曜日許可物件表（休出用）' && ['地区', '地区名'].includes(String(headers[ci] || '').trim())) {
         const mth = document.createElement('th');
-        mth.textContent = 'map';
-        mth.style.cursor = 'default';
+        mth.textContent = geoColumnMode;
         mth.className = 'geo-map-cell';
+        wireGeoHead(mth);
         htr.appendChild(mth);
       }
     });
@@ -3863,12 +3909,12 @@ function renderTable() {
       const mapBtn = document.createElement('button');
       mapBtn.type = 'button';
       mapBtn.className = 'geo-map-btn';
-      mapBtn.textContent = 'map';
+      mapBtn.textContent = geoColumnMode;
       const mapRegistrationCol = findHeaderIndex(['登録番号']);
       if (mapRegistrationCol >= 0) mapBtn.dataset.registration = String(row[mapRegistrationCol] ?? '');
       mapBtn.setAttribute('aria-label', `${tdProperty.textContent}の地図`);
       if (!resolveGeoPoint(tdProperty.textContent, mapBtn.dataset.registration || '')) mapBtn.style.display = 'none';
-      mapBtn.addEventListener('click', () => openGeoMap(mapBtn, tdProperty.textContent));
+      mapBtn.addEventListener('click', () => openGeoCell(mapBtn, tdProperty.textContent));
       tdMap.appendChild(mapBtn);
       const tdKeiryou = document.createElement('td');
       tdKeiryou.className = 'keiryou-quick-cell';
@@ -3982,14 +4028,14 @@ function renderTable() {
           const mapBtn = document.createElement('button');
           mapBtn.type = 'button';
           mapBtn.className = 'geo-map-btn';
-          mapBtn.textContent = 'map';
+          mapBtn.textContent = geoColumnMode;
           const nPropCol = findHeaderIndex(['契約物件', '物件名', '名前']);
           const nRegCol = findHeaderIndex(['登録番号']);
           const nName = nPropCol >= 0 ? String(row[nPropCol] || '').trim() : '';
           if (nRegCol >= 0) mapBtn.dataset.registration = String(row[nRegCol] ?? '');
           mapBtn.setAttribute('aria-label', `${nName}の地図`);
           if (!resolveGeoPoint(nName, mapBtn.dataset.registration || '')) mapBtn.style.display = 'none';
-          mapBtn.addEventListener('click', () => openGeoMap(mapBtn, nName));
+          mapBtn.addEventListener('click', () => openGeoCell(mapBtn, nName));
           tdMap.appendChild(mapBtn);
           tr.appendChild(tdMap);
         }
@@ -4645,7 +4691,7 @@ window._colviewCtx = {
 })();
 </script>
 
-<div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ"></iframe></div>
+<div id="gmapLayer" hidden><iframe id="gmapFrame" title="Googleマップ" allow="geolocation"></iframe></div>
 <div id="appShrinkFrame" hidden><div class="shrink-hint">タップで戻る</div><div id="appShrinkHandle" title="ドラッグで大きさ変更">◢</div></div>
 
 <script>document.write('<script src="property-geo-status.js?ts=' + Date.now() + '"><\/script>');</script>
