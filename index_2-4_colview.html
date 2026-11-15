@@ -14,8 +14,8 @@
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { overscroll-behavior-x: contain; margin:0; font-family:'Hiragino Sans','ヒラギノ角ゴ ProN','Meiryo','メイリオ',sans-serif; font-size:13px; font-weight:400; }
@@ -198,6 +198,8 @@
   #geoMapDialog .geo-map-head { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #aaa; }
   #geoMapDialog h2 { margin:0; font-size:16px; flex:1; min-width:0; overflow-wrap:anywhere; }
   #geoMap { height:52dvh; min-height:260px; background:#e8e8e8; }
+  .geo-map-wrap { position:relative; }
+  #geoMapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:13px; pointer-events:none; z-index:800; text-align:center; padding:0 12px; }
   #geoMapMeta { padding:10px 12px 0; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
   #geoMapDialog .geo-map-actions { display:flex; flex-wrap:wrap; gap:10px; padding:12px; }
   #geoMapDialog .geo-map-actions button, #geoMapDialog .geo-map-actions a {
@@ -3210,7 +3212,7 @@ function resolveGeoPoint(name, registration){
   return null;
 }
 
-let geoMapObj=null, geoMapMarker=null;
+let geoMapObj=null, geoMapMarker=null, geoTileLayer=null, geoLoadTimer=null;
 function openGeoMap(btn, name){
   const registration=btn.dataset.registration||'';
   const point=resolveGeoPoint(name, registration);
@@ -3222,6 +3224,10 @@ function openGeoMap(btn, name){
   const regBtn=document.getElementById('geoMapRegister');
   const unregBtn=document.getElementById('geoMapUnregister');
   const regPeer=btn.closest('tr')?.querySelector('.geo-register-btn')||null;
+  const loading=document.getElementById('geoMapLoading');
+  if(loading){ loading.textContent='地図を読み込み中…'; loading.style.display='flex'; }
+  if(geoLoadTimer){ clearTimeout(geoLoadTimer); geoLoadTimer=null; }
+  geoLoadTimer=setTimeout(()=>{ if(loading&&!dlg.querySelector('.leaflet-tile-loaded')){ loading.textContent='地図データを読み込めませんでした。通信状態を確認してください。'; loading.style.display='flex'; } }, 9000);
   if(point){
     meta.textContent=`${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}${point.acc?`（精度約${point.acc}m）`:''}${point.at?`　登録：${point.at}`:''}${point.source==='shared'?'　共有の登録地点':''}`;
     google.style.display='';
@@ -3247,10 +3253,12 @@ function openGeoMap(btn, name){
   };
   if(typeof dlg.showModal==='function'&&!dlg.open)dlg.showModal();
   const renderGeoMap=()=>{
-    if(!window.L)return;
+    if(!window.L){ if(loading){ loading.textContent='地図を表示できませんでした（地図ライブラリ未読込）'; loading.style.display='flex'; } return; }
     if(!geoMapObj){
       geoMapObj=L.map('geoMap');
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(geoMapObj);
+      geoTileLayer=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+      geoTileLayer.on('load',()=>{ if(loading)loading.style.display='none'; });
+      geoTileLayer.addTo(geoMapObj);
     }
     geoMapObj.invalidateSize();
     if(geoMapMarker){geoMapObj.removeLayer(geoMapMarker);geoMapMarker=null;}
@@ -4570,7 +4578,7 @@ window._colviewCtx = {
 
 <dialog id="geoMapDialog">
   <div class="geo-map-head"><h2 id="geoMapTitle">地図</h2></div>
-  <div id="geoMap"></div>
+  <div class="geo-map-wrap"><div id="geoMap"></div><div id="geoMapLoading">地図を読み込み中…</div></div>
   <div id="geoMapMeta"></div>
   <div class="geo-map-actions">
     <a id="geoMapGoogle" href="#" target="_blank" rel="noopener">Googleマップで開く</a>
