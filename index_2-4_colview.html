@@ -3832,7 +3832,7 @@ function renderTable() {
   thN.textContent='順番'; thN.style.cursor='default'; thN.style.minWidth='48px';
   htr.appendChild(thN);
   if (assignmentFilter.active) {
-    ['計量', '地区名', 'map', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
+    ['計量', 'map', '地区名', '物件名', '収集順', '収集時間', '担当者情報'].forEach(label => {
       const th = document.createElement('th');
       th.textContent = label;
       th.style.cursor = 'default';
@@ -4006,7 +4006,7 @@ function renderTable() {
       const tdAssignment = document.createElement('td');
       tdAssignment.className = 'assignment-info-cell';
       tdAssignment.textContent = `${item.staffValue} / ${item.day}`;
-      tr.append(tdKeiryou, tdDistrict, tdMap, tdProperty, tdOrder, tdCollectionTime, tdAssignment);
+      tr.append(tdKeiryou, tdMap, tdDistrict, tdProperty, tdOrder, tdCollectionTime, tdAssignment);
     } else {
       visArr.forEach(ci => {
         const td = document.createElement('td');
