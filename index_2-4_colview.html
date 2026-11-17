@@ -222,8 +222,7 @@
   /* 担当者別表示では、計量ボタンを左端の順番のすぐ右に固定する */
   #dataTable th.keiryou-quick-cell,
   #dataTable td.keiryou-quick-cell {
-    width:72px; min-width:72px; max-width:72px;
-    padding-left:3px; padding-right:3px; text-align:left;
+    text-align:left;
   }
   /* 表の直後に置く（画面に固定しない）。表が短いときは表のすぐ下、
      長いときは表が上限いっぱいになるので結果的に画面の一番下に来る。 */
@@ -518,10 +517,6 @@
     .geo-register-btn,
     .geo-map-btn,
     .keiryou-open-btn { padding:5px 7px; font-size:12px; }
-    #dataTable th.keiryou-quick-cell,
-    #dataTable td.keiryou-quick-cell {
-      width:68px; min-width:68px; max-width:68px;
-    }
     /* 下のボタン列は1行に収めたいので、狭い画面では小さめにする */
     #collectionOrderActions { padding:8px 10px; gap:6px; justify-content:flex-start; }
     #collectionOrderActions button { padding:8px 9px; font-size:13px; }
