@@ -191,6 +191,10 @@
     white-space:nowrap;
   }
   .geo-map-btn:active { font-weight:900; }
+  /* 列幅のドラッグ調整（見出しの右端を引く。幅は端末に保存） */
+  #dataTable thead th { position:relative; }
+  #dataTable.col-resized { table-layout:fixed; }
+  .col-resize-handle { position:absolute; top:0; right:-5px; width:10px; height:100%; cursor:col-resize; touch-action:none; z-index:6; }
   /* 列名(map/navi)は切替ボタン。各物件のmapボタンと同じ部品・同じクラスで作り、色はランチャーのテーマ設定に従う（ソフト側では決めない） */
   /* 地図表示中は物件表の画面を縮小し、タップで戻る */
   #gmapLayer { position:fixed; inset:0; z-index:900; background:#fff; }
@@ -4089,6 +4093,82 @@ function renderTable() {
   lastStatusInfo = { rowCount: rows.length, visCount: visArr.length };
   refreshStatusLine();
   adjustWrapperHeight();
+  wireColumnResize();
+}
+
+/* ===== 列幅のドラッグ調整 =====
+   見出しセルの右端をドラッグすると列幅が変わる。幅は列名ごとに
+   localStorage（colview_col_widths_v1）へ保存し、次回表示でも使う。
+   初めてドラッグした表示では、その時点の全列幅を取り込んでから固定レイアウトにする。 */
+const COL_WIDTH_KEY = 'colview_col_widths_v1';
+function colWidthStore(){
+  try { return JSON.parse(localStorage.getItem(COL_WIDTH_KEY) || '{}'); } catch(e){ return {}; }
+}
+function wireColumnResize(){
+  const table = document.getElementById('dataTable');
+  if (!table || table.style.display === 'none') return;
+  const headRow = table.querySelector('thead tr:last-child');
+  if (!headRow) return;
+  const ths = [...headRow.children];
+  if (!ths.length) return;
+  let cg = table.querySelector('colgroup');
+  if (cg) cg.remove();
+  cg = document.createElement('colgroup');
+  ths.forEach(() => cg.appendChild(document.createElement('col')));
+  table.insertBefore(cg, table.firstChild);
+  const viewKey = assignmentFilter.active ? 'assign' : ('sheet:' + currentSheetName);
+  const store = colWidthStore();
+  const keyOf = th => th.classList.contains('geo-map-cell') ? '__map__' : (th.textContent || '').trim();
+  const firstRow = table.querySelector('thead tr:first-child');
+  const hasTitleRow = firstRow && firstRow !== headRow && [...firstRow.children].some(c => c.colSpan > 1);
+  ths.forEach((th, idx) => {
+    const col = cg.children[idx];
+    const storeKey = viewKey + ':' + keyOf(th);
+    if (store[storeKey]) col.style.width = store[storeKey] + 'px';
+    const handle = document.createElement('span');
+    handle.className = 'col-resize-handle';
+    handle.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); });
+    handle.addEventListener('pointerdown', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      // 保存幅が無い列は現在の幅を取り込んで固定レイアウト化（土曜シートのタイトル行がある場合は除く）
+      if (!hasTitleRow) {
+        const s = colWidthStore();
+        let filled = false;
+        ths.forEach((t2, i2) => {
+          const k2 = viewKey + ':' + keyOf(t2);
+          if (!s[k2]) { s[k2] = Math.round(t2.getBoundingClientRect().width); filled = true; }
+          cg.children[i2].style.width = s[k2] + 'px';
+        });
+        if (filled) { try { localStorage.setItem(COL_WIDTH_KEY, JSON.stringify(s)); } catch(e){} }
+        table.classList.add('col-resized');
+      }
+      const startX = ev.clientX;
+      const startW = th.getBoundingClientRect().width;
+      try { handle.setPointerCapture(ev.pointerId); } catch(e){}
+      const move = mv => {
+        const w = Math.max(24, Math.min(640, Math.round(startW + (mv.clientX - startX))));
+        col.style.width = w + 'px';
+      };
+      const up = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', up);
+        handle.removeEventListener('pointercancel', up);
+        const w = parseInt(col.style.width, 10);
+        if (w) {
+          const s = colWidthStore();
+          s[storeKey] = w;
+          try { localStorage.setItem(COL_WIDTH_KEY, JSON.stringify(s)); } catch(e){}
+        }
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up);
+      handle.addEventListener('pointercancel', up);
+    });
+    th.appendChild(handle);
+  });
+  if (!hasTitleRow && ths.some(th => store[viewKey + ':' + keyOf(th)])) {
+    table.classList.add('col-resized');
+  }
 }
 
 document.getElementById('collectionOrderUndo').addEventListener('click', () => {
