@@ -718,6 +718,56 @@
   }
   #recorderFloatBar[hidden] { display: none; }
 
+  /* 物件表から計量データ入力を開いたとき、物件表を縮小画面で残す（物件表の地図表示と同じ戻り方） */
+  .software-frame.keiryo-shrunk {
+    visibility: visible;
+    pointer-events: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    transform-origin: top left;
+    z-index: 40;
+  }
+  #keiryoShrinkFrame {
+    position: absolute;
+    z-index: 41;
+    border: 2px solid #222;
+    box-sizing: border-box;
+    background: transparent;
+    touch-action: none;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  #keiryoShrinkFrame[hidden] { display: none; }
+  #keiryoShrinkFrame .shrink-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 3px 0;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  #keiryoShrinkHandle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 18px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
   /* ソフトを切り替えるときのスライド（消して作り直すのではなく、横から出し入れする） */
   @keyframes uenoSlideFromRight {
     from { transform: translate3d(100%, 0, 0); }
@@ -1385,6 +1435,10 @@
   }
 
   function closeSoftwareApp(app) {
+    if (app.file === COLVIEW_FILE) {
+      keiryoShrinkPending = false;
+      unshrinkColview();
+    }
     const rec = recorderApp();
     if (rec && app.file === rec.file) hideRecorderFloat();
     const frame = frames.get(app.file);
@@ -1426,6 +1480,8 @@
   }
 
   function showLauncher(shouldCloseSoftware) {
+    keiryoShrinkPending = false;
+    unshrinkColview();
     launcher.hidden = false;
     if (shouldCloseSoftware && activeApp) {
       const appToClose = activeApp;
@@ -1593,6 +1649,159 @@
     activeApp = null;
   }
 
+  // ===== 物件表 → 計量データ入力：物件表を縮小画面で残す =====
+  // 物件表の地図表示と同じ戻り方にする。計量を開いても物件表はフレームを移さず
+  // （移すと iPhone で読み直しになるため）小さくして上に残し、タップで全画面に戻る。
+  // 枠のドラッグで移動、右下の角（◢）のドラッグで大きさ変更。位置と大きさは端末に保存。
+  const COLVIEW_FILE = "index_2-4_colview.html";
+  let keiryoShrinkPending = false;
+  let keiryoShrinkActive = false;
+  let keiryoShrinkFrameEl = null;
+  let keiryoShrinkPos = null;
+  let keiryoShrinkScale = 0.32;
+  try {
+    const savedPos = JSON.parse(localStorage.getItem("ueno_keiryo_shrink_pos") || "null");
+    if (savedPos && Number.isFinite(savedPos.x) && Number.isFinite(savedPos.y)) keiryoShrinkPos = savedPos;
+    const savedScale = parseFloat(localStorage.getItem("ueno_keiryo_shrink_scale") || "");
+    if (Number.isFinite(savedScale)) keiryoShrinkScale = Math.min(0.6, Math.max(0.15, savedScale));
+  } catch (error) {}
+
+  function colviewApp() {
+    return software.find((item) => item.file === COLVIEW_FILE) || null;
+  }
+
+  function applyKeiryoShrinkPos() {
+    const app = colviewApp();
+    if (!app || !keiryoShrinkPos) return;
+    const frame = frames.get(app.file);
+    const ws = document.querySelector(".workspace").getBoundingClientRect();
+    if (frame && frame.classList.contains("keiryo-shrunk")) {
+      frame.style.left = keiryoShrinkPos.x + "px";
+      frame.style.top = keiryoShrinkPos.y + "px";
+      frame.style.transform = `scale(${keiryoShrinkScale})`;
+    }
+    if (keiryoShrinkFrameEl) {
+      keiryoShrinkFrameEl.style.left = keiryoShrinkPos.x + "px";
+      keiryoShrinkFrameEl.style.top = keiryoShrinkPos.y + "px";
+      keiryoShrinkFrameEl.style.width = Math.round(ws.width * keiryoShrinkScale) + "px";
+      keiryoShrinkFrameEl.style.height = Math.round(ws.height * keiryoShrinkScale) + "px";
+    }
+  }
+
+  function ensureKeiryoShrinkFrame() {
+    if (keiryoShrinkFrameEl) return keiryoShrinkFrameEl;
+    const el = document.createElement("div");
+    el.id = "keiryoShrinkFrame";
+    el.hidden = true;
+    const hint = document.createElement("div");
+    hint.className = "shrink-hint";
+    hint.textContent = "タップで戻る";
+    el.appendChild(hint);
+    const handle = document.createElement("div");
+    handle.id = "keiryoShrinkHandle";
+    handle.textContent = "◢";
+    el.appendChild(handle);
+    frameLayer.appendChild(el);
+    keiryoShrinkFrameEl = el;
+    let move = null;
+    el.addEventListener("pointerdown", (e) => {
+      move = { x: e.clientX, y: e.clientY, left: keiryoShrinkPos ? keiryoShrinkPos.x : 10, top: keiryoShrinkPos ? keiryoShrinkPos.y : 10, moved: false };
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (!move || !keiryoShrinkPos) return;
+      const dx = e.clientX - move.x, dy = e.clientY - move.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) move.moved = true;
+      if (move.moved) {
+        keiryoShrinkPos.x = move.left + dx;
+        keiryoShrinkPos.y = move.top + dy;
+        applyKeiryoShrinkPos();
+      }
+    });
+    el.addEventListener("pointerup", () => {
+      if (!move) return;
+      const wasMoved = move.moved;
+      move = null;
+      if (wasMoved) {
+        try { localStorage.setItem("ueno_keiryo_shrink_pos", JSON.stringify(keiryoShrinkPos)); } catch (err) {}
+      } else {
+        returnFromKeiryoShrink();
+      }
+    });
+    el.addEventListener("pointercancel", () => { move = null; });
+    let resize = null;
+    handle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resize = { x: e.clientX, s: keiryoShrinkScale, moved: false };
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    handle.addEventListener("pointermove", (e) => {
+      if (!resize) return;
+      const dx = e.clientX - resize.x;
+      if (Math.abs(dx) > 4) resize.moved = true;
+      keiryoShrinkScale = Math.min(0.6, Math.max(0.15, resize.s + dx / window.innerWidth));
+      applyKeiryoShrinkPos();
+    });
+    const resizeEnd = () => {
+      if (!resize) return;
+      if (resize.moved) {
+        try { localStorage.setItem("ueno_keiryo_shrink_scale", String(keiryoShrinkScale)); } catch (err) {}
+      }
+      resize = null;
+    };
+    handle.addEventListener("pointerup", resizeEnd);
+    handle.addEventListener("pointercancel", () => { resize = null; });
+    handle.addEventListener("click", (e) => { e.stopPropagation(); });
+    return el;
+  }
+
+  function shrinkParkColview(app) {
+    const frame = frames.get(app.file);
+    if (!frame || frame.parentElement !== frameLayer) { minimizeSoftware(app); return; }
+    const catcher = ensureKeiryoShrinkFrame();
+    const ws = document.querySelector(".workspace").getBoundingClientRect();
+    if (!keiryoShrinkPos) keiryoShrinkPos = { x: 10, y: 10 };
+    keiryoShrinkPos.x = Math.min(Math.max(keiryoShrinkPos.x, -ws.width * keiryoShrinkScale + 64), ws.width - 64);
+    keiryoShrinkPos.y = Math.min(Math.max(keiryoShrinkPos.y, 0), Math.max(0, ws.height - 48));
+    frame.classList.remove("active");
+    frame.classList.add("keiryo-shrunk");
+    clearZoomStyle(frame);
+    frame.style.removeProperty("--preview-width");
+    frame.style.removeProperty("--preview-height");
+    frame.style.removeProperty("--preview-scale");
+    frame.style.width = ws.width + "px";
+    frame.style.height = ws.height + "px";
+    frame.style.visibility = "visible";
+    keiryoShrinkActive = true;
+    catcher.hidden = false;
+    applyKeiryoShrinkPos();
+  }
+
+  function unshrinkColview() {
+    if (!keiryoShrinkActive) return;
+    keiryoShrinkActive = false;
+    if (keiryoShrinkFrameEl) keiryoShrinkFrameEl.hidden = true;
+    const app = colviewApp();
+    const frame = app && frames.get(app.file);
+    if (frame && frame.classList.contains("keiryo-shrunk")) {
+      frame.classList.remove("keiryo-shrunk");
+      frame.style.removeProperty("left");
+      frame.style.removeProperty("top");
+      frame.style.removeProperty("width");
+      frame.style.removeProperty("height");
+      frame.style.removeProperty("transform");
+      frame.style.removeProperty("visibility");
+    }
+  }
+
+  function returnFromKeiryoShrink() {
+    const app = colviewApp();
+    if (!app) return;
+    unshrinkColview();
+    openSoftware(app);
+  }
+
   // パネル内のソフトから「このソフトを開いて」と頼まれたときの受け口。
   // 物件表の「計量」ボタン → 計量データ入力、入力後は物件表へ戻る、に使う。
   // 開いていたソフトは最小化されるだけで中身は残るので、戻ると元の画面のまま。
@@ -1604,6 +1813,10 @@
     const app = isKeiryoRequest
       ? software.find((item) => item.name === "計量データ入力")
       : software.find((item) => item.file === data.file);
+    if (isKeiryoRequest && app) {
+      const colviewFrame = frames.get(COLVIEW_FILE);
+      if (colviewFrame && event.source === colviewFrame.contentWindow) keiryoShrinkPending = true;
+    }
     if (app) openSoftware(app, { slide: data.dir === "back" ? "back" : "forward" });
   });
 
@@ -1852,6 +2065,11 @@
 
   // 前のソフトの片付け。記録中の地点登録だけは隠さず浮動画面で残す。
   function parkPrevious(app) {
+    if (app.file === COLVIEW_FILE && keiryoShrinkPending) {
+      keiryoShrinkPending = false;
+      shrinkParkColview(app);
+      return;
+    }
     const rec = recorderApp();
     if (rec && app.file === rec.file) {
       // 地点登録はカードへ移さずロゴ最小化で残す（移すと読み直しになるため）。記録中でなくても同じ。
@@ -1881,6 +2099,12 @@
     if (app.direct) {
       location.href = softwareRoot + encodeURI(app.file);
       return;
+    }
+    // 計量から物件表へ戻るときは、縮小表示をやめてスライドなしで全画面へ戻す（地図と同じ）
+    if (keiryoShrinkActive) {
+      const shrinkReturn = app.file === COLVIEW_FILE;
+      unshrinkColview();
+      if (shrinkReturn && options) options = Object.assign({}, options, { slide: undefined });
     }
     const slide = options && options.slide;
     // カードから開く場合は、広がる動きの開始位置を先に測っておく
