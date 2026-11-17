@@ -2421,8 +2421,7 @@ function savePropertyData(){
   saveSession();
   saveHistory(state.date, state.selectedStaff, state.entryData);
   const savedName = prop.name;
-  // 物件表の「計量」から入った場合は、保存したら物件表まで戻る。
-  if(returnToColviewIfRequested()) return;
+  // 保存では物件表へ自動で戻らない。物件表へは、縮小した物件表のタップで戻る。
   if(returnScreen===9){
     renderPropertyListA();showScreen(9);
   } else {
