@@ -545,4 +545,9 @@
  if(session()?.kind==='travel')data.viewMode='travel';else if(session()&&data.viewMode==='travel')data.viewMode='commission';
  permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:switchRecordingMode,session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify,focus:focusStop});
  initMap();render();fit();
+ // スワイプで仕切り線（ヘッダー下）が画面最上部に来る位置へ軽く止める。
+ // 下方向（内容を上へ送る）スクロールで近づいたときだけ吸着する。
+ // 上へ戻すときは吸着しないので、ヘッダーのボタン（閉じる・操作パネル等）に届く。
+ (()=>{const mainEl=document.querySelector('main');if(!mainEl)return;let lastY=window.scrollY||0,timer=0,snapping=false;
+ window.addEventListener('scroll',()=>{const y=window.scrollY||0;const down=y>lastY;lastY=y;if(snapping)return;clearTimeout(timer);timer=setTimeout(()=>{if(!down)return;const target=mainEl.offsetTop;const dy=target-(window.scrollY||0);if(dy!==0&&Math.abs(dy)<=90){snapping=true;window.scrollTo({top:target,behavior:'smooth'});setTimeout(()=>{snapping=false;},400);}},120);},{passive:true});})();
 })();
