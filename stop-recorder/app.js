@@ -208,6 +208,13 @@
  function renderSessions(){
   updateFileName();
  }
+ // 記録中は画面を仕切り線（ヘッダー下）が最上部に来る位置で固定する。
+ // 開始で固定し、一時停止・終了で解除する（render のたびに状態と合わせる）。
+ let scrollFixed=false,fixTimer=0;
+ function fixTarget(){const m=document.querySelector('main');return m?m.offsetTop:0;}
+ function applyScrollFix(){if(!scrollFixed)return;const t=fixTarget();if(Math.abs((window.scrollY||0)-t)>2)window.scrollTo(0,t);}
+ window.addEventListener('scroll',()=>{if(!scrollFixed)return;clearTimeout(fixTimer);fixTimer=setTimeout(applyScrollFix,120);},{passive:true});
+ function updateScrollFix(){const should=state==='running';if(should===scrollFixed)return;scrollFixed=should;if(scrollFixed)window.scrollTo({top:fixTarget(),behavior:'smooth'});}
  function render(){
   refreshTotalTime();
   renderSessions();updateControls();const s=session();$('count').textContent=`${s?.stops.length||0} 地点`;$('recordDate').textContent=dated(s?.date);$('dateWeekday').textContent=dated($('date').value).slice(10);
@@ -221,7 +228,7 @@
    const actions=document.createElement('div');actions.className='stop-actions';
    const edit=document.createElement('button');edit.textContent='編集';edit.onclick=()=>openEdit(stop.id);
    const del=document.createElement('button');del.textContent='削除';del.className='danger';del.onclick=()=>deletePoint(stop.id);actions.append(edit,del);row.append(n,body,actions);list.append(row);
-  }drawMap();permit?.render();if(travelView())renderTravelProgress();
+  }drawMap();permit?.render();if(travelView())renderTravelProgress();updateScrollFix();
  }
  function renderTravelProgress(){
   const s=session(),interval=travelInterval(s),elapsed=s?.kind==='travel'?activeTimeMs(s):0,due=Number.isFinite(s?.nextTravelAtMs)?s.nextTravelAtMs:interval,remaining=Math.max(0,due-elapsed);
@@ -545,9 +552,4 @@
  if(session()?.kind==='travel')data.viewMode='travel';else if(session()&&data.viewMode==='travel')data.viewMode='commission';
  permit=StopPermit.create({mode:()=>data.viewMode||'commission',setMode:switchRecordingMode,session,selected:()=>selectedId,recording:()=>state==='running'||state==='paused',refreshFileName:()=>{fileNameOverride=newFileName(false);updateFileName();},save:persist,render,ask,notify,focus:focusStop});
  initMap();render();fit();
- // スワイプで仕切り線（ヘッダー下）が画面最上部に来る位置へ軽く止める。
- // 下方向（内容を上へ送る）スクロールで近づいたときだけ吸着する。
- // 上へ戻すときは吸着しないので、ヘッダーのボタン（閉じる・操作パネル等）に届く。
- (()=>{const mainEl=document.querySelector('main');if(!mainEl)return;let lastY=window.scrollY||0,timer=0,snapping=false;
- window.addEventListener('scroll',()=>{const y=window.scrollY||0;const down=y>lastY;lastY=y;if(snapping)return;clearTimeout(timer);timer=setTimeout(()=>{if(!down)return;const target=mainEl.offsetTop;const dy=target-(window.scrollY||0);if(dy!==0&&Math.abs(dy)<=90){snapping=true;window.scrollTo({top:target,behavior:'smooth'});setTimeout(()=>{snapping=false;},400);}},120);},{passive:true});})();
 })();
