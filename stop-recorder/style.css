@@ -2,3 +2,4 @@
 .pin.registered{border-color:#1a9e4b;background:#e6f4ea}.pin.unregistered{border-color:#e07b00;background:#fff3df}.pin.registered.active,.pin.unregistered.active{background:#185d4e;color:#fff;border-color:#185d4e}.pin{-webkit-touch-callout:none;touch-action:none;user-select:none;-webkit-user-select:none}
 
 /* スワイプで仕切り線の位置に止める吸着は app.js 側で行う（上へ戻すときは吸着しない）。 */
+.start-divider{border-top:1px solid #ccc;margin:0 0 14px}

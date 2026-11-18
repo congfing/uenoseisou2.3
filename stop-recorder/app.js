@@ -208,10 +208,10 @@
  function renderSessions(){
   updateFileName();
  }
- // 記録中は画面を仕切り線（ヘッダー下）が最上部に来る位置で固定する。
+ // 記録中は画面を開始ボタンの上の仕切り線が最上部に来る位置で固定する。
  // 開始で固定し、一時停止・終了で解除する（render のたびに状態と合わせる）。
  let scrollFixed=false,fixTimer=0;
- function fixTarget(){const m=document.querySelector('main');return m?m.offsetTop:0;}
+ function fixTarget(){const d=document.querySelector('.start-divider');if(d)return d.getBoundingClientRect().top+(window.scrollY||0);const m=document.querySelector('main');return m?m.offsetTop:0;}
  function applyScrollFix(){if(!scrollFixed)return;const t=fixTarget();if(Math.abs((window.scrollY||0)-t)>2)window.scrollTo(0,t);}
  window.addEventListener('scroll',()=>{if(!scrollFixed)return;clearTimeout(fixTimer);fixTimer=setTimeout(applyScrollFix,120);},{passive:true});
  function updateScrollFix(){const should=state==='running';if(should===scrollFixed)return;scrollFixed=should;if(scrollFixed)window.scrollTo({top:fixTarget(),behavior:'smooth'});}
